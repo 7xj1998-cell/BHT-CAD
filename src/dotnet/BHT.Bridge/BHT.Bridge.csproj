@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Doc/ghi du lieu BHT trong DWG. CHI AcDbMgd + AcCoreMgd (khong AcMgd) -> NETLOAD duoc trong Core Console. -->
+  <PropertyGroup>
+    <OutputType>Library</OutputType>
+    <RootNamespace>BHT.Bridge</RootNamespace>
+    <AssemblyName>BHT.Bridge</AssemblyName>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\BHT.Core\BHT.Core.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <Reference Include="AcDbMgd"><HintPath>$(AcadDir)\acdbmgd.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="AcCoreMgd"><HintPath>$(AcadDir)\accoremgd.dll</HintPath><Private>false</Private></Reference>
+  </ItemGroup>
+  <Target Name="BhtCheckAcadRefs" BeforeTargets="ResolveAssemblyReferences">
+    <Error Condition="!Exists('$(AcadDir)\acdbmgd.dll')" Text="Khong tim thay $(AcadDir)\acdbmgd.dll - dat /p:AcadDir=... hoac bien moi truong ACAD_INSTALL_DIR." />
+  </Target>
+</Project>
