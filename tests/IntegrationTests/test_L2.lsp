@@ -1,0 +1,18 @@
+;;; BHT 0.3.3 - phien L2: mo lai ban ve 0.3.2 da nang cap + SAVEAS 2018 o phien L
+(load "C:/Users/Le Bao/BHT_TEST_V040/t_common.lsp")
+(tbegin "L2")
+(setq e (tload))
+(setq S (t-read-state "L"))
+(defun sv (k) (cdr (assoc k S)))
+(setq POS (t-lbl-positions) diff 0)
+(foreach pp (sv "lblpos") (if (not (equal (cdr pp) (cdr (assoc (car pp) POS)) 1e-9)) (setq diff (1+ diff))))
+(tchk "L2-01" "mở lại bản vẽ 0.3.2 đã nâng cấp (SAVEAS 2018): điểm, nhãn (vị trí + trạng thái), ảnh, hồ sơ, bản ghi giữ nguyên; tất cả trong Model"
+      (and (null e) S (= (length (bht:pt-all)) (sv "points")) (= (length (bht:tagged-pairs "TEXT" "BHT_NHAN" 2)) (sv "labels"))
+           (equal (t-lbl-states) (sv "states")) (= (t-mk-count) (sv "markers")) (= (length (bht:rec-keys "PHOTO")) (sv "photos"))
+           (equal (bht:obj-ids) (sv "objs")) (= diff 0)
+           (vl-every '(lambda (e) (= (cdr (assoc 0 (entget e))) "IMAGE")) (bht:ents-outside-model)))
+      (list (length (bht:pt-all)) (t-lbl-states) diff (length (bht:ents-outside-model))))
+(setq k (bht:check))
+(tchk "L2-02" "BHTKT: 0 lỗi" (= (car k) 0) (strcat (itoa (car k)) " lỗi, " (itoa (cadr k)) " cảnh báo"))
+(tend "L2")
+(princ)

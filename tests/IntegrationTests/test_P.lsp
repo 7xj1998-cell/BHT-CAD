@@ -1,0 +1,13 @@
+;;; BHT 0.4.0 - phien P: ban ve moi. Thu NETLOAD BHT.Palette.dll trong Core Console (co AcMgd - giao dien).
+(load "C:/Users/Le Bao/BHT_TEST_V040/t_common.lsp")
+(tbegin "P")
+(setq e (tload))
+(tchk "P00" "nạp BHT-0.4.0" (and (null e) (= *bht-version* "0.4.0")) e)
+(setq e (t-netload "BHT.Palette.dll"))
+(tlog (strcat "INFO P01 NETLOAD BHT.Palette.dll: " (if e (strcat "lỗi Lisp: " e) "lệnh NETLOAD chạy xong (xem console: có dòng 'BHT.Palette 0.4.0.1 đã nạp' hay lỗi)")))
+(tlog "   (tiếp theo: dòng script BHTPALETTE, rồi (t-p-after))")
+(defun t-p-after ()
+  (tchk "P02" "sau lệnh BHTPALETTE trong Core Console: tiến trình vẫn chạy tiếp (lệnh chỉ báo cần AutoCAD đầy đủ, không tạo PaletteSet)" T nil)
+  (tend "P")
+  (princ))
+(princ)
