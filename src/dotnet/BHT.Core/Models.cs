@@ -140,9 +140,9 @@ namespace BHT.Core
 
     public static class BhtVersion
     {
-        public const string Version = "0.4.2";
-        public const string AssemblyVersion = "0.4.2.0";
-        public const string FileVersion = "0.4.2.0";
+        public const string Version = "0.4.3";
+        public const string AssemblyVersion = "0.4.3.0";
+        public const string FileVersion = "0.4.3.0";
         public const string LispApiLevel = "1";
         public const string DictName = "BHT_V02";
 
@@ -152,7 +152,10 @@ namespace BHT.Core
             int lvl;
             if (!int.TryParse(apiLevel ?? "", NumberStyles.Integer, CultureInfo.InvariantCulture, out lvl)) return false;
             if (lvl < 1) return false;
-            return Compare(lispVersion, "0.4.2") >= 0;
+            // Palette va Lisp phai cung phien ban. AutoCAD khong the go DLL .NET
+            // da nap trong mot phien lam viec, nen cho phep "moi hon" se che mat
+            // tinh trang DLL cu dang chay cung Lisp moi.
+            return Compare(lispVersion, Version) == 0;
         }
 
         /// <summary>So sanh "a.b.c" theo so; phan khong phai so = 0.</summary>

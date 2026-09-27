@@ -72,10 +72,10 @@ namespace BHT.Palette
     public static class PaletteHost
     {
         public static readonly Guid PaletteGuid = new Guid("B4A7E0C2-5D31-4F0B-9C6E-0BD7A1F40410");
-        public const string Title = "BHT 0.4.2 — QUẢN LÝ HIỆN TRẠNG TUYẾN";
+        public static string Title { get { return "BHT " + BHT.Core.BhtVersion.Version + " — QUẢN LÝ HIỆN TRẠNG TUYẾN"; } }
         private static PaletteSet _ps;
         private static BhtPaletteControl _ctl;
-        private static bool _restored;
+        private static bool _initialLayoutApplied;
         private static bool _docEvents;
 
         [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
@@ -101,11 +101,12 @@ namespace BHT.Palette
             _ps.Name = Title;
             _ps.Text = Title;
             _ps.Visible = true;
-            if (!_restored)
+            if (!_initialLayoutApplied)
             {
-                // Chua co cau hinh luu (lan dau): dock trai, rong vua du.
-                _restored = true;
-                try { _ps.Dock = DockSides.Left; _ps.Size = new Size(420, 760); } catch { }
+                // Moi phien AutoCAD bat dau voi bo cuc de doc: dock trai, rong 430 px.
+                // Cau hinh cu tung lam cac hang dau bieu mau bi cat va de lai "chu mo coi".
+                _initialLayoutApplied = true;
+                try { _ps.Dock = DockSides.Left; _ps.Size = new Size(430, 820); } catch { }
             }
             _ctl.BindTo(AcApp.DocumentManager.MdiActiveDocument);
             _ctl.RefreshAll();
@@ -113,8 +114,7 @@ namespace BHT.Palette
 
         private static void OnLoad(object sender, PalettePersistEventArgs e)
         {
-            // AutoCAD da khoi phuc cau hinh cua PaletteSet theo GUID -> khong ep dock lai.
-            _restored = true;
+            // AutoCAD da doc cau hinh cu. Show() se chuan hoa bo cuc mot lan cho phien nay.
         }
 
         private static void OnSave(object sender, PalettePersistEventArgs e)

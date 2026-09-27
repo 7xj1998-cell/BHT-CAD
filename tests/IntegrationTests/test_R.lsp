@@ -1,9 +1,9 @@
 ;;; BHT 0.3.3 - phien R (dung lai nguyen kich ban hoi quy cua 0.3.2): HOI QUY chuc nang 0.2.0/0.3.1 (dung lai kich ban test_A cua 0.2.0,
 ;;; chi doi duong dan nap Lisp, phien ban va thu muc xuat). Ban ve: BAN SAO sample-route.dwg.
-(load "C:/Users/Le Bao/BHT_TEST_V042/t_common.lsp")
+(load "C:/Users/Le Bao/BHT_TEST_V043/t_common.lsp")
 (tbegin "R")
 (setq e (tload))
-(tchk "A01" "nạp BHT 0.4.2 từ đường dẫn có dấu" (and (null e) (= *bht-version* "0.4.2")) (if e e *bht-version*))
+(tchk "A01" "nạp BHT 0.4.3 từ đường dẫn có dấu" (and (null e) (= *bht-version* "0.4.3")) (if e e *bht-version*))
 ;; A02
 (setq r (tsafe "A02" "selftest" '(lambda () (bht:selftest))))
 (if r (tchk "A02" "BHTTEST hàm thuần" (= (cadr r) 0) (strcat (itoa (car r)) " pass, " (itoa (cadr r)) " fail")))
@@ -187,6 +187,10 @@
             (and (= (rv r 'points) 534) (= (rv r 'objects) (length (bht:obj-ids))) (= (rv r 'photos) 205)
                  (= (rv r 'total-objects) (length (bht:obj-ids))))
             (vl-princ-to-string r)))
+(setq first (car (bht:read-lines (strcat *T-DIR* "run/out_R/BHT_DIEM_RTK.csv"))))
+(tchk "A21a" "CSV dùng tiêu đề tiếng Việt có dấu"
+      (and first (vl-string-search "ID điểm khảo sát" first) (vl-string-search "Tên điểm" first)
+           (vl-string-search "Lý trình Km" first) (vl-string-search "Tệp nguồn" first)) first)
 ;; A22 kiem tra
 (setq k1 (bht:check))
 (setq e (bht:pv (bht:pt-find "BOT19-R-000002" (bht:pt-all)) 'ent) d (entget e) old (assoc 10 d))

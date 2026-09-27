@@ -1,5 +1,5 @@
 ;;; ======================================================================
-;;; BHT-0.4.2.lsp - BHT 0.4.2 (build 2026-09-27)
+;;; BHT-0.4.3.lsp - BHT 0.4.3 (build 2026-09-28)
 ;;; Quan ly khao sat bao hieu / coc tieu / cot Km / bang va cong trinh ven
 ;;; tuyen: diem RTK, ho so doi tuong, anh TimeMark (KMZ), tuyen tham chieu,
 ;;; ly trinh, goi thau / doan tuyen, xuat CSV cho Excel.
@@ -12,13 +12,14 @@
 ;;; Muc tieu: AutoCAD 2021-2024, Civil 3D 2023 (Windows). File luu UTF-8,
 ;;; can LISPSYS = 1 (mac dinh tu AutoCAD 2021) de hien tieng Viet co dau.
 ;;;
-;;; NHAT KY THAY DOI 0.4.2 (chi tiet: CHANGELOG.md)
+;;; NHAT KY THAY DOI 0.4.3 (chi tiet: CHANGELOG.md)
 ;;;  + BTH / BHT mo mot Palette .NET duy nhat; Lisp tu nap DLL cung thu muc.
 ;;;  + DCL chi con la giao dien du phong BHTDCL, khong mo trong luong thuong.
 ;;;  + File DCL tam ghi UTF-8 BOM de AutoCAD 2024 doc dung tieng Viet.
 ;;;  + POINT mac dinh dau X kich thuoc 1; bo tri nhan 8 huong x 8 ban kinh.
 ;;;  + BHTBLOCK nap DWG ky hieu tuy chon theo nhom, INSBASE la tam chen.
-;;;  + Nhan ky hieu dat tren block, hien object_id truoc ma hieu.
+;;;  + Nhan ky hieu hien ten nghiep vu + ma/ly trinh; ID noi bo chi o XData.
+;;;  + Block coc tieu / cot Km theo mau; Palette co mau va thong bao tai cho.
 ;;;
 ;;; NHAT KY THAY DOI 0.4.0
 ;;;  + Ham API bht:api-* (dang ky vl-acad-defun) cho plugin .NET BHT.Palette:
@@ -67,12 +68,12 @@
 
 (vl-load-com)
 
-(setq *bht-version* "0.4.2")
-(setq *bht-build* "2026-09-27")
+(setq *bht-version* "0.4.3")
+(setq *bht-build* "2026-09-28")
 
 ;; Luu duong dan ngay khi APPLOAD / Application Bundle nap Lisp. DLL dat canh
 ;; file Lisp de nguoi dung chi can APPLOAD mot lan, khong phai tu NETLOAD.
-(setq *bht-lsp-file* (findfile "BHT-0.4.2.lsp"))
+(setq *bht-lsp-file* (findfile "BHT-0.4.3.lsp"))
 (setq *bht-lsp-dir*
   (if *bht-lsp-file* (vl-filename-directory *bht-lsp-file*) nil))
 (setq *bht-palette-dll*
@@ -322,7 +323,21 @@
 
 (setq *bht-log-lines* nil)
 
-(defun bht:msg (s) (princ (strcat "\n" s)))
+(setq *bht-screen-messages* nil)
+
+;; Moi thong bao nghiep vu van hien o dong lenh va dong thoi duoc giu lai de
+;; Palette doc sau khi lenh ket thuc. Gioi han 40 dong de khong phinh bo nho.
+(defun bht:screen-message-add (s)
+  (setq *bht-screen-messages* (cons (bht:str s) *bht-screen-messages*))
+  (if (> (length *bht-screen-messages*) 40)
+    (setq *bht-screen-messages* (reverse (cdr (reverse *bht-screen-messages*)))))
+  s
+)
+
+(defun bht:msg (s)
+  (bht:screen-message-add s)
+  (princ (strcat "\n" s))
+)
 
 (defun bht:log (s)
   (setq *bht-log-lines* (cons (strcat (bht:now) "  " s) *bht-log-lines*))
@@ -574,6 +589,11 @@
 
 (defun bht:line-g (a b) (list '(0 . "LINE") '(8 . "0") '(62 . 0) (cons 10 a) (cons 11 b)))
 (defun bht:circle-g (c r) (list '(0 . "CIRCLE") '(8 . "0") '(62 . 0) (cons 10 c) (cons 40 r)))
+(defun bht:line-color-g (a b color) (list '(0 . "LINE") '(8 . "0") (cons 62 color) (cons 10 a) (cons 11 b)))
+(defun bht:solid-g (a b c d color)
+  (list '(0 . "SOLID") '(8 . "0") (cons 62 color) (cons 10 a) (cons 11 b) (cons 12 c) (cons 13 d)))
+(defun bht:text-color-g (s p h color)
+  (list '(0 . "TEXT") '(8 . "0") (cons 62 color) (cons 10 p) (cons 40 h) (cons 1 s) '(50 . 0.0)))
 
 (defun bht:poly-g (pts / out i)
   (setq out nil i 0)
@@ -3791,9 +3811,38 @@
 
 (defun bht:symbol-blocks ()
   (bht:block "BHT_KH_BIEN_BAO" (list (bht:circle-g '(0.0 0.0 0.0) 1.0) (bht:line-g '(0.0 -1.0 0.0) '(0.0 -2.0 0.0))))
-  (bht:block "BHT_KH_COC_TIEU" (bht:poly-g '((-0.4 -0.4 0.0) (0.4 -0.4 0.0) (0.4 0.4 0.0) (-0.4 0.4 0.0))))
-  (bht:block "BHT_KH_COT_KM" (append (bht:poly-g '((-0.6 -1.0 0.0) (0.6 -1.0 0.0) (0.6 1.0 0.0) (-0.6 1.0 0.0)))
-                                     (list (bht:line-g '(-0.6 0.3 0.0) '(0.6 0.3 0.0)))))
+  ;; 0.4.3: hinh chieu bang cua coc tieu theo mau thuc dia: than trang,
+  ;; chan phan quang do, dau phan quang xanh. Diem chen = tam chan coc (0,0).
+  (bht:block "BHT_KH_COC_TIEU_V043"
+    (list
+      (bht:solid-g '(0.0 -0.22 0.0) '(0.30 -0.22 0.0) '(0.0 0.22 0.0) '(0.30 0.22 0.0) 1)
+      (bht:line-color-g '(0.0 -0.22 0.0) '(1.72 -0.22 0.0) 7)
+      (bht:line-color-g '(1.72 -0.22 0.0) '(1.72 0.22 0.0) 7)
+      (bht:line-color-g '(1.72 0.22 0.0) '(0.0 0.22 0.0) 7)
+      (bht:line-color-g '(0.0 0.22 0.0) '(0.0 -0.22 0.0) 7)
+      (bht:line-color-g '(1.55 -0.34 0.0) '(2.08 -0.34 0.0) 3)
+      (bht:line-color-g '(2.08 -0.34 0.0) '(2.08 0.34 0.0) 3)
+      (bht:line-color-g '(2.08 0.34 0.0) '(1.55 0.34 0.0) 3)
+      (bht:line-color-g '(1.55 0.34 0.0) '(1.55 -0.34 0.0) 3)
+      (bht:solid-g '(1.70 -0.18 0.0) '(1.96 -0.18 0.0) '(1.70 0.18 0.0) '(1.96 0.18 0.0) 7)))
+  ;; 0.4.3: cot Km theo mau: nua tron do, than bang trang, chu KM va nep trang.
+  ;; Diem chen = tam mat phang phia nua tron (0,0).
+  (bht:block "BHT_KH_COT_KM_V043"
+    (list
+      (bht:solid-g '(0.0 0.0 0.0) '(0.0 0.75 0.0) '(-0.287 0.693 0.0) '(-0.287 0.693 0.0) 1)
+      (bht:solid-g '(0.0 0.0 0.0) '(-0.287 0.693 0.0) '(-0.530 0.530 0.0) '(-0.530 0.530 0.0) 1)
+      (bht:solid-g '(0.0 0.0 0.0) '(-0.530 0.530 0.0) '(-0.693 0.287 0.0) '(-0.693 0.287 0.0) 1)
+      (bht:solid-g '(0.0 0.0 0.0) '(-0.693 0.287 0.0) '(-0.750 0.0 0.0) '(-0.750 0.0 0.0) 1)
+      (bht:solid-g '(0.0 0.0 0.0) '(-0.750 0.0 0.0) '(-0.693 -0.287 0.0) '(-0.693 -0.287 0.0) 1)
+      (bht:solid-g '(0.0 0.0 0.0) '(-0.693 -0.287 0.0) '(-0.530 -0.530 0.0) '(-0.530 -0.530 0.0) 1)
+      (bht:solid-g '(0.0 0.0 0.0) '(-0.530 -0.530 0.0) '(-0.287 -0.693 0.0) '(-0.287 -0.693 0.0) 1)
+      (bht:solid-g '(0.0 0.0 0.0) '(-0.287 -0.693 0.0) '(0.0 -0.75 0.0) '(0.0 -0.75 0.0) 1)
+      (bht:line-color-g '(0.0 -0.75 0.0) '(1.75 -0.75 0.0) 7)
+      (bht:line-color-g '(1.75 -0.75 0.0) '(1.75 0.75 0.0) 7)
+      (bht:line-color-g '(1.75 0.75 0.0) '(0.0 0.75 0.0) 7)
+      (bht:line-color-g '(0.0 0.75 0.0) '(0.0 -0.75 0.0) 7)
+      (bht:solid-g '(1.62 -0.78 0.0) '(1.88 -0.78 0.0) '(1.62 0.78 0.0) '(1.88 0.78 0.0) 7)
+      (bht:text-color-g "KM" '(0.35 -0.28 0.0) 0.58 7)))
   (bht:block "BHT_KH_BANG_CHI_DAN" (bht:poly-g '((-1.5 -0.7 0.0) (1.5 -0.7 0.0) (1.5 0.7 0.0) (-1.5 0.7 0.0))))
   (bht:block "BHT_KH_BANG_QC" (append (bht:poly-g '((-1.5 -0.7 0.0) (1.5 -0.7 0.0) (1.5 0.7 0.0) (-1.5 0.7 0.0)))
                                       (list (bht:line-g '(-1.5 -0.7 0.0) '(1.5 0.7 0.0)))))
@@ -3827,6 +3876,12 @@
 (defun bht:kh-custom-key (group) (strcat "kh_block_" (strcase group T)))
 (defun bht:kh-custom-src-key (group) (strcat "kh_block_src_" (strcase group T)))
 (defun bht:kh-custom-factor-key (group) (strcat "kh_block_factor_" (strcase group T)))
+
+(defun bht:kh-default-block (group)
+  (cond ((= group "COC_TIEU") "BHT_KH_COC_TIEU_V043")
+        ((= group "COT_KM") "BHT_KH_COT_KM_V043")
+        (T (strcat "BHT_KH_" group)))
+)
 
 ;; Nap 1 DWG ngoai thanh 1 dinh nghia block rieng BHT_USER_<NHOM>.
 ;; Chen tham chieu tam bang ActiveX roi xoa tham chieu; dinh nghia block van
@@ -3895,7 +3950,7 @@
 (defun bht:kh-block (rec / blk custom)
   (bht:symbol-blocks)
   (setq custom (bht:meta (bht:kh-custom-key (bht:get rec "nhom")) "")
-        blk (strcat "BHT_KH_" (bht:get rec "nhom")))
+        blk (bht:kh-default-block (bht:get rec "nhom")))
   (cond ((and (/= custom "") (tblsearch "BLOCK" custom)) custom)
         ((tblsearch "BLOCK" blk) blk)
         (T "BHT_KH_CHUA_XAC_DINH"))
@@ -3907,9 +3962,42 @@
   (* (bht:kh-scale) (if (and (/= custom "") f (> f 0.0)) f 1.0))
 )
 
-(defun bht:kh-label (oid rec)
-  ;; ID luon dung dau va nam tren dau block; ma bao hieu theo sau de ban ve gon.
-  (strcat oid (if (/= (bht:get rec "ma_hieu") "") (strcat " | " (bht:get rec "ma_hieu")) ""))
+(defun bht:all-zero-p (s / ok i)
+  (setq ok T i 1)
+  (while (and ok (<= i (strlen s)))
+    (if (/= (substr s i 1) "0") (setq ok nil))
+    (setq i (1+ i)))
+  ok
+)
+
+(defun bht:kh-code-label (group code / prefix value upper dot decimals)
+  (setq value (vl-string-trim " " (bht:str code))
+        prefix (strcat (strcase group) "_")
+        upper (strcase value))
+  ;; Ma luu co the la COC_TIEU_KM48+500; bo tien to noi bo khoi nhan ban ve.
+  (if (and (>= (strlen upper) (strlen prefix)) (= (substr upper 1 (strlen prefix)) prefix))
+    (setq value (substr value (1+ (strlen prefix))) upper (strcase value)))
+  (if (= (substr upper 1 (min 2 (strlen upper))) "KM")
+    (progn
+      (setq value (vl-string-trim " " (substr value 3))
+            dot (vl-string-search "." value))
+      (if dot
+        (progn
+          (setq decimals (substr value (+ dot 2)))
+          (if (bht:all-zero-p decimals) (setq value (substr value 1 dot)))))
+      (strcat "Km " value))
+    value)
+)
+
+(defun bht:kh-label (oid rec / group code chainage detail)
+  ;; Nhan hien thi la ten nghiep vu + ma/ly trinh; object_id chi giu trong XData.
+  (setq group (bht:get rec "nhom")
+        code (bht:get rec "ma_hieu")
+        chainage (bht:get rec "ly_trinh_km")
+        detail (cond ((/= code "") (bht:kh-code-label group code))
+                     ((/= chainage "") (bht:kh-code-label group chainage))
+                     (T "")))
+  (strcat (bht:group-label group) (if (/= detail "") (strcat " " detail) ""))
 )
 
 (defun bht:kh-xdata-ins (oid state pt rot sc)
@@ -4129,7 +4217,7 @@
      (setq name (bht:meta (bht:kh-custom-key group) ""))
      (bht:msg (strcat "BHT: nhóm " group " -> "
                       (if (= name "")
-                        (strcat "mặc định BHT_KH_" group)
+                        (strcat "mặc định " (bht:kh-default-block group))
                         (strcat name " | hệ số đơn vị " (bht:meta (bht:kh-custom-factor-key group) "1")
                                 " | nguồn " (bht:meta (bht:kh-custom-src-key group) ""))))))
     (T
@@ -4433,9 +4521,9 @@
                            (bht:pv p 'src))
                      rows)))
   (setq res (cons (cons 'points (bht:write-csv (strcat folder prefix "DIEM_RTK.csv")
-    '("survey_point_id" "dataset_id" "dong_nguon" "ten_diem" "northing_goc" "easting_goc" "z_goc" "mo_ta_goc"
-      "phan_loai_goi_y" "object_ids" "route_id" "ly_trinh_m" "ly_trinh_km" "offset_m" "phia_so_voi_tuyen"
-      "trang_thai_km" "doan_ung_vien_theo_km" "file_nguon")
+    '("ID điểm khảo sát" "Mã bộ dữ liệu" "Dòng nguồn" "Tên điểm" "Tọa độ Bắc gốc" "Tọa độ Đông gốc" "Cao độ gốc" "Mô tả gốc"
+      "Phân loại gợi ý" "ID hồ sơ" "ID tuyến" "Lý trình (m)" "Lý trình Km" "Độ lệch (m)" "Phía so với tuyến"
+      "Trạng thái lý trình" "Đoạn ứng viên theo Km" "Tệp nguồn")
     (reverse rows))) res))
   ;; 2. Doi tuong
   (setq rows nil objs nil)
@@ -4459,11 +4547,11 @@
                            (bht:get rec "ghi_chu") (bht:get rec "tao_luc") (bht:get rec "sua_luc"))
                      rows)))
   (setq res (cons (cons 'objects (bht:write-csv (strcat folder prefix "DOI_TUONG.csv")
-    '("object_id" "nhom" "nhom_ten" "ma_hieu" "loai_ma" "mo_ta" "so_tru" "so_mat_bien" "ma_cac_mat"
-      "tinh_trang" "trang_thai_kiem_tra" "phia_duong" "so_diem_rtk" "survey_point_ids" "vi_tri_e_tb" "vi_tri_n_tb"
-      "route_id" "ly_trinh_m" "ly_trinh_km" "offset_m" "phia_so_voi_tuyen" "trang_thai_km" "nguon_km"
-      "package_id" "package_name" "segment_id" "phuong_phap_gan_doan" "doan_ung_vien"
-      "so_anh_xac_nhan" "photo_ids" "file_anh_khac" "ghi_chu" "tao_luc" "sua_luc")
+    '("ID hồ sơ" "Mã nhóm" "Tên nhóm" "Mã hiệu" "Loại mã" "Mô tả" "Số trụ/chân" "Số mặt biển" "Mã các mặt"
+      "Tình trạng" "Trạng thái kiểm tra" "Phía đường" "Số điểm RTK" "ID điểm khảo sát" "Vị trí Đông trung bình" "Vị trí Bắc trung bình"
+      "ID tuyến" "Lý trình (m)" "Lý trình Km" "Độ lệch (m)" "Phía so với tuyến" "Trạng thái lý trình" "Nguồn lý trình"
+      "ID gói thầu" "Tên gói thầu" "ID đoạn" "Phương pháp gán đoạn" "Đoạn ứng viên"
+      "Số ảnh xác nhận" "ID ảnh" "Tệp ảnh khác" "Ghi chú" "Tạo lúc" "Sửa lúc")
     (reverse rows))) res))
   ;; 3. Anh
   (setq rows nil)
@@ -4476,8 +4564,8 @@
                            (bht:get rec "antifake") (bht:get rec "dia_chi"))
                      rows)))
   (setq res (cons (cons 'photos (bht:write-csv (strcat folder prefix "ANH.csv")
-    '("photo_id" "ten_placemark" "thoi_gian_chup" "longitude" "latitude" "gps_hop_le" "e_vi_tri_chup" "n_vi_tri_chup"
-      "he_toa_do_tinh" "trang_thai_ghep" "de_xuat" "kc_gan_nhat_m" "object_ids_xac_nhan" "duong_dan" "antifake" "dia_chi")
+    '("ID ảnh" "Tên điểm ảnh" "Thời gian chụp" "Kinh độ" "Vĩ độ" "GPS hợp lệ" "Tọa độ Đông vị trí chụp" "Tọa độ Bắc vị trí chụp"
+      "Hệ tọa độ tính" "Trạng thái ghép" "Đề xuất" "Khoảng cách gần nhất (m)" "ID hồ sơ xác nhận" "Đường dẫn" "Chống giả mạo" "Địa chỉ")
     (reverse rows))) res))
   ;; 4. Tong hop theo goi / doan / nhom - moi doi tuong dem DUNG MOT lan
   (setq groups nil)
@@ -4513,9 +4601,9 @@
           sums (mapcar '+ sums (cdr g))))
   (setq rows (cons (append (list "TONG" "" "" "" "" "" "Tất cả đối tượng") (mapcar 'itoa sums)) rows))
   (setq res (cons (cons 'summary (bht:write-csv (strcat folder prefix "TONG_HOP.csv")
-    '("package_id" "package_name" "segment_id_hoac_trang_thai" "pham_vi_km" "phia" "nhom" "nhom_ten"
-      "so_doi_tuong" "so_tru" "so_mat_bien" "so_dt_chua_ro_so_tru" "so_dt_chua_ro_so_mat"
-      "so_diem_rtk" "so_anh_xac_nhan" "so_dt_chua_chot")
+    '("ID gói thầu" "Tên gói thầu" "ID đoạn hoặc trạng thái" "Phạm vi Km" "Phía" "Mã nhóm" "Tên nhóm"
+      "Số đối tượng" "Số trụ/chân" "Số mặt biển" "Số đối tượng chưa rõ số trụ" "Số đối tượng chưa rõ số mặt"
+      "Số điểm RTK" "Số ảnh xác nhận" "Số đối tượng chưa chốt")
     (reverse rows))) res))
   (setq res (cons (cons 'total-objects (car sums)) res))
   (bht:log (strcat "Xuất CSV vào " folder))
@@ -5362,7 +5450,7 @@
 )
 
 ;;; ----------------------------------------------------------------------
-;;; 0.4.2: API cho plugin .NET (BHT.Bridge / BHT.Palette)
+;;; 0.4.3: API cho plugin .NET (BHT.Bridge / BHT.Palette)
 ;;;  - Lisp la noi DUY NHAT chua thuat toan nhan / ky hieu / ky hieu anh /
 ;;;    kiem tra / thu tu hien thi; plugin goi cac ham duoi day, KHONG viet lai.
 ;;;  - Moi ham tra ve DANH SACH CHUOI: ("OK" ...) hoac ("LOI" "ly do").
@@ -5394,6 +5482,15 @@
 
 (defun bht:api-version ()
   (list "OK" *bht-version* *bht-api-level* *bht-build*)
+)
+
+;; Lay cac thong bao cua lenh tuong tac de hien ngay trong Palette.
+;; DRAIN/CLEAR: tra ve theo dung thu tu roi xoa bo dem; PEEK: chi doc.
+(defun bht:api-messages (mode / out)
+  (setq out (reverse *bht-screen-messages*))
+  (if (member (strcase (bht:str mode)) '("DRAIN" "CLEAR"))
+    (setq *bht-screen-messages* nil))
+  (cons "OK" out)
 )
 
 ;; Thong tin giong BHTINFO (theo handle thuc the / ID diem / ID ho so / ma anh).
@@ -5491,7 +5588,7 @@
 )
 
 (setq *bht-api-functions*
-  '(bht:api-version bht:api-info-handle bht:api-info-point bht:api-info-object bht:api-info-photo
+  '(bht:api-version bht:api-messages bht:api-info-handle bht:api-info-point bht:api-info-object bht:api-info-photo
     bht:api-photo-path bht:api-symbol-sync bht:api-label-sync bht:api-point-style bht:api-photo-sync bht:api-photo-stats
     bht:api-check bht:api-draworder))
 
@@ -5525,7 +5622,7 @@
     (bht:msg "BHT: Palette đã sẵn sàng. Gõ BTH hoặc BHT để mở bảng.")
     (progn
       (bht:msg "BHT: không nạp được Palette.")
-      (bht:msg "  Kiểm tra BHT.Palette.dll, BHT.Bridge.dll và BHT.Core.dll nằm cạnh BHT-0.4.2.lsp.")
+      (bht:msg "  Kiểm tra BHT.Palette.dll, BHT.Bridge.dll và BHT.Core.dll nằm cạnh BHT-0.4.3.lsp.")
       (bht:msg "  Có thể dùng bảng dự phòng bằng lệnh BHTDCL.")))
   (princ)
 )

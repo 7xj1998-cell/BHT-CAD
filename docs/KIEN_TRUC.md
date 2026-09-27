@@ -1,7 +1,7 @@
-# BHT 0.4.2 — KIẾN TRÚC
+# BHT 0.4.3 — KIẾN TRÚC
 
 ```
-BHT-0.4.2.lsp  (lõi Lisp: nhập dữ liệu, thuật toán nhãn / ký hiệu / ký hiệu ảnh / kiểm tra / thứ tự hiển thị)
+BHT-0.4.3.lsp  (lõi Lisp: nhập dữ liệu, thuật toán nhãn / ký hiệu / ký hiệu ảnh / kiểm tra / thứ tự hiển thị)
       ▲  bht:api-*  (vl-acad-defun, Application.Invoke)            ▲ lệnh Lisp (SendStringToExecute, fire-and-forget)
       │                                                              │
 BHT.Palette.dll  (một PaletteSet WinForms; lệnh chính BTH / BHT; tham chiếu acmgd)
@@ -37,6 +37,7 @@ BHT.Core.dll     (thuần .NET: mô hình dữ liệu, mã hóa bản ghi giốn
   `ExecutionResult`, không phải Task); ngoại lệ bắt **bên trong** callback; nếu đang ở ngữ cảnh lệnh thì chạy trực tiếp.
 * `RunLisp` — `Application.Invoke` gọi `bht:api-*`; không có kết quả = LỖI.
 * `SendCommand` — `SendStringToExecute` chỉ là gửi (fire-and-forget); `CommandWatcher` xác nhận qua
-  CommandEnded / CommandCancelled / CommandFailed / LispEnded / LispCancelled rồi **đọc lại dữ liệu**; gửi ≠ thành công.
+  CommandEnded / CommandCancelled / CommandFailed / LispEnded / LispCancelled, đọc lại dữ liệu và lấy bộ đệm
+  `bht:api-messages` để hiện kết quả ngay trong Palette; gửi ≠ thành công.
 * Palette: `ImpliedSelectionChanged` có cờ chống đệ quy + hẹn giờ 300 ms (debounce); `DocumentActivated` /
   `DocumentToBeDestroyed` để gắn lại / gỡ sự kiện; bộ nhớ đệm dữ liệu bị hủy khi ObjectAppended / Modified / Erased.

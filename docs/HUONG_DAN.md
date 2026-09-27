@@ -1,27 +1,27 @@
-# BHT 0.4.2 — Hướng dẫn sử dụng
+# BHT 0.4.3 — Hướng dẫn sử dụng
 
 BHT là bộ lệnh AutoLISP quản lý điểm khảo sát RTK, hồ sơ đối tượng (biển báo, cọc tiêu, cột Km…), ảnh TimeMark (KMZ), tuyến / lý trình và xuất thống kê.
 
 - Lệnh chính: **`BTH`** hoặc **`BHT`** mở một Palette gắn bên trái AutoCAD.
-- Bản 0.4.2 gồm `BHT-0.4.2.lsp`, `BHT.Palette.dll`, `BHT.Bridge.dll` và `BHT.Core.dll`.
+- Bản 0.4.3 gồm `BHT-0.4.3.lsp`, `BHT.Palette.dll`, `BHT.Bridge.dll` và `BHT.Core.dll`.
 - `BHTDCL` mở bảng DCL dự phòng khi Palette không nạp được. DCL dùng UTF-8 BOM để hiển thị đúng tiếng Việt.
-- Định dạng dữ liệu trong bản vẽ không đổi: bản vẽ từ 0.3.2 đến 0.4.0 mở bằng 0.4.2 mà không cần chuyển đổi.
+- Định dạng dữ liệu trong bản vẽ không đổi: bản vẽ từ 0.3.2 đến 0.4.2 mở bằng 0.4.3 mà không cần chuyển đổi.
 - Mục tiêu hỗ trợ AutoCAD 2021–2024 và Civil 3D 2023 trên Windows.
 
 ## 1. Cài đặt khuyến nghị
 
 1. Đóng AutoCAD.
-2. Giải nén gói `BHT-0.4.2.zip` và chạy `INSTALL_BHT.cmd`.
+2. Giải nén gói `BHT-0.4.3.zip` và chạy `INSTALL_BHT.cmd`.
 3. Mở AutoCAD, gõ `BTH` hoặc `BHT`.
 
 AutoCAD tự nhận `BHT.bundle`; không cần `APPLOAD` hoặc `NETLOAD`. Nếu từng cài bản cũ bằng Startup Suite, hãy gỡ file Lisp cũ để tránh hai phiên bản cùng nạp.
 
 ## 1b. Cách di động bằng APPLOAD
 
-1. Đặt `BHT-0.4.2.lsp` và ba DLL trong cùng một thư mục tin cậy.
+1. Đặt `BHT-0.4.3.lsp` và ba DLL trong cùng một thư mục tin cậy.
 2. Kiểm tra **LISPSYS = 1**. Nếu phải đổi từ 0 sang 1, khởi động lại AutoCAD.
-3. Gõ `APPLOAD`, chọn duy nhất `BHT-0.4.2.lsp`. Lisp tự nạp DLL cạnh nó.
-4. Khi dòng lệnh báo `BHT 0.4.2 đã nạp thành công`, gõ `BTH` hoặc `BHT`.
+3. Gõ `APPLOAD`, chọn duy nhất `BHT-0.4.3.lsp`. Lisp tự nạp DLL cạnh nó.
+4. Khi dòng lệnh báo `BHT 0.4.3 đã nạp thành công`, gõ `BTH` hoặc `BHT`.
 
 Nếu Palette không nạp được, gõ `BHTLOAD` để thử lại và đọc lỗi tại dòng lệnh. Bạn vẫn có thể dùng `BHTDCL` trong lúc xử lý DLL.
 
@@ -62,7 +62,16 @@ vẽ (dictionary BHT_V02 / XData) — palette chỉ là giao diện; đóng pale
 | Khác | Chẩn đoán | `BHTDIAG`, `BHTTEST`, `BHTHELP` |
 | Bảo trì dữ liệu cũ | Chỉ dùng cho bản vẽ cũ | `BHTNANGCAP` (dữ liệu BHT 0.1), **`BHTVEMODEL`** (thực thể BHT lỡ tạo trong Layout) |
 
-## 3. Thay đổi trong 0.4.2
+## 3. Thay đổi trong 0.4.3
+
+- Palette dùng bảng màu xanh dễ đọc, mở mặc định bên trái rộng 430 px và không còn hàng gợi ý rời bị cắt chữ.
+- Kết quả của các lệnh Lisp được đưa vào vùng **Thông báo** nhiều dòng ở cuối Palette.
+- CSV xuất ra dùng UTF-8 BOM và tiêu đề tiếng Việt có dấu.
+- Nhãn ký hiệu dùng tên nghiệp vụ, ví dụ `Cọc tiêu Km 48+500`; ID nội bộ chỉ còn trong dữ liệu XData.
+- Block mặc định của **Cọc tiêu** và **Cột Km** được vẽ lại theo mẫu hiện trường. Biển báo giữ nguyên để chờ mẫu.
+- Bộ cài từ chối chạy khi còn AutoCAD đang mở, tránh DLL cũ và Lisp mới chạy lẫn phiên bản.
+
+### Các chức năng kế thừa từ 0.4.2
 
 ### Điểm RTK và bố trí nhãn
 
@@ -85,7 +94,7 @@ vẽ (dictionary BHT_V02 / XData) — palette chỉ là giao diện; đóng pale
 3. Chạy `BHTKYHIEU` để tạo/cập nhật ký hiệu. BHT giữ hình học nguồn và tự áp dụng hệ số đơn vị của DWG.
 4. Chọn `M` trong `BHTBLOCK` để nhóm đó trở lại ký hiệu mặc định; chọn `X` để xem cấu hình hiện tại.
 
-Mỗi nhóm dùng một định nghĩa `BHT_USER_<NHOM>` được lưu trong DWG hiện hành. Tệp nguồn không bị sửa. Nhãn phía trên block có dạng `object_id | mã hiệu`, nên ID luôn nhìn thấy; mã hiệu rỗng thì chỉ hiện ID.
+Mỗi nhóm dùng một định nghĩa `BHT_USER_<NHOM>` được lưu trong DWG hiện hành. Tệp nguồn không bị sửa. Nhãn phía trên block dùng tên nghiệp vụ và mã hiệu/lý trình, ví dụ `Cọc tiêu Km 48+500`; ID hồ sơ được giữ trong XData để tra cứu nhưng không in lên bản vẽ.
 
 ## 4. Lệnh mới / thay đổi từ 0.3.3
 
@@ -288,4 +297,4 @@ Các lệnh và bí danh cũ vẫn dùng được.
 
 - Luôn làm việc trên **bản sao** bản vẽ.
 - Ảnh GPS 0,0 (`BOT19-P-000204`, `-000205` trong KMZ mẫu) được giữ nhưng không có ký hiệu. Ghép thủ công bằng `BHTGANANH` hoặc `BHTXEMANH` > `G`.
-- Kết quả kiểm thử của bản này nằm ở `TEST_REPORT_0.4.2.md`.
+- Kết quả kiểm thử của bản này nằm ở `TEST_REPORT_0.4.3.md`.

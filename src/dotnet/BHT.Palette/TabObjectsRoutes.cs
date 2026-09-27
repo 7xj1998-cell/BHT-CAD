@@ -18,7 +18,7 @@ namespace BHT.Palette
         private ComboBox _oGroup, _oCodeType, _oSide;
         private CheckBox _oChecked, _oAllowShared;
         private ListBox _oPoints, _oPhotos;
-        private Label _oBasis, _oMode;
+        private Label _oMode;
         private bool _oIsNew;
 
         private TabPage BuildObjectsTab()
@@ -37,7 +37,6 @@ namespace BHT.Palette
             _oId = new TextBox { Dock = DockStyle.Fill };
             _oGroup = new ComboBox { Dock = DockStyle.Fill, DropDownStyle = ComboBoxStyle.DropDownList };
             foreach (var g in Groups.All) _oGroup.Items.Add(g[1] + " - " + g[2]);
-            _oBasis = new Label { AutoSize = true, MaximumSize = new Size(300, 0), ForeColor = Color.DimGray };
             _oCode = new TextBox { Dock = DockStyle.Fill };
             _oCodeType = new ComboBox { Dock = DockStyle.Fill, DropDownStyle = ComboBoxStyle.DropDownList };
             _oCodeType.Items.AddRange(new object[] { "CHUA_XAC_DINH", "QCVN", "NOI_BO" });
@@ -81,7 +80,7 @@ namespace BHT.Palette
             _oInfo = new TextBox { Multiline = true, ReadOnly = true, ScrollBars = ScrollBars.Vertical, Dock = DockStyle.Fill, Height = 65, Font = new Font("Consolas", 8.5f) };
             Action<string, Control> row = (t, c) => { form.Controls.Add(new Label { Text = t, AutoSize = true, Padding = new Padding(0, 5, 0, 0) }); form.Controls.Add(c); };
             form.Controls.Add(new Label()); form.Controls.Add(_oMode);
-            row("ID", _oId); row("Nhóm", _oGroup); form.Controls.Add(new Label()); form.Controls.Add(_oBasis);
+            row("ID", _oId); row("Nhóm", _oGroup);
             row("Mã hiệu", _oCode); row("Loại mã", _oCodeType); row("Mô tả", _oDesc);
             row("Số trụ/chân", _oPoles); row("Số mặt biển", _oFaces); row("Mã các mặt", _oFaceCodes);
             row("Tình trạng", _oCond); row("Phía đường", _oSide); form.Controls.Add(new Label()); form.Controls.Add(_oChecked);
@@ -145,7 +144,6 @@ namespace BHT.Palette
             _oMode.Text = "HỒ SƠ MỚI (chưa lưu)";
             _oId.Text = ""; _oId.ReadOnly = false;
             _oGroup.SelectedIndex = Groups.All.Length - 1;
-            _oBasis.Text = "";
             _oCode.Text = ""; _oCodeType.SelectedIndex = 0; _oDesc.Text = ""; _oPoles.Text = ""; _oFaces.Text = ""; _oFaceCodes.Text = "";
             _oCond.Text = ""; _oSide.SelectedIndex = 0; _oChecked.Checked = false; _oNote.Text = "";
             _oPoints.Items.Clear(); _oPhotos.Items.Clear();
@@ -169,7 +167,6 @@ namespace BHT.Palette
             _oMode.Text = "SỬA HỒ SƠ " + oid.ToUpperInvariant();
             _oId.Text = oid.ToUpperInvariant(); _oId.ReadOnly = true;
             SelectCombo(_oGroup, r.Get(ObjFields.Group));
-            _oBasis.Text = "";
             _oCode.Text = r.Get(ObjFields.Code); SelectCombo(_oCodeType, r.Get(ObjFields.CodeType) == "" ? "CHUA_XAC_DINH" : r.Get(ObjFields.CodeType));
             _oDesc.Text = r.Get(ObjFields.Desc); _oPoles.Text = r.Get(ObjFields.PoleCount); _oFaces.Text = r.Get(ObjFields.FaceCount);
             _oFaceCodes.Text = string.Join("; ", r.GetAll(ObjFields.Face).ToArray());
@@ -287,9 +284,8 @@ namespace BHT.Palette
             }
             string basis;
             SelectCombo(_oGroup, Groups.Suggest(pts, out basis));
-            _oBasis.Text = "Gợi ý nhóm: " + basis;
             if (pts.Count == 1) _oDesc.Text = pts[0].Description;
-            _oMode.Text = "HỒ SƠ MỚI từ " + ids.Count + " điểm - kiểm tra nhóm rồi bấm Lưu";
+            _oMode.Text = "HỒ SƠ MỚI từ " + ids.Count + " điểm — gợi ý: " + basis + ". Kiểm tra nhóm rồi bấm Lưu.";
             Status("Soạn hồ sơ mới. Nhóm chỉ là GỢI Ý từ mô tả gốc - hãy xác nhận.");
         }
 

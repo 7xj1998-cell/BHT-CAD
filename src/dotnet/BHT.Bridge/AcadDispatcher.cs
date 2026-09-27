@@ -147,7 +147,7 @@ namespace BHT.Bridge
             {
                 if (watcher != null) watcher.Expect(doc, command);
                 doc.SendStringToExecute("_" + command + " ", true, false, true);
-                return OpResult.Success("đã GỬI lệnh " + command + " - đang chờ AutoCAD thực hiện (xem dòng lệnh)");
+                return OpResult.Success("đã gửi lệnh " + command + " - đang chờ AutoCAD thực hiện");
             }
             catch (Exception ex) { return OpResult.Fail(command + ": " + ex.Message); }
         }

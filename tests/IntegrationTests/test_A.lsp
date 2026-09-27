@@ -1,13 +1,13 @@
 ;;; BHT 0.3.3 - phien A: ban ve moi (BAN SAO sample-route.dwg). Nhan tu dong / tay,
 ;;; ho so doi tuong, ky hieu theo ID, thu tu hien thi, anh, nhap trung dinh dang.
-(load "C:/Users/Le Bao/BHT_TEST_V042/t_common.lsp")
+(load "C:/Users/Le Bao/BHT_TEST_V043/t_common.lsp")
 (tbegin "A")
 (setq *D* (strcat *T-DIR* "data/"))
 (setq *CSV* (strcat *D* "survey.csv"))
 (setq *PH* "C:/Users/Le Bao/BHT_TEST_V032/anh/kmz_out/BHT_PHOTO.tsv")
 (setq *MOVED* (strcat *T-DIR* "anh_da_doi/kmz_out"))
 (setq e (tload))
-(tchk "T00" "nạp BHT-0.4.2" (and (null e) (= *bht-version* "0.4.2")) (if e e *bht-version*))
+(tchk "T00" "nạp BHT-0.4.3" (and (null e) (= *bht-version* "0.4.3")) (if e e *bht-version*))
 (setq *bht-no-launch* T)
 
 ;; ---------- thuc the NGOAI BHT ----------
@@ -15,7 +15,7 @@
 (setq F1 (entmakex '((0 . "TEXT") (8 . "BHT_RTK_TEN") (10 575100.0 1180100.0 0.0) (40 . 1.0) (1 . "KHONG PHAI NHAN BHT"))))
 (setq F2 (entmakex '((0 . "TEXT") (8 . "BHT_NHAN") (10 575110.0 1180100.0 0.0) (40 . 1.0) (1 . "OBJ-T1")
                      (-3 ("APP_KHAC" (1000 . "OBJ-T1"))))))
-(setq F3 (entmakex '((0 . "INSERT") (2 . "BHT_KH_COC_TIEU") (8 . "BHT_KYHIEU") (10 575120.0 1180100.0 0.0))))
+(setq F3 (entmakex '((0 . "INSERT") (2 . "BHT_KH_COC_TIEU_V043") (8 . "BHT_KYHIEU") (10 575120.0 1180100.0 0.0))))
 (setq SNAP (t-snapshot))
 (tlog (strcat "   thực thể ngoài BHT chụp lại: " (itoa (length SNAP))))
 
@@ -179,9 +179,26 @@
 (setq r (bht:symbol-refresh '("OBJ-T1")) d1b (entget (car (t-kh-ins-of "OBJ-T1"))) ktb (entget kt))
 (tchk "K02" "sửa hồ sơ -> cập nhật ký hiệu: giữ vị trí/góc/tỷ lệ người dùng đặt, nhãn đổi chữ nhưng giữ chỗ"
       (and (equal (cdr (assoc 10 d1b)) '(575400.0 1187000.0 0.0) 1e-9) (equal (cdr (assoc 50 d1b)) 0.5 1e-9) (equal (cdr (assoc 41 d1b)) 2.0 1e-9)
-           (= (cadr (bht:xget (car (t-kh-ins-of "OBJ-T1")) "BHT_KH")) "TAY") (= (cdr (assoc 1 ktb)) "OBJ-T1 | CT-01")
+           (= (cadr (bht:xget (car (t-kh-ins-of "OBJ-T1")) "BHT_KH")) "TAY") (= (cdr (assoc 1 ktb)) "Cọc tiêu CT-01")
            (equal (cdr (assoc 10 ktb)) ktp 1e-9) (= (length (t-kh-ins-of "OBJ-T1")) 1))
       (list (cdr (assoc 10 d1b)) (cdr (assoc 1 ktb)) r))
+(setq rec (bht:set (bht:obj-read "OBJ-T1") "ma_hieu" "COC_TIEU_KM48+500"))
+(tchk "K02a" "nhãn ký hiệu chỉ hiện tên nghiệp vụ và Km, không lộ object_id"
+      (= (bht:kh-label "OBJ-T1" rec) "Cọc tiêu Km 48+500") (bht:kh-label "OBJ-T1" rec))
+(bht:symbol-blocks)
+(defun t-block-data (name / e d out done)
+  (setq e (tblobjname "BLOCK" name) out nil done nil)
+  (while (and e (not done) (setq e (entnext e)))
+    (setq d (entget e))
+    (if (= (cdr (assoc 0 d)) "ENDBLK") (setq done T) (setq out (cons d out))))
+  (reverse out))
+(setq bc (t-block-data "BHT_KH_COC_TIEU_V043") bk (t-block-data "BHT_KH_COT_KM_V043"))
+(tchk "K02b" "block mặc định 0.4.3 của Cọc tiêu và Cột Km đã được tạo"
+      (and (>= (length bc) 10) (>= (length bk) 14)
+           (vl-some '(lambda (d) (and (= (cdr (assoc 0 d)) "SOLID") (= (cdr (assoc 62 d)) 1))) bc)
+           (vl-some '(lambda (d) (= (cdr (assoc 62 d)) 3)) bc)
+           (vl-some '(lambda (d) (and (= (cdr (assoc 0 d)) "TEXT") (= (cdr (assoc 1 d)) "KM"))) bk))
+      (list (length bc) (length bk)))
 (setq k4 (car (t-kh-ins-of "OBJ-T4")) p4 (cdr (assoc 10 (entget k4))))
 (bht:obj-add-points "OBJ-T4" '("BOT19-R-000042"))
 (setq r (bht:symbol-refresh '("OBJ-T4")) p4b (cdr (assoc 10 (entget k4)))

@@ -31,7 +31,7 @@ namespace BHT.Palette
         private string _lispMsg = "chưa kiểm tra";
 
         private readonly TabControl _tabs = new TabControl();
-        private readonly Label _status = new Label();
+        private readonly TextBox _status = new TextBox();
         private readonly Label _docLabel = new Label();
 
         public BhtPaletteControl()
@@ -40,8 +40,9 @@ namespace BHT.Palette
             Dock = DockStyle.Fill;
             _docLabel.Dock = DockStyle.Top; _docLabel.Height = 20; _docLabel.Padding = new Padding(4, 3, 0, 0);
             _docLabel.BackColor = Color.FromArgb(45, 45, 48); _docLabel.ForeColor = Color.White;
-            _status.Dock = DockStyle.Bottom; _status.Height = 38; _status.Padding = new Padding(4, 2, 4, 2);
-            _status.BorderStyle = BorderStyle.FixedSingle; _status.AutoEllipsis = true;
+            _status.Dock = DockStyle.Bottom; _status.Height = 72; _status.Margin = new Padding(4);
+            _status.Multiline = true; _status.ReadOnly = true; _status.ScrollBars = ScrollBars.Vertical;
+            _status.BorderStyle = BorderStyle.FixedSingle; _status.TabStop = false;
             _tabs.Dock = DockStyle.Fill; _tabs.Multiline = false;
             _tabs.TabPages.Add(BuildOverviewTab());
             _tabs.TabPages.Add(BuildPointsTab());
@@ -51,6 +52,7 @@ namespace BHT.Palette
             Controls.Add(_tabs);
             Controls.Add(_docLabel);
             Controls.Add(_status);
+            PaletteTheme.Apply(this, _tabs, _docLabel, _status);
             _selTimer.Interval = 300;
             _selTimer.Tick += OnSelTimer;
             _probeTimer.Interval = 300;
@@ -119,6 +121,11 @@ namespace BHT.Palette
 
         public void RefreshAll()
         {
+            RefreshAll(true);
+        }
+
+        private void RefreshAll(bool reportStatus)
+        {
             if (_svc == null) return;
             try
             {
@@ -126,7 +133,7 @@ namespace BHT.Palette
                 RefreshPoints();
                 RefreshPhotos();
                 RefreshObjects();
-                Status("Đã đọc dữ liệu từ bản vẽ.");
+                if (reportStatus) Status("Đã đọc dữ liệu từ bản vẽ.");
             }
             catch (Exception ex) { Status("Lỗi đọc dữ liệu: " + ex.Message); }
         }
@@ -145,7 +152,10 @@ namespace BHT.Palette
             AcadDispatcher.RunLisp("bht:api-version", new string[0], r => UI(() =>
             {
                 _lispOk = r.Ok && r.Values.Count > 1 && BhtVersion.LispCompatible(r.Values[0], r.Values[1]);
-                _lispMsg = _lispOk ? "BHT Lisp " + r.Values[0] + " đã nạp" : "Lisp BHT 0.4.2 CHƯA nạp - chức năng ký hiệu/nhãn/kiểm tra tạm khóa";
+                string loaded = r.Values.Count > 0 ? r.Values[0] : "không rõ";
+                _lispMsg = _lispOk
+                    ? "BHT Lisp " + loaded + " đã nạp"
+                    : "Plugin " + BhtVersion.Version + " / Lisp " + loaded + " không cùng phiên bản. Đóng tất cả AutoCAD rồi cài lại BHT " + BhtVersion.Version + ".";
                 Status(_lispMsg);
                 RefreshOverview();
             }));
@@ -153,7 +163,13 @@ namespace BHT.Palette
 
         // ------------------------------------------------------------------ tien ich
 
-        protected void Status(string s) { _status.Text = s; }
+        protected void Status(string s)
+        {
+            _status.Text = s ?? "";
+            _status.BackColor = PaletteTheme.StatusBack(s);
+            _status.SelectionStart = _status.TextLength;
+            _status.ScrollToCaret();
+        }
 
         /// <summary>Dua viec ve luong giao dien, sau khi callback AutoCAD ket thuc (tranh tai nhap).</summary>
         protected void UI(Action a)
@@ -175,7 +191,7 @@ namespace BHT.Palette
 
         private bool NeedLisp()
         {
-            if (!_lispOk) { Status("Lõi Lisp BHT 0.4.2 chưa sẵn sàng (" + _lispMsg + "). Gõ BHTLOAD hoặc nạp lại bộ BHT."); ProbeLisp(); return false; }
+            if (!_lispOk) { Status("Lõi Lisp BHT " + BhtVersion.Version + " chưa sẵn sàng. " + _lispMsg); ProbeLisp(); return false; }
             return true;
         }
 
@@ -201,23 +217,38 @@ namespace BHT.Palette
                 if (r.Ok) Status(label + ": xong. " + string.Join("; ", r.Values.Take(8).ToArray()));
                 else Status(label + ": LỖI - " + r.Error);
                 if (after != null) after(r);
-                RefreshAll();
+                RefreshAll(false);
             }));
         }
 
         private void SendCmd(string cmd)
         {
-            if (!NeedDoc()) return;
-            var r = AcadDispatcher.SendCommand(_doc, cmd, _watcher);
-            Status(r.Message);
+            if (!NeedDoc() || !NeedLisp()) return;
+            Action send = () =>
+            {
+                var r = AcadDispatcher.SendCommand(_doc, cmd, _watcher);
+                Status(r.Ok ? "Đang chạy " + cmd + "… Kết quả sẽ hiện tại đây." : r.ToString());
+            };
+            // Bo cac dong thong bao con lai tu lenh truoc, roi moi gui lenh moi.
+            AcadDispatcher.RunLisp("bht:api-messages", new[] { "DRAIN" }, r => UI(send));
         }
 
         private void OnCommandFinished(string cmd, string state)
         {
             UI(() =>
             {
-                Status("Lệnh " + cmd + (state == "KET_THUC" ? " đã kết thúc" : state == "HUY" ? " đã bị hủy" : " lỗi") + " - đã đọc lại dữ liệu bản vẽ (xem kết quả ở dòng lệnh).");
-                RefreshAll();
+                if (!_lispOk)
+                {
+                    RefreshAll(false);
+                    Status("Lệnh " + cmd + (state == "KET_THUC" ? " đã kết thúc." : state == "HUY" ? " đã bị hủy." : " bị lỗi."));
+                    return;
+                }
+                AcadDispatcher.RunLisp("bht:api-messages", new[] { "DRAIN" }, r => UI(() =>
+                {
+                    RefreshAll(false);
+                    string head = "Lệnh " + cmd + (state == "KET_THUC" ? " đã kết thúc." : state == "HUY" ? " đã bị hủy." : " bị lỗi.");
+                    Status(r.Ok && r.Values.Count > 0 ? head + "\r\n" + string.Join("\r\n", r.Values.ToArray()) : head);
+                }));
             });
         }
 
