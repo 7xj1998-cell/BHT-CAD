@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ApplicationPackage
+  SchemaVersion="1.0"
+  AppVersion="0.4.2"
+  ProductCode="{23E89180-4C3E-4BC6-8F21-0841E4A10402}"
+  UpgradeCode="{712C995D-E8C7-4699-A93F-B9B26C6BEB94}"
+  Name="BHT"
+  Description="Quản lý hiện trạng tuyến trong AutoCAD"
+  Author="BHT">
+  <CompanyDetails Name="BHT" />
+  <Components>
+    <RuntimeRequirements OS="Win64" Platform="AutoCAD*" SeriesMin="R24.0" SeriesMax="R24.3" />
+
+    <!-- DLL được nạp khi gọi một trong các lệnh. Lisp phía dưới tự NETLOAD khi APPLOAD. -->
+    <ComponentEntry
+      AppName="BHT.Palette"
+      AppDescription="Palette quản lý hiện trạng tuyến"
+      ModuleName="./Contents/Windows/BHT.Palette.dll">
+      <LoadReasons LoadOnCommandInvocation="True" LoadOnAutoCADStartup="False" LoadOnAppearance="False" />
+      <Commands GroupName="BHT">
+        <Command Global="BTH" Local="BTH" />
+        <Command Global="BHT" Local="BHT" />
+        <Command Global="BHTSHOW" Local="BHTSHOW" />
+        <Command Global="BHTPALETTE" Local="BHTPALETTE" />
+      </Commands>
+    </ComponentEntry>
+
+    <!-- ComponentEntry được AutoCAD xử lý từ dưới lên; lõi Lisp nạp theo từng DWG. -->
+    <ComponentEntry
+      AppName="BHT.Lisp"
+      AppDescription="Lõi dữ liệu và thuật toán BHT"
+      ModuleName="./Contents/Windows/BHT-0.4.2.lsp"
+      PerDocument="True">
+      <LoadReasons LoadOnAutoCADStartup="True" LoadOnAppearance="True" />
+    </ComponentEntry>
+  </Components>
+</ApplicationPackage>
