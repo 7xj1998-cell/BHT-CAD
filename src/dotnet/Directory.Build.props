@@ -1,0 +1,22 @@
+<Project>
+  <!-- Thiet lap chung cho moi du an BHT .NET -->
+  <PropertyGroup>
+    <TargetFramework>net48</TargetFramework>
+    <Platforms>x64</Platforms>
+    <PlatformTarget>x64</PlatformTarget>
+    <!-- C# 5: de ban dung duoc ca bang csc.exe cua .NET Framework (scripts/build.ps1 -UseCsc) -->
+    <LangVersion>5</LangVersion>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <Deterministic>true</Deterministic>
+    <Version>0.4.3</Version>
+    <!-- Thu muc cai AutoCAD chua acdbmgd.dll / accoremgd.dll / acmgd.dll (KHONG chep vao ma nguon) -->
+    <AcadDir Condition="'$(AcadDir)' == '' and '$(ACAD_INSTALL_DIR)' != ''">$(ACAD_INSTALL_DIR)</AcadDir>
+    <AcadDir Condition="'$(AcadDir)' == ''">D:\AutoCAD 2024</AcadDir>
+  </PropertyGroup>
+  <!-- Chi dung khi build bang dotnet SDK (vd GitHub Actions): goi tham chieu .NET Framework 4.8
+       de khong can cai .NET Framework 4.8 Developer Pack. Ban build csc.exe (scripts/build.ps1) khong dung toi. -->
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="all" />
+  </ItemGroup>
+</Project>

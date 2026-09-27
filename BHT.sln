@@ -1,0 +1,40 @@
+
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BHT.Core", "src\dotnet\BHT.Core\BHT.Core.csproj", "{4E1C0A11-0B7D-4C6E-9A40-000000000401}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BHT.Bridge", "src\dotnet\BHT.Bridge\BHT.Bridge.csproj", "{4E1C0A11-0B7D-4C6E-9A40-000000000402}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BHT.Palette", "src\dotnet\BHT.Palette\BHT.Palette.csproj", "{4E1C0A11-0B7D-4C6E-9A40-000000000403}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BHT.CoreTests", "tests\CoreTests\BHT.CoreTests.csproj", "{4E1C0A11-0B7D-4C6E-9A40-000000000404}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|x64 = Debug|x64
+		Release|x64 = Release|x64
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{4E1C0A11-0B7D-4C6E-9A40-000000000401}.Debug|x64.ActiveCfg = Debug|x64
+		{4E1C0A11-0B7D-4C6E-9A40-000000000401}.Debug|x64.Build.0 = Debug|x64
+		{4E1C0A11-0B7D-4C6E-9A40-000000000401}.Release|x64.ActiveCfg = Release|x64
+		{4E1C0A11-0B7D-4C6E-9A40-000000000401}.Release|x64.Build.0 = Release|x64
+		{4E1C0A11-0B7D-4C6E-9A40-000000000402}.Debug|x64.ActiveCfg = Debug|x64
+		{4E1C0A11-0B7D-4C6E-9A40-000000000402}.Debug|x64.Build.0 = Debug|x64
+		{4E1C0A11-0B7D-4C6E-9A40-000000000402}.Release|x64.ActiveCfg = Release|x64
+		{4E1C0A11-0B7D-4C6E-9A40-000000000402}.Release|x64.Build.0 = Release|x64
+		{4E1C0A11-0B7D-4C6E-9A40-000000000403}.Debug|x64.ActiveCfg = Debug|x64
+		{4E1C0A11-0B7D-4C6E-9A40-000000000403}.Debug|x64.Build.0 = Debug|x64
+		{4E1C0A11-0B7D-4C6E-9A40-000000000403}.Release|x64.ActiveCfg = Release|x64
+		{4E1C0A11-0B7D-4C6E-9A40-000000000403}.Release|x64.Build.0 = Release|x64
+		{4E1C0A11-0B7D-4C6E-9A40-000000000404}.Debug|x64.ActiveCfg = Debug|x64
+		{4E1C0A11-0B7D-4C6E-9A40-000000000404}.Debug|x64.Build.0 = Debug|x64
+		{4E1C0A11-0B7D-4C6E-9A40-000000000404}.Release|x64.ActiveCfg = Release|x64
+		{4E1C0A11-0B7D-4C6E-9A40-000000000404}.Release|x64.Build.0 = Release|x64
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
