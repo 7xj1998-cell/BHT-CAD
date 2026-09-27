@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Bo chay kiem thu don vi toi gian (khong NuGet): ma thoat = so FAIL. -->
+  <Import Project="..\..\src\dotnet\Directory.Build.props" />
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>BHT.CoreTests</RootNamespace>
+    <AssemblyName>BHT.CoreTests</AssemblyName>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\dotnet\BHT.Core\BHT.Core.csproj" />
+  </ItemGroup>
+</Project>
