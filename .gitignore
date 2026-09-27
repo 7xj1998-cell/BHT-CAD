@@ -1,0 +1,30 @@
+# Ket qua build
+build/
+bin/
+obj/
+*.pdb
+*.user
+*.suo
+.vs/
+# KHONG BAO GIO dua DLL cua Autodesk (hay bat ky DLL nao) vao repo
+*.dll
+*.exe
+# Du lieu khao sat / ban ve / anh that: KHONG dua vao repo
+*.dwg
+*.dwl
+*.dwl2
+*.bak
+*.sv$
+*.kmz
+*.jpg
+*.jpeg
+*.csv
+*.tsv
+data/
+# Ket qua chay kiem thu
+tests/IntegrationTests/run/
+*.console.txt
+*.scr
+BHT_LOG*
+# Goi phat hanh (nam o release/ ngoai repo)
+*.zip
