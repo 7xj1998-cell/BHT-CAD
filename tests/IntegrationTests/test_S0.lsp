@@ -1,9 +1,9 @@
-;;; BHT 0.4.1 - phien S0: nap, phien ban, BHTTEST, DCL tinh
-(load "C:/Users/Le Bao/BHT_TEST_V041/t_common.lsp")
+;;; BHT 0.4.2 - phien S0: nap, phien ban, BHTTEST, DCL tinh
+(load "C:/Users/Le Bao/BHT_TEST_V042/t_common.lsp")
 (tbegin "S0")
 (setq e (tload))
-(tchk "T00" "nạp BHT-0.4.1 (đường dẫn có dấu); *bht-version* = 0.4.1" (and (null e) (= *bht-version* "0.4.1")) (if e e (strcat *bht-version* " / " *bht-build*)))
-(tchk "T01" "thông báo APPLOAD đúng nguyên văn" (= (bht:load-message) "BHT 0.4.1 đã nạp thành công.") (bht:load-message))
+(tchk "T00" "nạp BHT-0.4.2 (đường dẫn có dấu); *bht-version* = 0.4.2" (and (null e) (= *bht-version* "0.4.2")) (if e e (strcat *bht-version* " / " *bht-build*)))
+(tchk "T01" "thông báo APPLOAD đúng nguyên văn" (= (bht:load-message) "BHT 0.4.2 đã nạp thành công.") (bht:load-message))
 (setq r (tsafe "T02" "BHTTEST" '(lambda () (bht:selftest))))
 (if r (tchk "T02" "BHTTEST tự kiểm tra hàm (0 FAIL, >= 45)" (and (= (cadr r) 0) (>= (car r) 45)) (strcat (itoa (car r)) " pass, " (itoa (cadr r)) " fail")))
 (setq bad nil keys nil)
@@ -24,7 +24,7 @@
       (strcat "nút=" (itoa (length *bht-ui-buttons*)) " lỗi=" (vl-princ-to-string bad) " thiếu=" (vl-princ-to-string unk)
               " {=" (itoa opn) " }=" (itoa cls) " sót=" (vl-princ-to-string left)))
 (setq cmds '(c:BHTSAPNHAN c:BHTNHANTUDONG c:BHTTHUTUVE c:BHTVEMODEL c:BHTKYHIEU c:BHTDOITUONG c:BHTCHENANH))
-(tchk "T04" "lệnh 0.3.3 vẫn được định nghĩa trong 0.4.1" (vl-every '(lambda (c) (eval c)) cmds) nil)
+(tchk "T04" "lệnh 0.3.3 vẫn được định nghĩa trong 0.4.2" (vl-every '(lambda (c) (eval c)) cmds) nil)
 (setq r (vl-catch-all-apply 'bht:ui-validate nil))
 (if (and (not (vl-catch-all-error-p r)) r)
   (tchk "T05" "load_dialog DCL trong Core Console" T nil)
@@ -34,9 +34,9 @@
   (if (vl-catch-all-error-p (vl-catch-all-apply c nil)) (setq bad (cons c bad))))
 (tchk "T06" "chạy lệnh không tương tác trên bản vẽ trống: BHTTEST, BHTKT, BHTTRANGTHAI, BHTHELP" (null bad) bad)
 ;; --- API cho plugin .NET, Lisp khong phu thuoc palette ---
-(tchk "T07" "12 hàm bht:api-* đăng ký vl-acad-defun (gọi được từ .NET Application.Invoke)" (= *bht-api-registered* 12) *bht-api-registered*)
+(tchk "T07" "13 hàm bht:api-* đăng ký vl-acad-defun (gọi được từ .NET Application.Invoke)" (= *bht-api-registered* 13) *bht-api-registered*)
 (setq r (bht:api-version))
-(tchk "T08" "bht:api-version = (OK 0.4.1 1 build)" (equal r (list "OK" "0.4.1" "1" *bht-build*)) r)
+(tchk "T08" "bht:api-version = (OK 0.4.2 1 build)" (equal r (list "OK" "0.4.2" "1" *bht-build*)) r)
 (setq r (bht:api-info-object "KHONG-CO"))
 (tchk "T09" "API không hỏi người dùng, trả về danh sách chuỗi; hồ sơ không có -> dòng '(không có hồ sơ)'" (and (= (car r) "OK") (vl-every '(lambda (x) (= (type x) 'STR)) r)) r)
 (setq r (bht:api-photo-path "KHONG-CO"))
@@ -47,5 +47,14 @@
       (and (not (eval 'c:BHT)) (not (eval 'c:BTH)) c:BHTDCL c:BHTLOAD) nil)
 (setq r (vl-catch-all-apply 'c:BHTLOAD nil))
 (tchk "T13" "BHTLOAD khi DLL không nằm cạnh Lisp: báo rõ, không lỗi" (not (vl-catch-all-error-p r)) nil)
+(setq r (bht:api-point-style "1"))
+(tchk "T14" "POINT mặc định là dấu X đúng tâm, kích thước tuyệt đối 1 unit; API sắp nhãn chạy được"
+      (and (= (car r) "OK") (= (getvar "PDMODE") 3) (equal (getvar "PDSIZE") 1.0 1e-9)) r)
+(setq r (vl-catch-all-apply 'bht:block-load-dwg
+                            (list (strcat *T-DIR* "run/route_src.dwg") "KHAC")))
+(tchk "T15" "nạp DWG ngoài thành block tùy chọn, giữ hệ số đổi đơn vị, không để INSERT tạm"
+      (and (not (vl-catch-all-error-p r)) r (tblsearch "BLOCK" r) (> *bht-block-load-factor* 0.0)
+           (null (ssget "_X" (list '(0 . "INSERT") (cons 2 r)))))
+      (if (vl-catch-all-error-p r) (vl-catch-all-error-message r) (list r *bht-block-load-factor*)))
 (tend "S0")
 (princ)

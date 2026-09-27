@@ -1,5 +1,5 @@
 ;;; ======================================================================
-;;; BHT-0.4.1.lsp - BHT 0.4.1 (build 2026-09-27)
+;;; BHT-0.4.2.lsp - BHT 0.4.2 (build 2026-09-27)
 ;;; Quan ly khao sat bao hieu / coc tieu / cot Km / bang va cong trinh ven
 ;;; tuyen: diem RTK, ho so doi tuong, anh TimeMark (KMZ), tuyen tham chieu,
 ;;; ly trinh, goi thau / doan tuyen, xuat CSV cho Excel.
@@ -12,10 +12,13 @@
 ;;; Muc tieu: AutoCAD 2021-2024, Civil 3D 2023 (Windows). File luu UTF-8,
 ;;; can LISPSYS = 1 (mac dinh tu AutoCAD 2021) de hien tieng Viet co dau.
 ;;;
-;;; NHAT KY THAY DOI 0.4.1 (chi tiet: CHANGELOG.md)
+;;; NHAT KY THAY DOI 0.4.2 (chi tiet: CHANGELOG.md)
 ;;;  + BTH / BHT mo mot Palette .NET duy nhat; Lisp tu nap DLL cung thu muc.
 ;;;  + DCL chi con la giao dien du phong BHTDCL, khong mo trong luong thuong.
 ;;;  + File DCL tam ghi UTF-8 BOM de AutoCAD 2024 doc dung tieng Viet.
+;;;  + POINT mac dinh dau X kich thuoc 1; bo tri nhan 8 huong x 8 ban kinh.
+;;;  + BHTBLOCK nap DWG ky hieu tuy chon theo nhom, INSBASE la tam chen.
+;;;  + Nhan ky hieu dat tren block, hien object_id truoc ma hieu.
 ;;;
 ;;; NHAT KY THAY DOI 0.4.0
 ;;;  + Ham API bht:api-* (dang ky vl-acad-defun) cho plugin .NET BHT.Palette:
@@ -64,12 +67,12 @@
 
 (vl-load-com)
 
-(setq *bht-version* "0.4.1")
+(setq *bht-version* "0.4.2")
 (setq *bht-build* "2026-09-27")
 
 ;; Luu duong dan ngay khi APPLOAD / Application Bundle nap Lisp. DLL dat canh
 ;; file Lisp de nguoi dung chi can APPLOAD mot lan, khong phai tu NETLOAD.
-(setq *bht-lsp-file* (findfile "BHT-0.4.1.lsp"))
+(setq *bht-lsp-file* (findfile "BHT-0.4.2.lsp"))
 (setq *bht-lsp-dir*
   (if *bht-lsp-file* (vl-filename-directory *bht-lsp-file*) nil))
 (setq *bht-palette-dll*
@@ -526,6 +529,28 @@
   (bht:rec-write "META" "CONFIG" (bht:set rec key value))
 )
 
+;; Kieu POINT BHT: dau X co tam trung chinh xac voi toa do DXF 10.
+;; PDSIZE duong la kich thuoc tuyet doi theo don vi ban ve (mac dinh 1 unit).
+(defun bht:point-size (/ s)
+  (setq s (bht:num (bht:meta "pt_size" "1.0")))
+  (if (and s (> s 0.0)) s 1.0)
+)
+
+(defun bht:point-style-apply (size arrange / s r app doc)
+  (setq s (if (and size (> size 0.0)) size (bht:point-size)))
+  (if (and size (> size 0.0)) (bht:meta-set "pt_size" (bht:fnum s 3)))
+  (setvar "PDMODE" 3)
+  (setvar "PDSIZE" s)
+  (setq app (vl-catch-all-apply 'vlax-get-acad-object nil)
+        doc (if (vl-catch-all-error-p app) nil
+              (vl-catch-all-apply 'vla-get-ActiveDocument (list app))))
+  (if (and doc (not (vl-catch-all-error-p doc)))
+    (vl-catch-all-apply 'vla-Regen (list doc 1))) ; acAllViewports
+  (setq r (if arrange (bht:lbl-sync-scope 'ALL) nil))
+  (list (cons 'pdmode 3) (cons 'pdsize s)
+        (cons 'labels (if r (cdr (assoc 'total r)) 0)))
+)
+
 ;;; ----------------------------------------------------------------------
 ;;; Layer / Block
 ;;; ----------------------------------------------------------------------
@@ -826,6 +851,7 @@
                                  key added same conflict dupc adopted dupfile seen tm cls old dsrec)
   (setq added 0 same 0 conflict 0 dupc 0 adopted 0 dupfile 0 seen nil tm (bht:now))
   (bht:layer *bht-pt-layer* 3)
+  (bht:point-style-apply nil nil)
   (bht:regapp "BHT_RTK") (bht:regapp "BHT_PT")
   ;; Chi muc hien co
   (setq index (bht:pt-all) cmap nil lmap nil)
@@ -1171,7 +1197,9 @@
 ;; Vat can co dinh cho bo tri nhan: moi diem RTK, ky hieu doi tuong, ky hieu anh,
 ;; nhan ky hieu doi tuong, nhan ma anh, duong dan anh. Tra ve danh sach hop.
 (defun bht:lbl-obstacles (index h / out r e d sc)
-  (setq out nil r (* 0.2 h))
+  ;; Bao tron nua kich thuoc dau X + khe ho 0.15 lan chieu cao chu.
+  ;; Nhan khong duoc che tam POINT, ke ca khi PDSIZE = 1 unit.
+  (setq out nil r (+ (/ (bht:point-size) 2.0) (* 0.15 h)))
   (foreach it index (setq out (cons (bht:box-around (bht:pv (cdr it) 'xyz) r r) out)))
   (foreach pr (bht:tagged-pairs "INSERT" "BHT_KH" 1)
     (setq d (entget (cdr pr)) sc (abs (cdr (assoc 41 d))))
@@ -1188,7 +1216,8 @@
 ;; Thu tu: ban kinh tang dan, moi ban kinh 8 huong (DB, D, DN, TB, T, TN, B, N).
 (defun bht:lbl-cands (px py w hh off h / out)
   (setq out nil)
-  (foreach g (list off (+ off (* 1.5 h)) (+ off (* 3.0 h)) (+ off (* 5.0 h)))
+  (foreach g (list off (+ off (* 1.5 h)) (+ off (* 3.0 h)) (+ off (* 5.0 h))
+                   (+ off (* 8.0 h)) (+ off (* 12.0 h)) (+ off (* 18.0 h)) (+ off (* 25.0 h)))
     (foreach dd *bht-lbl-dirs*
       (setq out (cons (list (cond ((= (car dd) 1) (+ px g)) ((= (car dd) -1) (- px g w)) (T (- px (/ w 2.0))))
                             (cond ((= (cadr dd) 1) (+ py g)) ((= (cadr dd) -1) (- py g hh)) (T (- py (/ hh 2.0)))))
@@ -1207,7 +1236,7 @@
     (setq sym (read (strcat "BHT-LB-" (itoa i))))
     (set sym nil)
     (setq lst (cons (list (cadr it) (caddr it) sym it) lst) i (1+ i)
-          rmax (max rmax (+ off (* 5.0 h) (max (nth 3 it) (nth 4 it))))))
+          rmax (max rmax (+ off (* 25.0 h) (max (nth 3 it) (nth 4 it))))))
   (setq lst (reverse lst)
         obs (bht:sort-by obs '(lambda (a b) (< (car a) (car b)))))
   (foreach b obs (setq maxow (max maxow (- (caddr b) (car b)))))
@@ -1218,7 +1247,7 @@
       (setq px (car el) py (cadr el) it (cadddr el) w (nth 3 it) hh (nth 4 it) nb nil)
       ;; khoi nhan lan can (cua diem khac) da dat
       (while (and lo (< (car (car lo)) (- px (* 2.0 rmax)))) (setq lo (cdr lo)))
-      (setq ri (+ off (* 5.0 h) (max w hh))
+      (setq ri (+ off (* 25.0 h) (max w hh))
             reach (list (- px ri) (- py ri) (+ px ri) (+ py ri)))
       (setq j lo)
       (while (and j (<= (car (car j)) (+ px (* 2.0 rmax))))
@@ -1635,6 +1664,21 @@
     (progn (bht:meta-set "nhan_an" "0") (setq r (bht:lbl-sync)) (bht:lbl-report r))
     (progn (bht:meta-set "nhan_an" "1") (bht:lbl-visibility T)
            (bht:msg "BHT: đã ẨN nhãn điểm RTK (layer tắt, không xóa). Gõ lại BHTANNHAN để hiện.")))
+  (bht:log-flush)
+  (princ)
+)
+
+;; Dat POINT thanh dau X dung tam, kich thuoc tuyet doi; tuy chon sap lai nhan.
+(defun c:BHTKIEUDIEM (/ *error* s v r)
+  (setq *error* bht:on-error
+        s (bht:num (bht:ask-string "Kích thước dấu X theo đơn vị bản vẽ" (bht:meta "pt_size" "1.0"))))
+  (if (and s (> s 0.0))
+    (progn
+      (setq v (strcase (bht:ask-string "Sắp lại toàn bộ nhãn để tránh dấu X và điểm liền kề? [C/K]" "C"))
+            r (bht:point-style-apply s (= v "C")))
+      (bht:msg (strcat "BHT: POINT = dấu X, kích thước " (bht:fnum s 3) " unit; tâm X giữ đúng tọa độ điểm."
+                       (if (= v "C") " Đã sắp lại nhãn tự động." ""))))
+    (bht:msg "BHT: kích thước phải lớn hơn 0."))
   (bht:log-flush)
   (princ)
 )
@@ -3780,15 +3824,92 @@
 (defun bht:kh-scale (/ s) (setq s (bht:num (bht:meta "kh_scale" "1"))) (if (and s (> s 0)) s 1.0))
 (defun bht:kh-h (/ s) (setq s (bht:num (bht:meta "kh_h" "1.5"))) (if (and s (> s 0)) s 1.5))
 
-(defun bht:kh-block (rec / blk)
+(defun bht:kh-custom-key (group) (strcat "kh_block_" (strcase group T)))
+(defun bht:kh-custom-src-key (group) (strcat "kh_block_src_" (strcase group T)))
+(defun bht:kh-custom-factor-key (group) (strcat "kh_block_factor_" (strcase group T)))
+
+;; Nap 1 DWG ngoai thanh 1 dinh nghia block rieng BHT_USER_<NHOM>.
+;; Chen tham chieu tam bang ActiveX roi xoa tham chieu; dinh nghia block van
+;; duoc luu trong DWG hien tai. Ban ve nguon khong bi sua.
+(defun bht:block-load-vla (tmp / app doc ms br name err)
+  (setq app (vl-catch-all-apply 'vlax-get-acad-object nil)
+        doc (if (vl-catch-all-error-p app) nil
+              (vl-catch-all-apply 'vla-get-ActiveDocument (list app))))
+  (if (or (null doc) (vl-catch-all-error-p doc))
+    'NO_ACTIVE_DOCUMENT
+    (progn
+      (setq ms (vla-get-ModelSpace doc)
+            br (vl-catch-all-apply 'vla-InsertBlock
+                 (list ms (vlax-3d-point '(0.0 0.0 0.0)) tmp 1.0 1.0 1.0 0.0)))
+      (if (vl-catch-all-error-p br)
+        (progn (setq *bht-block-load-error* (vl-catch-all-error-message br)) nil)
+        (progn
+          (setq name (vla-get-Name br)
+                *bht-block-load-factor* (abs (vla-get-XScaleFactor br))
+                err (vl-catch-all-apply 'vla-Delete (list br)))
+          (vlax-release-object br)
+          (if (vl-catch-all-error-p err)
+            (progn (setq *bht-block-load-error* (vl-catch-all-error-message err)) nil)
+            name)))))
+)
+
+(defun bht:block-load-cmd (tmp group / name err e d)
+  (setq name (strcat "BHT_USER_" group)
+        err (vl-catch-all-apply
+              '(lambda ()
+                 (vl-cmdf "_.-INSERT" (strcat name "=" tmp) '(0.0 0.0 0.0) 1.0 1.0 0.0)
+                 (entlast)) nil))
+  (cond
+    ((vl-catch-all-error-p err)
+     (setq *bht-block-load-error* (vl-catch-all-error-message err)) nil)
+    ((not (and (setq e err) (setq d (entget e)) (= (cdr (assoc 0 d)) "INSERT")))
+     (setq *bht-block-load-error* "-INSERT không tạo được tham chiếu block tạm") nil)
+    (T
+     (setq name (cdr (assoc 2 d))
+           *bht-block-load-factor* (abs (cdr (assoc 41 d))))
+     (entdel e)
+     name))
+)
+
+(defun bht:block-load-dwg (path group / tmp name)
+  (setq *bht-block-load-error* "" *bht-block-load-factor* 1.0
+        tmp (strcat (getvar "TEMPPREFIX") "BHT_USER_" group ".dwg"))
+  (if (findfile tmp) (vl-file-delete tmp))
+  (if (not (vl-file-copy path tmp))
+    (progn (setq *bht-block-load-error* "không sao chép được DWG vào thư mục tạm") nil)
+    (progn
+      (setq name (bht:block-load-vla tmp))
+      (if (= name 'NO_ACTIVE_DOCUMENT) (setq name (bht:block-load-cmd tmp group)))
+      (vl-file-delete tmp)
+      name))
+)
+
+(defun bht:kh-group-oids (group / out rec)
+  (setq out nil)
+  (foreach oid (bht:obj-ids)
+    (setq rec (bht:obj-read oid))
+    (if (= (bht:get rec "nhom") group) (setq out (cons oid out))))
+  (reverse out)
+)
+
+(defun bht:kh-block (rec / blk custom)
   (bht:symbol-blocks)
-  (setq blk (strcat "BHT_KH_" (bht:get rec "nhom")))
-  (if (tblsearch "BLOCK" blk) blk "BHT_KH_CHUA_XAC_DINH")
+  (setq custom (bht:meta (bht:kh-custom-key (bht:get rec "nhom")) "")
+        blk (strcat "BHT_KH_" (bht:get rec "nhom")))
+  (cond ((and (/= custom "") (tblsearch "BLOCK" custom)) custom)
+        ((tblsearch "BLOCK" blk) blk)
+        (T "BHT_KH_CHUA_XAC_DINH"))
+)
+
+(defun bht:kh-scale-for (rec / custom f)
+  (setq custom (bht:meta (bht:kh-custom-key (bht:get rec "nhom")) "")
+        f (bht:num (bht:meta (bht:kh-custom-factor-key (bht:get rec "nhom")) "1")))
+  (* (bht:kh-scale) (if (and (/= custom "") f (> f 0.0)) f 1.0))
 )
 
 (defun bht:kh-label (oid rec)
-  (strcat oid (if (/= (bht:get rec "ma_hieu") "") (strcat " " (bht:get rec "ma_hieu")) "")
-          (if (/= (bht:get rec "ly_trinh_km") "") (strcat " " (bht:get rec "ly_trinh_km")) ""))
+  ;; ID luon dung dau va nam tren dau block; ma bao hieu theo sau de ban ve gon.
+  (strcat oid (if (/= (bht:get rec "ma_hieu") "") (strcat " | " (bht:get rec "ma_hieu")) ""))
 )
 
 (defun bht:kh-xdata-ins (oid state pt rot sc)
@@ -3857,16 +3978,17 @@
     (setq rec (bht:obj-read oid))
     (if rec
       (progn
-        (setq pos (bht:obj-position rec index) blk (bht:kh-block rec) g (cdr (assoc oid ins)) anchor nil)
+        (setq pos (bht:obj-position rec index) blk (bht:kh-block rec) sc (bht:kh-scale-for rec)
+              g (cdr (assoc oid ins)) anchor nil)
         (foreach e2 (cdr g) (entdel e2) (setq dup (1+ dup)))
         (cond
           ((setq e (car g))
            (setq d (entget e) st (bht:kh-ins-state e pos))
            (cond
              ((and (eq st 'AUTO) pos)
-              (setq nd (bht:dxf-put (bht:dxf-put (bht:dxf-put (bht:dxf-put (bht:dxf-put d 10 pos) 41 s) 42 s) 43 s) 50 0.0)
+               (setq nd (bht:dxf-put (bht:dxf-put (bht:dxf-put (bht:dxf-put (bht:dxf-put d 10 pos) 41 sc) 42 sc) 43 sc) 50 0.0)
                     nd (bht:dxf-put (bht:dxf-put nd 2 blk) 8 "BHT_KYHIEU")
-                    nx (bht:kh-xdata-ins oid "TU_DONG" pos 0.0 s)))
+                    nx (bht:kh-xdata-ins oid "TU_DONG" pos 0.0 sc)))
              ((eq st 'AUTO)
               ;; ho so khong con diem hop le: giu ky hieu tai cho
               (setq nopos (1+ nopos) nd (bht:dxf-put d 2 blk)
@@ -3879,18 +4001,18 @@
              (progn (entmod (append nd (list nx))) (entupd e) (setq updated (1+ updated))))
            (setq d (entget e) anchor (list (cdr (assoc 10 d)) (abs (cdr (assoc 41 d))))))
           ((and pos create)
-           (setq e (bht:insert blk pos "BHT_KYHIEU" s))
+            (setq e (bht:insert blk pos "BHT_KYHIEU" sc))
            (if e
              (progn
-               (entmod (append (entget e) (list (bht:kh-xdata-ins oid "TU_DONG" pos 0.0 s))))
+                (entmod (append (entget e) (list (bht:kh-xdata-ins oid "TU_DONG" pos 0.0 sc))))
                (entupd e)
-               (setq created (1+ created) anchor (list pos s)))))
+                (setq created (1+ created) anchor (list pos sc)))))
           ((null pos) (setq nopos (1+ nopos))))
         ;; nhan ky hieu (theo vi tri ky hieu thuc te)
         (if anchor
           (progn
             (setq lbl (bht:kh-label oid rec) sc (cadr anchor)
-                  lpos (list (+ (car (car anchor)) (* 1.5 sc)) (+ (cadr (car anchor)) (* 1.0 sc)) (caddr (car anchor)))
+                  lpos (list (car (car anchor)) (+ (cadr (car anchor)) (* 2.2 sc)) (caddr (car anchor)))
                   g (cdr (assoc oid txt)))
             (foreach e2 (cdr g) (entdel e2) (setq dup (1+ dup)))
             (if (setq e (car g))
@@ -3979,6 +4101,51 @@
               (bht:symbol-report (cadr r)))
        (bht:msg "BHT: không chọn được ký hiệu BHT nào.")))
     (T (bht:symbol-report (bht:symbol-sync nil))))
+  (bht:log-flush)
+  (princ)
+)
+
+;; Thu vien block tuy chon: moi file DWG la 1 block, INSBASE cua file nguon la
+;; tam chen. BHT chi luu ten dinh nghia block theo nhom; hinh hoc nguon giu nguyen.
+(defun c:BHTBLOCK (/ *error* gv group action path name oids r)
+  (setq *error* bht:on-error)
+  (bht:msg "Nhóm block: 1=Biển báo, 2=Cọc tiêu, 3=Cột Km, 4=Bảng chỉ dẫn, 5=Bảng QC, 6=Đèn, 7=Công trình, 8=Khác, 0=Chưa xác định.")
+  (setq gv (bht:ask-string "Chọn nhóm (số hoặc mã nhóm)" "1")
+        group (bht:group-code gv))
+  (if group
+    (setq action (strcase (bht:ask-string "[N=Nạp DWG tùy chọn/M=Dùng block mặc định/X=Xem cấu hình]" "N"))))
+  (cond
+    ((null group)
+     (bht:msg "BHT: nhóm không hợp lệ."))
+    ((= action "M")
+     (bht:meta-set (bht:kh-custom-key group) "")
+     (bht:meta-set (bht:kh-custom-src-key group) "")
+     (bht:meta-set (bht:kh-custom-factor-key group) "")
+     (setq oids (bht:kh-group-oids group)
+           r (if oids (bht:symbol-sync-ex oids nil) nil))
+     (bht:msg (strcat "BHT: nhóm " group " dùng lại block mặc định."
+                      (if r (strcat " Đã cập nhật " (itoa (length oids)) " hồ sơ.") ""))))
+    ((= action "X")
+     (setq name (bht:meta (bht:kh-custom-key group) ""))
+     (bht:msg (strcat "BHT: nhóm " group " -> "
+                      (if (= name "")
+                        (strcat "mặc định BHT_KH_" group)
+                        (strcat name " | hệ số đơn vị " (bht:meta (bht:kh-custom-factor-key group) "1")
+                                " | nguồn " (bht:meta (bht:kh-custom-src-key group) ""))))))
+    (T
+     (setq path (getfiled (strcat "Chọn DWG block cho nhóm " group) (bht:dwg-folder) "dwg" 0))
+     (cond
+       ((null path) (bht:msg "BHT: đã hủy chọn DWG block."))
+       ((null (setq name (bht:block-load-dwg path group)))
+        (bht:msg (strcat "BHT: không nạp được block - " *bht-block-load-error*)))
+       (T
+        (bht:meta-set (bht:kh-custom-key group) name)
+        (bht:meta-set (bht:kh-custom-src-key group) path)
+        (bht:meta-set (bht:kh-custom-factor-key group) (bht:fnum *bht-block-load-factor* 8))
+        (setq oids (bht:kh-group-oids group)
+              r (if oids (bht:symbol-sync-ex oids nil) nil))
+        (bht:msg (strcat "BHT: đã nạp " name " cho nhóm " group ". INSBASE của DWG là tâm chèn."
+                         (if r (strcat " Đã cập nhật " (itoa (length oids)) " hồ sơ.") "")))))))
   (bht:log-flush)
   (princ)
 )
@@ -4764,7 +4931,7 @@
   (bht:st-chk "giao hộp" (and (equal (bht:box-ov '(0.0 0.0 2.0 2.0) '(1.0 1.0 3.0 3.0)) 1.0 1e-9)
                               (= (bht:box-ov '(0.0 0.0 1.0 1.0) '(1.0 0.0 2.0 1.0)) 0.0)))
   (setq r (bht:lbl-cands 10.0 20.0 4.0 1.0 0.5 1.0))
-  (bht:st-chk "32 vị trí ứng viên, đầu tiên Đông-Bắc" (and (= (length r) 32) (equal (car r) '(10.5 20.5) 1e-9)))
+  (bht:st-chk "64 vị trí ứng viên, đầu tiên Đông-Bắc" (and (= (length r) 64) (equal (car r) '(10.5 20.5) 1e-9)))
   (setq r (bht:lbl-layout (list (list "A" 0.0 0.0 4.0 1.25) (list "B" 0.0 0.0 4.0 1.25)) nil 0.5 1.0))
   (bht:st-chk "hai nhãn cùng vị trí không chồng nhau"
               (and (= (length r) 2)
@@ -4815,6 +4982,7 @@
       "  BHTNHAPTSV   Nhập BHT_RTK.tsv (định dạng trao đổi/chuẩn hóa; KHÔNG cần nhập lại dữ liệu đã nhập bằng CSV) (BHTNK)"
       "  BHTNHANDIEM  Nhãn điểm RTK: tên / +mô tả / +cao độ, ưu tiên hồ sơ, ID nội bộ, sắp xếp, ẩn/hiện, cài đặt (BHTLABEL)"
       "  BHTSAPNHAN   Sắp xếp nhãn tránh chồng lấn theo vùng chọn / danh sách ID / tất cả (POINT không bị di chuyển)"
+      "  BHTKIEUDIEM  Đặt POINT thành dấu X đúng tâm, mặc định 1 unit; tùy chọn sắp lại toàn bộ nhãn"
       "  BHTNHANTUDONG Trả nhãn đã dời tay về vị trí tự động   BHTANNHAN  Ẩn / hiện nhãn điểm RTK"
       "  BHTDOITUONG  Tạo hồ sơ đối tượng từ nhiều điểm RTK (điểm đã thuộc hồ sơ khác: xem / sửa / thêm điểm / tạo mới có xác nhận) (BHTTAG)"
       "  BHTSUADT     Sửa hồ sơ (BHTEDIT)      BHTXOADT   Xóa hồ sơ, giữ điểm (BHTDELETE)"
@@ -4832,6 +5000,7 @@
       "  BHTLYTRINH   Tính lý trình/offset cho đối tượng (không mốc = chưa xác định)"
       "  BHTGOITHAU   Nạp BHT_GOI_THAU.tsv   BHTPHANDOAN  Gán đoạn/gói tự động   BHTGANDOAN  Gán tay"
       "  BHTKYHIEU    Chèn / cập nhật ký hiệu theo object_id (giữ vị trí người dùng đặt; R = trả về tự động)"
+      "  BHTBLOCK     Nạp DWG làm block tùy chọn theo nhóm / trở lại block mặc định (INSBASE là tâm chèn)"
       "  BHTTHUTUVE   Thứ tự hiển thị: nhãn > ký hiệu/điểm > raster BHT > ảnh nền IRT"
       "  BHTXUAT      Xuất CSV: DIEM_RTK, DOI_TUONG, ANH, TONG_HOP (BHTEXPORT, BHTSUMMARY)"
       "  BHTKT        Kiểm tra toàn vẹn (BHTCHECK)   BHTINFO  Xem dữ liệu   BHTDIAG  Chẩn đoán đối tượng/proxy"
@@ -5193,7 +5362,7 @@
 )
 
 ;;; ----------------------------------------------------------------------
-;;; 0.4.1: API cho plugin .NET (BHT.Bridge / BHT.Palette)
+;;; 0.4.2: API cho plugin .NET (BHT.Bridge / BHT.Palette)
 ;;;  - Lisp la noi DUY NHAT chua thuat toan nhan / ky hieu / ky hieu anh /
 ;;;    kiem tra / thu tu hien thi; plugin goi cac ham duoi day, KHONG viet lai.
 ;;;  - Moi ham tra ve DANH SACH CHUOI: ("OK" ...) hoac ("LOI" "ly do").
@@ -5283,6 +5452,16 @@
                (list ids))
 )
 
+;; Dinh dang POINT thanh dau X dung tam va sap lai nhan toan ban ve.
+(defun bht:api-point-style (size)
+  (bht:api-run '(lambda (size / s)
+                  (setq s (bht:num (bht:str size)))
+                  (if (not (and s (> s 0.0)))
+                    (list 'LOI "kích thước dấu X phải lớn hơn 0")
+                    (bht:api-alist (bht:point-style-apply s T))))
+               (list size))
+)
+
 (defun bht:api-photo-sync ()
   (bht:api-run '(lambda () (bht:api-alist (bht:photo-sync))) nil)
 )
@@ -5313,7 +5492,7 @@
 
 (setq *bht-api-functions*
   '(bht:api-version bht:api-info-handle bht:api-info-point bht:api-info-object bht:api-info-photo
-    bht:api-photo-path bht:api-symbol-sync bht:api-label-sync bht:api-photo-sync bht:api-photo-stats
+    bht:api-photo-path bht:api-symbol-sync bht:api-label-sync bht:api-point-style bht:api-photo-sync bht:api-photo-stats
     bht:api-check bht:api-draworder))
 
 (defun bht:api-register (/ n)
@@ -5346,7 +5525,7 @@
     (bht:msg "BHT: Palette đã sẵn sàng. Gõ BTH hoặc BHT để mở bảng.")
     (progn
       (bht:msg "BHT: không nạp được Palette.")
-      (bht:msg "  Kiểm tra BHT.Palette.dll, BHT.Bridge.dll và BHT.Core.dll nằm cạnh BHT-0.4.1.lsp.")
+      (bht:msg "  Kiểm tra BHT.Palette.dll, BHT.Bridge.dll và BHT.Core.dll nằm cạnh BHT-0.4.2.lsp.")
       (bht:msg "  Có thể dùng bảng dự phòng bằng lệnh BHTDCL.")))
   (princ)
 )
@@ -5354,6 +5533,7 @@
 ;;; ----------------------------------------------------------------------
 (if (and (getvar "LISPSYS") (= (getvar "LISPSYS") 0))
   (princ "\nBHT CANH BAO: LISPSYS=0 - tieng Viet co dau co the hien sai. Dat LISPSYS=1, khoi dong lai AutoCAD roi nap lai."))
+(bht:point-style-apply nil nil)
 (setq *bht-palette-loaded* (bht:palette-load))
 (defun bht:load-message () (strcat "BHT " *bht-version* " đã nạp thành công."))
 (princ (strcat "\n" (bht:load-message)))

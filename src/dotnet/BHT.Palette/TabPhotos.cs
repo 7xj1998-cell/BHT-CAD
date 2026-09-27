@@ -26,28 +26,37 @@ namespace BHT.Palette
         {
             var tp = new TabPage("Ảnh");
             _tabPhotos = tp;
-            var split = new SplitContainer { Dock = DockStyle.Fill, Orientation = Orientation.Horizontal, SplitterDistance = 120 };
+            var layout = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 7, Padding = new Padding(3) };
+            layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+            layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 22));
+            layout.RowStyles.Add(new RowStyle(SizeType.Percent, 28));
+            layout.RowStyles.Add(new RowStyle(SizeType.Percent, 42));
+            layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            layout.RowStyles.Add(new RowStyle(SizeType.Percent, 30));
+
             _phList = new ListBox { Dock = DockStyle.Fill, IntegralHeight = false };
             _phList.SelectedIndexChanged += (s, e) => ShowPhoto();
-            _phFilter = new Label { Dock = DockStyle.Top, Height = 18, ForeColor = Color.DarkBlue };
+            _phFilter = new Label { Dock = DockStyle.Fill, ForeColor = Color.DarkBlue, AutoEllipsis = true };
             var nav = Flow();
+            nav.Dock = DockStyle.Fill;
             nav.Controls.Add(Btn("◀ Trước", (s, e) => StepPhoto(-1)));
             nav.Controls.Add(Btn("Sau ▶", (s, e) => StepPhoto(1)));
             nav.Controls.Add(Btn("Bỏ lọc", (s, e) => { _photoFilterPoint = null; FillPhotoList(); }));
-            split.Panel1.Controls.Add(_phList);
-            split.Panel1.Controls.Add(_phFilter);
-            split.Panel1.Controls.Add(nav);
+            nav.Controls.Add(Btn("Nhập KMZ", (s, e) => SendCmd("BHTKMZ")));
+            nav.Controls.Add(Btn("Chỉ thư mục ảnh", (s, e) => SendCmd("BHTTHUMUCANH")));
 
             _phPic = new PictureBox { Dock = DockStyle.Fill, SizeMode = PictureBoxSizeMode.Zoom, BackColor = Color.Black };
             _phPic.DoubleClick += (s, e) => OpenPhotoExternal();
-            _phInfo = new TextBox { Multiline = true, ReadOnly = true, ScrollBars = ScrollBars.Vertical, Dock = DockStyle.Bottom, Height = 150, Font = new Font("Consolas", 8.5f) };
-            var linkRow = new TableLayoutPanel { Dock = DockStyle.Bottom, Height = 28, ColumnCount = 2 };
+            _phInfo = new TextBox { Multiline = true, ReadOnly = true, ScrollBars = ScrollBars.Vertical, Dock = DockStyle.Fill, Font = new Font("Consolas", 8.5f) };
+            var linkRow = new TableLayoutPanel { Dock = DockStyle.Fill, AutoSize = true, ColumnCount = 2 };
             linkRow.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
             linkRow.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
             _phObj = new ComboBox { Dock = DockStyle.Fill, DropDownStyle = ComboBoxStyle.DropDownList };
             linkRow.Controls.Add(_phObj, 0, 0);
             linkRow.Controls.Add(Btn("Xác nhận gắn", (s, e) => LinkCurrentPhoto()), 1, 0);
-            var act = Flow(); act.Dock = DockStyle.Bottom;
+            var act = Flow(); act.Dock = DockStyle.Fill;
             act.Controls.Add(Btn("Thu phóng vị trí chụp", (s, e) => ZoomPhoto()));
             act.Controls.Add(Btn("Bỏ gắn", (s, e) => UnlinkCurrentPhoto()));
             act.Controls.Add(Btn("Mở ảnh gốc", (s, e) => OpenPhotoExternal()));
@@ -57,11 +66,14 @@ namespace BHT.Palette
                 CallLisp("bht:api-info-photo", new[] { id }, "Thông tin ảnh " + id, r => { if (r.Ok) _phInfo.Text = string.Join("\r\n", r.Values.ToArray()); });
             }));
             act.Controls.Add(Btn("Đồng bộ ký hiệu ảnh", (s, e) => CallLisp("bht:api-photo-sync", new string[0], "Đồng bộ ký hiệu ảnh", null)));
-            split.Panel2.Controls.Add(_phPic);
-            split.Panel2.Controls.Add(linkRow);
-            split.Panel2.Controls.Add(act);
-            split.Panel2.Controls.Add(_phInfo);
-            tp.Controls.Add(split);
+            layout.Controls.Add(nav, 0, 0);
+            layout.Controls.Add(_phFilter, 0, 1);
+            layout.Controls.Add(_phList, 0, 2);
+            layout.Controls.Add(_phPic, 0, 3);
+            layout.Controls.Add(linkRow, 0, 4);
+            layout.Controls.Add(act, 0, 5);
+            layout.Controls.Add(_phInfo, 0, 6);
+            tp.Controls.Add(layout);
             return tp;
         }
 
@@ -71,6 +83,7 @@ namespace BHT.Palette
             _photos = _svc.GetPhotos();
             FillPhotoList();
             if (keep != null) SelectPhoto(keep);
+            else if (_phList.Items.Count > 0) _phList.SelectedIndex = 0;
         }
 
         private void FillPhotoList()
@@ -97,6 +110,13 @@ namespace BHT.Palette
                 string st = rec.Get(PhotoFields.State);
                 string gps = PhotoLogic.GpsValid(rec) ? "" : " [GPS 0,0]";
                 _phList.Items.Add(new PhotoItem(id, id + "  " + (st == "" ? "CHUA_GHEP" : st) + gps));
+            }
+            if (_phList.Items.Count == 0)
+            {
+                string empty = _photoFilterPoint == null
+                    ? "(chưa có ảnh — bấm Nhập KMZ ở phía trên)"
+                    : "(không có ảnh gần điểm — bấm Bỏ lọc để xem tất cả)";
+                _phList.Items.Add(new PhotoItem(null, empty));
             }
             _phList.EndUpdate();
         }
@@ -181,7 +201,15 @@ namespace BHT.Palette
         private void ShowPhoto()
         {
             var id = CurrentPhotoId();
-            if (id == null || _svc == null) { ShowImage(null); _phInfo.Text = ""; return; }
+            if (id == null || _svc == null)
+            {
+                ShowImage(null);
+                if (_phObj != null) _phObj.Items.Clear();
+                _phInfo.Text = _photos.Count == 0
+                    ? "Chưa có dữ liệu ảnh. Bấm Nhập KMZ để giải nén ảnh TimeMark và nạp BHT_PHOTO.tsv.\r\nNếu đã di chuyển thư mục JPG, bấm Chỉ thư mục ảnh."
+                    : "Không có ảnh trong bộ lọc hiện tại. Bấm Bỏ lọc để xem toàn bộ ảnh.";
+                return;
+            }
             BhtRecord rec;
             if (!_photos.TryGetValue(id, out rec)) return;
             string path = _svc.ResolvePhotoPath(id);

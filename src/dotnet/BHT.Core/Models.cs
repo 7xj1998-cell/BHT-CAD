@@ -54,7 +54,8 @@ namespace BHT.Core
             SegMethod = "gan_doan_pp", SegCandidates = "doan_ung_vien", CreatedAt = "tao_luc", ModifiedAt = "sua_luc";
 
         /// <summary>Cac truong nguoi dung duoc sua tu palette (giong bht:ask-fields).</summary>
-        public static readonly string[] Editable = { Group, Code, CodeType, Desc, PoleCount, FaceCount, Condition, CheckState, Note, RoadSide };
+        public static readonly string[] Editable = { Group, Code, CodeType, Desc, PoleCount, FaceCount, Condition, CheckState, Note, RoadSide,
+            RouteId, ChainageM, ChainageKm, OffsetM, RouteSide, KmState, KmSource };
     }
 
     public static class PhotoFields
@@ -139,9 +140,9 @@ namespace BHT.Core
 
     public static class BhtVersion
     {
-        public const string Version = "0.4.1";
-        public const string AssemblyVersion = "0.4.1.0";
-        public const string FileVersion = "0.4.1.0";
+        public const string Version = "0.4.2";
+        public const string AssemblyVersion = "0.4.2.0";
+        public const string FileVersion = "0.4.2.0";
         public const string LispApiLevel = "1";
         public const string DictName = "BHT_V02";
 
@@ -151,7 +152,7 @@ namespace BHT.Core
             int lvl;
             if (!int.TryParse(apiLevel ?? "", NumberStyles.Integer, CultureInfo.InvariantCulture, out lvl)) return false;
             if (lvl < 1) return false;
-            return Compare(lispVersion, "0.4.1") >= 0;
+            return Compare(lispVersion, "0.4.2") >= 0;
         }
 
         /// <summary>So sanh "a.b.c" theo so; phan khong phai so = 0.</summary>

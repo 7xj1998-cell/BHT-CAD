@@ -1,15 +1,15 @@
-;;; BHT 0.4.1 - phien NL: BAN SAO ban ve lam bang BHT 0.3.2 (legacy_032_src.dwg) mo bang 0.4.1 + BHT.Bridge.
-(load "C:/Users/Le Bao/BHT_TEST_V041/t_common.lsp")
+;;; BHT 0.4.2 - phien NL: BAN SAO ban ve lam bang BHT 0.3.2 (legacy_032_src.dwg) mo bang 0.4.2 + BHT.Bridge.
+(load "C:/Users/Le Bao/BHT_TEST_V042/t_common.lsp")
 (tbegin "NL")
 (setq e (tload))
-(tchk "K00" "nạp BHT-0.4.1 trên bản vẽ 0.3.2" (and (null e) (= *bht-version* "0.4.1")) e)
+(tchk "K00" "nạp BHT-0.4.2 trên bản vẽ 0.3.2" (and (null e) (= *bht-version* "0.4.2")) e)
 (setq NP (length (bht:pt-all)) NPH (length (bht:rec-keys "PHOTO")) NO (length (bht:obj-ids)) PC0 (t-pt-coords))
 (tlog (strcat "   bản vẽ 0.3.2: điểm " (itoa NP) ", ảnh " (itoa NPH) ", hồ sơ " (itoa NO)))
 (setq e (t-netload "BHT.Bridge.dll"))
 (t-dump (t-run "NL_L1.txt"))
 (command "BHTNETDUMP" (t-run "NL_C1.txt"))
 (setq cmp (t-cmp (t-run "NL_L1.txt") (t-run "NL_C1.txt")))
-(tchk "K01" "C# đọc bản vẽ 0.3.2 giống hệt Lisp 0.4.1 (điểm, hồ sơ, ảnh, meta, JPG)" (and (null e) (car cmp)) cmp)
+(tchk "K01" "C# đọc bản vẽ 0.3.2 giống hệt Lisp 0.4.2 (điểm, hồ sơ, ảnh, meta, JPG)" (and (null e) (car cmp)) cmp)
 (tchk "K02" "C# đọc đủ điểm / 205 ảnh / hồ sơ của bản vẽ 0.3.2"
       (and (= (t-count-prefix (t-run "NL_C1.txt") "P|") NP) (> NP 0) (= (t-count-prefix (t-run "NL_C1.txt") "R|PHOTO|") 205) (= (t-count-prefix (t-run "NL_C1.txt") "R|OBJ|") NO))
       (list NP NPH NO))

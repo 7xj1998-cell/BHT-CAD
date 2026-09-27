@@ -209,6 +209,49 @@ namespace BHT.Core
         }
     }
 
+    /// <summary>Đọc và định dạng lý trình nhập tay theo cùng quy ước với Lisp BHT.</summary>
+    public static class Chainage
+    {
+        /// <summary>
+        /// Chấp nhận Km39+050.5, 39+050.5 hoặc số mét 39050.5. Dấu phẩy thập phân
+        /// cũng được chấp nhận để thuận tiện khi nhập theo thiết lập vùng Việt Nam.
+        /// </summary>
+        public static bool TryParse(string text, out double metres)
+        {
+            metres = 0.0;
+            string s = (text ?? "").Trim().Replace(" ", "").Replace(',', '.').ToUpperInvariant();
+            if (s.StartsWith("KM", StringComparison.Ordinal)) s = s.Substring(2);
+            if (s.Length == 0) return false;
+
+            int plus = s.IndexOf('+');
+            if (plus >= 0)
+            {
+                if (plus == 0 || plus != s.LastIndexOf('+') || plus == s.Length - 1) return false;
+                double km, remainder;
+                if (!double.TryParse(s.Substring(0, plus), NumberStyles.Float, CultureInfo.InvariantCulture, out km)
+                    || !double.TryParse(s.Substring(plus + 1), NumberStyles.Float, CultureInfo.InvariantCulture, out remainder)) return false;
+                if (km < 0.0 || km != Math.Truncate(km) || remainder < 0.0 || remainder >= 1000.0) return false;
+                metres = km * 1000.0 + remainder;
+                return !double.IsNaN(metres) && !double.IsInfinity(metres);
+            }
+
+            if (!double.TryParse(s, NumberStyles.Float, CultureInfo.InvariantCulture, out metres)) return false;
+            return metres >= 0.0 && !double.IsNaN(metres) && !double.IsInfinity(metres);
+        }
+
+        /// <summary>Định dạng mét thành Km39+050.50, làm tròn nửa lên ở 0,01 m.</summary>
+        public static string Format(double metres)
+        {
+            if (double.IsNaN(metres) || double.IsInfinity(metres) || metres < 0.0) return "";
+            decimal rounded = decimal.Round((decimal)metres, 2, MidpointRounding.AwayFromZero);
+            long km = (long)decimal.Floor(rounded / 1000m);
+            decimal remainder = rounded - km * 1000m;
+            if (remainder >= 1000m) { km++; remainder = 0m; }
+            return "Km" + km.ToString(CultureInfo.InvariantCulture) + "+"
+                + remainder.ToString("000.00", CultureInfo.InvariantCulture);
+        }
+    }
+
     public static class PhotoLogic
     {
         private static string Slash(string dir)

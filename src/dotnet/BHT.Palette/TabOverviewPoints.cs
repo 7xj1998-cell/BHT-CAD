@@ -121,6 +121,8 @@ namespace BHT.Palette
                 if (ids.Count == 0) { Status("Chọn điểm trong danh sách."); return; }
                 CallLisp("bht:api-label-sync", new[] { string.Join(",", ids.ToArray()) }, "Cập nhật nhãn " + ids.Count + " điểm", null);
             }));
+            f.Controls.Add(Btn("Dấu X 1u + sắp nhãn", (s, e) =>
+                CallLisp("bht:api-point-style", new[] { "1" }, "Cập nhật dấu X và sắp nhãn", null)));
             tp.Controls.Add(_ptList);
             tp.Controls.Add(top);
             tp.Controls.Add(f);

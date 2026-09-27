@@ -1,6 +1,6 @@
-# BHT — HỢP ĐỒNG DỮ LIỆU DWG (0.4.0)
+# BHT — HỢP ĐỒNG DỮ LIỆU DWG (0.4.2)
 
-Tài liệu này mô tả **đúng định dạng mà mã Lisp (BHT-0.4.1.lsp) ghi vào bản vẽ**, lấy trực tiếp từ mã nguồn
+Tài liệu này mô tả **đúng định dạng mà mã Lisp (BHT-0.4.2.lsp) ghi vào bản vẽ**, lấy trực tiếp từ mã nguồn
 (`bht:rec-encode`, `bht:rec-decode`, `bht:rec-write`, `bht:pt-write-xdata`, `bht:obj-create`, `bht:photo-link`,
 các hàm ký hiệu / nhãn). Plugin .NET (BHT.Bridge) đọc/ghi **chính định dạng này**; DWG là nguồn dữ liệu duy nhất.
 Định dạng 0.4.0 **giống hệt 0.3.3 / 0.3.2** (không đổi cấu trúc) — bản vẽ cũ mở bình thường.
@@ -44,7 +44,8 @@ Thứ tự trường khi tạo (`bht:obj-create`, C# `ObjectLogic.BuildNew` gi�
 | phia_duong | mặc định `CHUA_XAC_DINH` |
 | doan, goi | gói/đoạn (rỗng khi tạo) |
 | gan_doan_pp | `CHUA_PHAN_DOAN` |
-| trang_thai_km | `CHUA_TINH` (không tự bịa lý trình) |
+| route_id, ly_trinh_m, ly_trinh_km, offset_m, phia_tuyen, nguon_km | kết quả tính theo tuyến hoặc giá trị ghi tay từ Palette |
+| trang_thai_km | `CHUA_TINH` khi mới tạo; `NHAP_TAY` khi người dùng ghi lý trình trong Palette; các trạng thái tính tuyến giữ quy ước cũ |
 | tao_luc | thời điểm tạo (`bht:now`) |
 | mat (lặp) | các mặt biển |
 | pt (lặp) | ID điểm RTK (CHỮ HOA) — một hồ sơ nhiều điểm |
@@ -62,9 +63,13 @@ Tìm file JPG (`bht:photo-path-candidates`, C# `PhotoLogic.Candidates`): thứ t
 + tương đối / tên file / `photos\tên file` → `goc` + tương đối … → thư mục DWG + tương đối.
 
 ### 1.3 META / CONFIG (một số khóa)
-`obj_seq, thu_muc_anh, dataset_cuoi, crs_idx, crs_trang_thai, nhan_che_do, nhan_h, nhan_offset, nhan_id, nhan_an,
+`obj_seq, thu_muc_anh, dataset_cuoi, crs_idx, crs_trang_thai, pt_size, nhan_che_do, nhan_h, nhan_offset, nhan_id, nhan_an,
 nhan_kieu_chu, nhan_uu_tien_dt, kh_h, kh_scale, anh_scale, anh_nhan_h, anh_nhan_an, anh_raster_w, anh_duong_dan,
 ghep_m, ghep_r, irt_mau_lop, irt_mau_file, irt_mau_thumuc`.
+
+Block tùy chọn theo nhóm dùng ba khóa động: `kh_block_<nhom>` (tên định nghĩa trong DWG), `kh_block_src_<nhom>`
+(đường dẫn nguồn để truy vết) và `kh_block_factor_<nhom>` (hệ số đơn vị đọc lúc nạp). Đây là cấu hình trình bày;
+hồ sơ và hình học block đã nhập vẫn nằm trong DWG.
 
 ### 1.4 DATASET
 Mỗi bộ dữ liệu điểm: số dòng, file nguồn, `dinh_dang` (`CSV` / `TSV` — phát hiện nhập cùng bộ dữ liệu bằng cả hai).
@@ -99,6 +104,7 @@ Mọi hàm nhận/trả **chuỗi**; trả về danh sách `("OK" …)` hoặc `
 | `bht:api-photo-path` | photo_id | `("OK" "đường dẫn JPG Lisp tìm thấy" )` hoặc "" |
 | `bht:api-symbol-sync` | "" = mọi hồ sơ / "OBJ-1,OBJ-2" | số tạo/cập nhật/xóa/trùng |
 | `bht:api-label-sync` | "" / "ALL" / danh sách ID | nhãn (nhãn dời tay vẫn giữ) |
+| `bht:api-point-style` | kích thước dương, ví dụ `"1"` | đặt POINT thành dấu X với kích thước tuyệt đối và sắp lại nhãn |
 | `bht:api-photo-sync`, `bht:api-photo-stats` | – | đồng bộ / thống kê ký hiệu ảnh |
 | `bht:api-check` | – | `("OK" "loi=n" "canh_bao=n" …)` giống BHTKT |
 | `bht:api-draworder` | – | thứ tự hiển thị (dùng lệnh DRAWORDER: chỉ gọi khi không có lệnh đang chạy) |

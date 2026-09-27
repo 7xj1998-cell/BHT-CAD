@@ -14,7 +14,7 @@ namespace BHT.Palette
         // ================================================================ D. HO SO DOI TUONG
         private TabPage _tabObjects;
         private ListView _objList;
-        private TextBox _oId, _oCode, _oDesc, _oPoles, _oFaces, _oFaceCodes, _oCond, _oNote, _oInfo;
+        private TextBox _oId, _oCode, _oDesc, _oPoles, _oFaces, _oFaceCodes, _oCond, _oNote, _oChainage, _oInfo;
         private ComboBox _oGroup, _oCodeType, _oSide;
         private CheckBox _oChecked, _oAllowShared;
         private ListBox _oPoints, _oPhotos;
@@ -52,22 +52,48 @@ namespace BHT.Palette
             _oNote = new TextBox { Dock = DockStyle.Fill };
             _oPoints = new ListBox { Dock = DockStyle.Fill, Height = 60, SelectionMode = SelectionMode.MultiExtended, IntegralHeight = false };
             _oPhotos = new ListBox { Dock = DockStyle.Fill, Height = 45, IntegralHeight = false };
-            _oPhotos.DoubleClick += (s, e) => { var p = _oPhotos.SelectedItem as string; if (p != null) { _tabs.SelectedTab = _tabPhotos; SelectPhoto(p.Split('|')[0]); } };
+            _oPhotos.DoubleClick += (s, e) => OpenSelectedObjectPhoto();
+            var photoPanel = new TableLayoutPanel { Dock = DockStyle.Fill, Height = 82, RowCount = 2, ColumnCount = 1 };
+            photoPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+            photoPanel.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            var photoActions = Flow(); photoActions.Dock = DockStyle.Fill;
+            photoActions.Controls.Add(Btn("Xem ở tab Ảnh", (s, e) => OpenSelectedObjectPhoto()));
+            photoActions.Controls.Add(Btn("Nhập KMZ", (s, e) => SendCmd("BHTKMZ")));
+            photoPanel.Controls.Add(_oPhotos, 0, 0);
+            photoPanel.Controls.Add(photoActions, 0, 1);
+
+            _oChainage = new TextBox { Dock = DockStyle.Fill };
+            var chainPanel = new TableLayoutPanel { Dock = DockStyle.Fill, Height = 64, ColumnCount = 3, RowCount = 2 };
+            chainPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.34f));
+            chainPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.33f));
+            chainPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.33f));
+            chainPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, 28));
+            chainPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, 34));
+            chainPanel.Controls.Add(_oChainage, 0, 0);
+            chainPanel.SetColumnSpan(_oChainage, 3);
+            var saveChainage = Btn("Ghi tay", (s, e) => SaveManualChainage()); saveChainage.Dock = DockStyle.Fill;
+            var clearChainage = Btn("Xóa", (s, e) => ClearManualChainage()); clearChainage.Dock = DockStyle.Fill;
+            var calculateChainage = Btn("Tính tuyến", (s, e) => SendCmd("BHTLYTRINH")); calculateChainage.Dock = DockStyle.Fill;
+            chainPanel.Controls.Add(saveChainage, 0, 1);
+            chainPanel.Controls.Add(clearChainage, 1, 1);
+            chainPanel.Controls.Add(calculateChainage, 2, 1);
             _oAllowShared = new CheckBox { Text = "Cho phép tạo hồ sơ MỚI dùng chung điểm (sẽ hỏi xác nhận)", AutoSize = true };
-            _oInfo = new TextBox { Multiline = true, ReadOnly = true, ScrollBars = ScrollBars.Vertical, Dock = DockStyle.Fill, Height = 70, Font = new Font("Consolas", 8.5f) };
+            _oInfo = new TextBox { Multiline = true, ReadOnly = true, ScrollBars = ScrollBars.Vertical, Dock = DockStyle.Fill, Height = 65, Font = new Font("Consolas", 8.5f) };
             Action<string, Control> row = (t, c) => { form.Controls.Add(new Label { Text = t, AutoSize = true, Padding = new Padding(0, 5, 0, 0) }); form.Controls.Add(c); };
             form.Controls.Add(new Label()); form.Controls.Add(_oMode);
             row("ID", _oId); row("Nhóm", _oGroup); form.Controls.Add(new Label()); form.Controls.Add(_oBasis);
             row("Mã hiệu", _oCode); row("Loại mã", _oCodeType); row("Mô tả", _oDesc);
             row("Số trụ/chân", _oPoles); row("Số mặt biển", _oFaces); row("Mã các mặt", _oFaceCodes);
             row("Tình trạng", _oCond); row("Phía đường", _oSide); form.Controls.Add(new Label()); form.Controls.Add(_oChecked);
-            row("Ghi chú", _oNote); row("Điểm RTK", _oPoints); row("Ảnh", _oPhotos); row("Lý trình", _oInfo);
+            row("Ghi chú", _oNote); row("Điểm RTK", _oPoints); row("Ảnh", photoPanel);
+            row("Lý trình tay", chainPanel); row("Thông tin", _oInfo);
             form.Controls.Add(new Label()); form.Controls.Add(_oAllowShared);
 
             var f1 = Flow();
             f1.Controls.Add(Btn("Chọn điểm trên CAD và tạo hồ sơ", (s, e) => PickSurveyPoints(NewObjectFromPoints)));
             f1.Controls.Add(Btn("Lưu", (s, e) => SaveObject()));
             f1.Controls.Add(Btn("Chèn/Cập nhật ký hiệu", (s, e) => SymbolForCurrent()));
+            f1.Controls.Add(Btn("Thư viện block", (s, e) => SendCmd("BHTBLOCK")));
             var f2 = Flow(); f2.Dock = DockStyle.Bottom;
             f2.Controls.Add(Btn("Chọn thêm điểm trên CAD", (s, e) => PickSurveyPoints(AddPointIds)));
             f2.Controls.Add(Btn("Gỡ điểm đã chọn", (s, e) => RemoveListPoints()));
@@ -122,7 +148,9 @@ namespace BHT.Palette
             _oBasis.Text = "";
             _oCode.Text = ""; _oCodeType.SelectedIndex = 0; _oDesc.Text = ""; _oPoles.Text = ""; _oFaces.Text = ""; _oFaceCodes.Text = "";
             _oCond.Text = ""; _oSide.SelectedIndex = 0; _oChecked.Checked = false; _oNote.Text = "";
-            _oPoints.Items.Clear(); _oPhotos.Items.Clear(); _oInfo.Text = ""; _oAllowShared.Checked = false;
+            _oPoints.Items.Clear(); _oPhotos.Items.Clear();
+            _oPhotos.Items.Add("(chưa gắn ảnh — bấm Nhập KMZ hoặc sang tab Ảnh)");
+            _oChainage.Text = ""; _oInfo.Text = ""; _oAllowShared.Checked = false;
         }
 
         private static void SelectCombo(ComboBox c, string value)
@@ -156,12 +184,69 @@ namespace BHT.Palette
             }
             _oPhotos.Items.Clear();
             foreach (var a in r.GetAll(ObjFields.Photo)) _oPhotos.Items.Add(a);
+            if (_oPhotos.Items.Count == 0) _oPhotos.Items.Add("(chưa gắn ảnh — sang tab Ảnh để chọn và xác nhận gắn)");
+            _oChainage.Text = r.Get(ObjFields.ChainageKm);
             var km = new StringBuilder();
             if (r.Get(ObjFields.ChainageKm) != "") km.Append(r.Get(ObjFields.ChainageKm)).Append(" offset ").Append(r.Get(ObjFields.OffsetM)).Append(" m ").Append(r.Get(ObjFields.RouteSide));
             else km.Append("(chưa tính lý trình - ").Append(r.Get(ObjFields.KmState)).Append(")");
             km.Append("\r\nĐoạn/gói: ").Append(r.Get(ObjFields.Segment)).Append(" / ").Append(r.Get(ObjFields.Package))
               .Append("\r\nTạo ").Append(r.Get(ObjFields.CreatedAt)).Append(" | sửa ").Append(r.Get(ObjFields.ModifiedAt));
             _oInfo.Text = km.ToString();
+        }
+
+        private void OpenSelectedObjectPhoto()
+        {
+            var link = _oPhotos.SelectedItem as string;
+            if (string.IsNullOrEmpty(link) || link.StartsWith("(", StringComparison.Ordinal))
+            {
+                _tabs.SelectedTab = _tabPhotos;
+                Status(_photos.Count == 0 ? "Chưa có dữ liệu ảnh — bấm Nhập KMZ." : "Chọn ảnh, chọn hồ sơ rồi bấm Xác nhận gắn.");
+                return;
+            }
+            string photoId = ObjectLogic.PhotoIdOfLink(link);
+            _tabs.SelectedTab = _tabPhotos;
+            SelectPhoto(photoId);
+        }
+
+        private void SaveManualChainage()
+        {
+            if (_oIsNew || string.IsNullOrEmpty(_oId.Text)) { Status("Lưu hồ sơ trước khi nhập lý trình."); return; }
+            if (!NeedDoc()) return;
+            double metres;
+            if (!Chainage.TryParse(_oChainage.Text, out metres))
+            {
+                Status("Lý trình không hợp lệ. Nhập dạng Km12+345.67, 12+345.67 hoặc số mét 12345.67.");
+                return;
+            }
+            var fields = new BhtRecord()
+                .Add(ObjFields.ChainageM, LispFormat.Fnum(metres, 3))
+                .Add(ObjFields.ChainageKm, Chainage.Format(metres))
+                .Add(ObjFields.KmState, "NHAP_TAY")
+                .Add(ObjFields.KmSource, "Nhập thủ công từ Palette")
+                .Add(ObjFields.RouteId, "").Add(ObjFields.OffsetM, "").Add(ObjFields.RouteSide, "")
+                .Add(ObjFields.Segment, "").Add(ObjFields.Package, "")
+                .Add(ObjFields.SegMethod, "CHUA_PHAN_DOAN").Add(ObjFields.SegCandidates, "");
+            string id = _oId.Text;
+            var result = AcadDispatcher.RunWrite(_doc, "Ghi lý trình tay", db => _svc.UpdateObject(id, fields));
+            Status(result.Ok ? "Đã ghi " + Chainage.Format(metres) + " cho " + id + "." : result.ToString());
+            if (!result.Ok) return;
+            RefreshAll();
+            if (_lispOk) CallLisp("bht:api-symbol-sync", new[] { id }, "Cập nhật ký hiệu " + id, null);
+        }
+
+        private void ClearManualChainage()
+        {
+            if (_oIsNew || string.IsNullOrEmpty(_oId.Text) || !NeedDoc()) return;
+            string id = _oId.Text;
+            var fields = new BhtRecord()
+                .Add(ObjFields.RouteId, "").Add(ObjFields.ChainageM, "").Add(ObjFields.ChainageKm, "")
+                .Add(ObjFields.OffsetM, "").Add(ObjFields.RouteSide, "")
+                .Add(ObjFields.KmState, "CHUA_TINH").Add(ObjFields.KmSource, "")
+                .Add(ObjFields.Segment, "").Add(ObjFields.Package, "")
+                .Add(ObjFields.SegMethod, "CHUA_PHAN_DOAN").Add(ObjFields.SegCandidates, "");
+            var result = AcadDispatcher.RunWrite(_doc, "Xóa lý trình", db => _svc.UpdateObject(id, fields));
+            Status(result.Ok ? "Đã xóa lý trình của " + id + "." : result.ToString());
+            if (result.Ok) RefreshAll();
         }
 
         private List<string> EditorPointIds()
@@ -336,6 +421,8 @@ namespace BHT.Palette
                 new[] { "BHTTRANGTHAI", "Trạng thái bản vẽ" },
                 new[] { "BHTKT", "Kiểm tra toàn vẹn" },
                 new[] { "BHTSAPNHAN", "Sắp xếp nhãn theo phạm vi" },
+                new[] { "BHTKIEUDIEM", "Dấu X của điểm và sắp lại nhãn" },
+                new[] { "BHTBLOCK", "Nạp / bỏ block tùy chọn theo nhóm" },
                 new[] { "BHTTHUTUVE", "Thứ tự hiển thị" },
                 new[] { "BHTGHEPANH", "Đề xuất ghép ảnh (chỉ đề xuất)" },
                 new[] { "BHTTHUMUCANH", "Chỉ lại thư mục ảnh" }

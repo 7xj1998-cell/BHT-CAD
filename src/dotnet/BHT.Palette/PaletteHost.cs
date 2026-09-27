@@ -72,7 +72,7 @@ namespace BHT.Palette
     public static class PaletteHost
     {
         public static readonly Guid PaletteGuid = new Guid("B4A7E0C2-5D31-4F0B-9C6E-0BD7A1F40410");
-        public const string Title = "BHT 0.4.1 — QUẢN LÝ HIỆN TRẠNG TUYẾN";
+        public const string Title = "BHT 0.4.2 — QUẢN LÝ HIỆN TRẠNG TUYẾN";
         private static PaletteSet _ps;
         private static BhtPaletteControl _ctl;
         private static bool _restored;

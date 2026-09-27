@@ -145,7 +145,7 @@ namespace BHT.Palette
             AcadDispatcher.RunLisp("bht:api-version", new string[0], r => UI(() =>
             {
                 _lispOk = r.Ok && r.Values.Count > 1 && BhtVersion.LispCompatible(r.Values[0], r.Values[1]);
-                _lispMsg = _lispOk ? "BHT Lisp " + r.Values[0] + " đã nạp" : "Lisp BHT 0.4.1 CHƯA nạp - chức năng ký hiệu/nhãn/kiểm tra tạm khóa";
+                _lispMsg = _lispOk ? "BHT Lisp " + r.Values[0] + " đã nạp" : "Lisp BHT 0.4.2 CHƯA nạp - chức năng ký hiệu/nhãn/kiểm tra tạm khóa";
                 Status(_lispMsg);
                 RefreshOverview();
             }));
@@ -175,7 +175,7 @@ namespace BHT.Palette
 
         private bool NeedLisp()
         {
-            if (!_lispOk) { Status("Lõi Lisp BHT 0.4.1 chưa sẵn sàng (" + _lispMsg + "). Gõ BHTLOAD hoặc nạp lại bộ BHT."); ProbeLisp(); return false; }
+            if (!_lispOk) { Status("Lõi Lisp BHT 0.4.2 chưa sẵn sàng (" + _lispMsg + "). Gõ BHTLOAD hoặc nạp lại bộ BHT."); ProbeLisp(); return false; }
             return true;
         }
 

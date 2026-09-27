@@ -1,4 +1,4 @@
-# Cài BHT 0.4.1
+# Cài BHT 0.4.2
 
 ## Cách khuyến nghị: Application Bundle
 
@@ -10,6 +10,6 @@ AutoCAD tự nhận `BHT.bundle`; không chạy `NETLOAD`. Palette mở bên tr�
 
 ## Cách APPLOAD
 
-Nếu không muốn cài bundle, giữ `BHT-0.4.1.lsp` và ba DLL trong cùng một thư mục. Trong AutoCAD, `APPLOAD` duy nhất file Lisp. Lisp tự nạp DLL; sau đó gõ `BTH` hoặc `BHT`.
+Nếu không muốn cài bundle, giữ `BHT-0.4.2.lsp` và ba DLL trong cùng một thư mục. Trong AutoCAD, `APPLOAD` duy nhất file Lisp. Lisp tự nạp DLL; sau đó gõ `BTH` hoặc `BHT`.
 
 `BHTDCL` chỉ là giao diện dự phòng. Không dùng lệnh này trong quy trình thông thường.

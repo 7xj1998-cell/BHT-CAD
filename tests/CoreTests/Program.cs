@@ -45,6 +45,7 @@ namespace BHT.CoreTests
             Safe("C12", "point xdata", PointX);
             Safe("C13", "lisp reply", Reply);
             Safe("C14", "groups", GroupsT);
+            Safe("C15", "manual chainage", ChainageT);
             string summary = "TONG BHT.CoreTests: " + pass + " PASS, " + fail + " FAIL";
             log.Add(summary); Console.WriteLine(summary);
             if (args.Length > 0) File.WriteAllLines(Path.Combine(args[0], "coretests_result.txt"), log.ToArray(), new System.Text.UTF8Encoding(false));
@@ -207,10 +208,10 @@ namespace BHT.CoreTests
 
         static void Versions()
         {
-            Check("C11a", "hằng phiên bản", BhtVersion.Version == "0.4.1" && BhtVersion.AssemblyVersion.StartsWith("0.4.1.") && BhtVersion.FileVersion.StartsWith("0.4.1."));
-            Check("C11b", "tương thích Lisp", BhtVersion.LispCompatible("0.4.1", "1") && !BhtVersion.LispCompatible("0.4.0", "1") && !BhtVersion.LispCompatible("0.4.1", "") && BhtVersion.LispCompatible("0.10.0", "2"));
+            Check("C11a", "hằng phiên bản", BhtVersion.Version == "0.4.2" && BhtVersion.AssemblyVersion.StartsWith("0.4.2.") && BhtVersion.FileVersion.StartsWith("0.4.2."));
+            Check("C11b", "tương thích Lisp", BhtVersion.LispCompatible("0.4.2", "1") && !BhtVersion.LispCompatible("0.4.0", "1") && !BhtVersion.LispCompatible("0.4.2", "") && BhtVersion.LispCompatible("0.10.0", "2"));
             var asm = typeof(BhtRecord).Assembly.GetName().Version.ToString();
-            Check("C11c", "AssemblyVersion BHT.Core = 0.4.1.x", asm.StartsWith("0.4.1."), asm);
+            Check("C11c", "AssemblyVersion BHT.Core = 0.4.2.x", asm.StartsWith("0.4.2."), asm);
         }
 
         static void PointX()
@@ -236,6 +237,18 @@ namespace BHT.CoreTests
             var g = Groups.Suggest(new[] { new SurveyPoint { Name = "A", Class = "CHUA_XAC_DINH" }, new SurveyPoint { Name = "B", Class = "COC_TIEU", Description = "coctiu.h5" } }, out basis);
             Check("C14a", "gợi ý nhóm từ phân loại đã lưu + căn cứ", g == "COC_TIEU" && basis.Contains("coctiu.h5"));
             Check("C14b", "group code", Groups.Code("2") == "COC_TIEU" && Groups.Code("coc_tieu") == "COC_TIEU" && Groups.Code("x") == null);
+        }
+
+        static void ChainageT()
+        {
+            double m;
+            Check("C15a", "đọc Km và mét", Chainage.TryParse("Km39+050.5", out m) && Math.Abs(m - 39050.5) < 1e-9
+                && Chainage.TryParse("39+050,5", out m) && Math.Abs(m - 39050.5) < 1e-9
+                && Chainage.TryParse("39050.5", out m) && Math.Abs(m - 39050.5) < 1e-9);
+            Check("C15b", "từ chối lý trình sai", !Chainage.TryParse("", out m) && !Chainage.TryParse("1+1000", out m)
+                && !Chainage.TryParse("KmA+010", out m) && !Chainage.TryParse("-1", out m));
+            Check("C15c", "định dạng giống Lisp", Chainage.Format(39050.505) == "Km39+050.51"
+                && Chainage.Format(999.999) == "Km1+000.00" && Chainage.Format(-1) == "");
         }
     }
 }

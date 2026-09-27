@@ -9,7 +9,7 @@ namespace BHT.Bridge
 {
     /// <summary>
     /// Duong DUY NHAT de .NET goi Lisp BHT: Application.Invoke (acedInvoke) toi cac ham
-    /// bht:api-* ma BHT-0.4.1.lsp dang ky bang vl-acad-defun.
+    /// bht:api-* ma BHT-0.4.2.lsp dang ky bang vl-acad-defun.
     /// BAT BUOC goi trong ngu canh lenh / tai lieu (tu 1 lenh .NET, hoac qua
     /// AcadDispatcher.RunInCommandContext tu palette). Dong bo: tra ve khi Lisp chay xong.
     /// </summary>
@@ -40,13 +40,13 @@ namespace BHT.Bridge
             catch (System.Exception ex)
             {
                 var r = new LispReply();
-                r.Error = "không gọi được hàm Lisp " + function + " (" + ex.Message + "). Cần nạp bộ BHT 0.4.1 (hàm bht:api-* đăng ký bằng vl-acad-defun).";
+                r.Error = "không gọi được hàm Lisp " + function + " (" + ex.Message + "). Cần nạp bộ BHT 0.4.2 (hàm bht:api-* đăng ký bằng vl-acad-defun).";
                 return r;
             }
             return LispReply.FromStrings(raw);
         }
 
-        /// <summary>Kiem tra Lisp BHT 0.4.1+ da nap: (bht:api-version) -> ("OK" phien_ban muc_api build).</summary>
+        /// <summary>Kiem tra Lisp BHT 0.4.2+ da nap: (bht:api-version) -> ("OK" phien_ban muc_api build).</summary>
         public bool Probe(out string version, out string message)
         {
             version = "";
@@ -56,7 +56,7 @@ namespace BHT.Bridge
             string lvl = r.Values.Count > 1 ? r.Values[1] : "";
             if (!BhtVersion.LispCompatible(version, lvl))
             {
-                message = "BHT Lisp " + version + " (API " + lvl + ") không tương thích - cần BHT-0.4.1.lsp trở lên.";
+                message = "BHT Lisp " + version + " (API " + lvl + ") không tương thích - cần BHT-0.4.2.lsp trở lên.";
                 return false;
             }
             message = "BHT Lisp " + version + " đã nạp (API " + lvl + ").";

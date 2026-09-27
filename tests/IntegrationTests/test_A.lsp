@@ -1,13 +1,13 @@
 ;;; BHT 0.3.3 - phien A: ban ve moi (BAN SAO sample-route.dwg). Nhan tu dong / tay,
 ;;; ho so doi tuong, ky hieu theo ID, thu tu hien thi, anh, nhap trung dinh dang.
-(load "C:/Users/Le Bao/BHT_TEST_V041/t_common.lsp")
+(load "C:/Users/Le Bao/BHT_TEST_V042/t_common.lsp")
 (tbegin "A")
 (setq *D* (strcat *T-DIR* "data/"))
 (setq *CSV* (strcat *D* "survey.csv"))
 (setq *PH* "C:/Users/Le Bao/BHT_TEST_V032/anh/kmz_out/BHT_PHOTO.tsv")
 (setq *MOVED* (strcat *T-DIR* "anh_da_doi/kmz_out"))
 (setq e (tload))
-(tchk "T00" "nạp BHT-0.4.1" (and (null e) (= *bht-version* "0.4.1")) (if e e *bht-version*))
+(tchk "T00" "nạp BHT-0.4.2" (and (null e) (= *bht-version* "0.4.2")) (if e e *bht-version*))
 (setq *bht-no-launch* T)
 
 ;; ---------- thuc the NGOAI BHT ----------
@@ -179,7 +179,7 @@
 (setq r (bht:symbol-refresh '("OBJ-T1")) d1b (entget (car (t-kh-ins-of "OBJ-T1"))) ktb (entget kt))
 (tchk "K02" "sửa hồ sơ -> cập nhật ký hiệu: giữ vị trí/góc/tỷ lệ người dùng đặt, nhãn đổi chữ nhưng giữ chỗ"
       (and (equal (cdr (assoc 10 d1b)) '(575400.0 1187000.0 0.0) 1e-9) (equal (cdr (assoc 50 d1b)) 0.5 1e-9) (equal (cdr (assoc 41 d1b)) 2.0 1e-9)
-           (= (cadr (bht:xget (car (t-kh-ins-of "OBJ-T1")) "BHT_KH")) "TAY") (= (cdr (assoc 1 ktb)) "OBJ-T1 CT-01")
+           (= (cadr (bht:xget (car (t-kh-ins-of "OBJ-T1")) "BHT_KH")) "TAY") (= (cdr (assoc 1 ktb)) "OBJ-T1 | CT-01")
            (equal (cdr (assoc 10 ktb)) ktp 1e-9) (= (length (t-kh-ins-of "OBJ-T1")) 1))
       (list (cdr (assoc 10 d1b)) (cdr (assoc 1 ktb)) r))
 (setq k4 (car (t-kh-ins-of "OBJ-T4")) p4 (cdr (assoc 10 (entget k4))))

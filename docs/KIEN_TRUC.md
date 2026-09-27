@@ -1,7 +1,7 @@
-# BHT 0.4.1 — KIẾN TRÚC
+# BHT 0.4.2 — KIẾN TRÚC
 
 ```
-BHT-0.4.1.lsp  (lõi Lisp: nhập dữ liệu, thuật toán nhãn / ký hiệu / ký hiệu ảnh / kiểm tra / thứ tự hiển thị)
+BHT-0.4.2.lsp  (lõi Lisp: nhập dữ liệu, thuật toán nhãn / ký hiệu / ký hiệu ảnh / kiểm tra / thứ tự hiển thị)
       ▲  bht:api-*  (vl-acad-defun, Application.Invoke)            ▲ lệnh Lisp (SendStringToExecute, fire-and-forget)
       │                                                              │
 BHT.Palette.dll  (một PaletteSet WinForms; lệnh chính BTH / BHT; tham chiếu acmgd)
@@ -17,13 +17,17 @@ BHT.Core.dll     (thuần .NET: mô hình dữ liệu, mã hóa bản ghi giốn
   tránh xung đột và tránh mở song song DCL/Palette. `BHTPALETTE` và `BHTSHOW` chỉ là bí danh tương thích.
 * **Tự nạp.** Autodesk Application Bundle nạp Lisp theo từng tài liệu và nạp DLL khi gọi lệnh. Khi dùng APPLOAD,
   Lisp tự `NETLOAD` `BHT.Palette.dll` đặt cạnh nó. Người dùng không cần thao tác NETLOAD thủ công.
-* **Không viết lại thuật toán của Lisp trong C#**: nhãn, ký hiệu, ký hiệu ảnh, kiểm tra, thứ tự hiển thị → gọi `bht:api-*`.
+* **Không viết lại thuật toán của Lisp trong C#**: kiểu điểm, nhãn, ký hiệu, ký hiệu ảnh, kiểm tra, thứ tự hiển thị → gọi `bht:api-*`.
   Phần viết lại trong C# (và lý do): mã hóa/giải mã bản ghi, tạo/sửa hồ sơ, gắn/bỏ ảnh (thao tác dữ liệu đơn giản cần chạy
   từ palette không chế độ mà không chiếm dòng lệnh), tìm đường dẫn JPG, tìm điểm/ảnh gần (hiển thị). Mỗi phần được
   **kiểm thử chéo với Lisp** trong Core Console (dump C# = dump Lisp; hồ sơ C# tạo được Lisp đọc giống bản Lisp tạo;
   đường dẫn JPG C# = `bht:api-photo-path`).
 * **WinForms** (không WPF): giống quy ước repo GKIN-NET của người dùng (PaletteSet + UserControl WinForms), không cần XAML,
   build được bằng csc.exe của .NET Framework khi máy không có SDK/Visual Studio.
+* **Block tùy chọn** được Lisp nạp từ DWG vào định nghĩa `BHT_USER_<NHOM>` trong bản vẽ. `INSBASE` là tâm chèn;
+  hệ số đơn vị được ghi vào META và kết hợp với tỷ lệ ký hiệu. Palette chỉ gọi lệnh `BHTBLOCK` để giữ một luồng xử lý.
+* **Lý trình nhập tay** được Palette phân tích bằng logic thuần .NET, sau đó ghi cùng các trường `ly_trinh_*` của Lisp
+  với trạng thái `NHAP_TAY`; tính lại theo tuyến vẫn đi qua `BHTLYTRINH`.
 
 ## AcadDispatcher (một lớp dùng chung)
 * `ActiveDocument` — tài liệu hiện hành (có thể null).

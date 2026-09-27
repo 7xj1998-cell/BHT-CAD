@@ -1,27 +1,27 @@
-# BHT 0.4.1 — Hướng dẫn sử dụng
+# BHT 0.4.2 — Hướng dẫn sử dụng
 
 BHT là bộ lệnh AutoLISP quản lý điểm khảo sát RTK, hồ sơ đối tượng (biển báo, cọc tiêu, cột Km…), ảnh TimeMark (KMZ), tuyến / lý trình và xuất thống kê.
 
 - Lệnh chính: **`BTH`** hoặc **`BHT`** mở một Palette gắn bên trái AutoCAD.
-- Bản 0.4.1 gồm `BHT-0.4.1.lsp`, `BHT.Palette.dll`, `BHT.Bridge.dll` và `BHT.Core.dll`.
+- Bản 0.4.2 gồm `BHT-0.4.2.lsp`, `BHT.Palette.dll`, `BHT.Bridge.dll` và `BHT.Core.dll`.
 - `BHTDCL` mở bảng DCL dự phòng khi Palette không nạp được. DCL dùng UTF-8 BOM để hiển thị đúng tiếng Việt.
-- Định dạng dữ liệu trong bản vẽ không đổi: bản vẽ từ 0.3.2 đến 0.4.0 mở bằng 0.4.1 mà không cần chuyển đổi.
+- Định dạng dữ liệu trong bản vẽ không đổi: bản vẽ từ 0.3.2 đến 0.4.0 mở bằng 0.4.2 mà không cần chuyển đổi.
 - Mục tiêu hỗ trợ AutoCAD 2021–2024 và Civil 3D 2023 trên Windows.
 
 ## 1. Cài đặt khuyến nghị
 
 1. Đóng AutoCAD.
-2. Giải nén gói `BHT-0.4.1.zip` và chạy `INSTALL_BHT.cmd`.
+2. Giải nén gói `BHT-0.4.2.zip` và chạy `INSTALL_BHT.cmd`.
 3. Mở AutoCAD, gõ `BTH` hoặc `BHT`.
 
 AutoCAD tự nhận `BHT.bundle`; không cần `APPLOAD` hoặc `NETLOAD`. Nếu từng cài bản cũ bằng Startup Suite, hãy gỡ file Lisp cũ để tránh hai phiên bản cùng nạp.
 
 ## 1b. Cách di động bằng APPLOAD
 
-1. Đặt `BHT-0.4.1.lsp` và ba DLL trong cùng một thư mục tin cậy.
+1. Đặt `BHT-0.4.2.lsp` và ba DLL trong cùng một thư mục tin cậy.
 2. Kiểm tra **LISPSYS = 1**. Nếu phải đổi từ 0 sang 1, khởi động lại AutoCAD.
-3. Gõ `APPLOAD`, chọn duy nhất `BHT-0.4.1.lsp`. Lisp tự nạp DLL cạnh nó.
-4. Khi dòng lệnh báo `BHT 0.4.1 đã nạp thành công`, gõ `BTH` hoặc `BHT`.
+3. Gõ `APPLOAD`, chọn duy nhất `BHT-0.4.2.lsp`. Lisp tự nạp DLL cạnh nó.
+4. Khi dòng lệnh báo `BHT 0.4.2 đã nạp thành công`, gõ `BTH` hoặc `BHT`.
 
 Nếu Palette không nạp được, gõ `BHTLOAD` để thử lại và đọc lỗi tại dòng lệnh. Bạn vẫn có thể dùng `BHTDCL` trong lúc xử lý DLL.
 
@@ -33,11 +33,12 @@ Nếu Palette không nạp được, gõ `BHTLOAD` để thử lại và đọc 
 * **B Điểm khảo sát** — danh sách tìm theo tên / ID / mô tả / loại (gõ không dấu cũng được). Chọn dòng → phóng tới điểm
   trong bản vẽ. Chọn POINT trong bản vẽ → thẻ hiện tên, mô tả gốc, X/Y/Z, ID, nhóm gợi ý, hồ sơ liên kết, ảnh liên quan.
   Nút: phóng tới, xem ảnh, tạo hồ sơ, cập nhật nhãn.
-* **C Ảnh TimeMark** — xem JPG ngay trong palette, trước/sau, trạng thái GPS, trạng thái ghép. Chọn ký hiệu ảnh trong bản
-  vẽ → nhảy tới ảnh đó. Danh sách điểm RTK gần vị trí chụp kèm khoảng cách (chỉ để tham khảo). **Ghép ảnh vào hồ sơ chỉ
+* **C Ảnh TimeMark** — xem JPG ngay trong palette, trước/sau, trạng thái GPS, trạng thái ghép. Bố cục luôn dành chỗ riêng
+  cho danh sách, ảnh xem trước và thông tin; khi chưa có dữ liệu, dùng **Nhập KMZ** hoặc **Chỉ thư mục ảnh** ngay trên thẻ.
+  Chọn ký hiệu ảnh trong bản vẽ → nhảy tới ảnh đó. Danh sách điểm RTK gần vị trí chụp kèm khoảng cách (chỉ để tham khảo). **Ghép ảnh vào hồ sơ chỉ
   khi bạn bấm xác nhận**; BHT không tự ghép theo khoảng cách, GPS ảnh không thay tọa độ RTK.
 * **D Hồ sơ đối tượng** — xem / tạo / sửa hồ sơ (nhóm, mã hiệu, mô tả, số trụ, số mặt, tình trạng, phía đường, điểm, ảnh,
-  lý trình nếu có). Tạo cọc tiêu từ POINT đang chọn: nhóm gợi ý dựa trên mô tả (có ghi căn cứ), bạn xác nhận, nhập số trụ
+  lý trình). Có thể ghi lý trình tay, xóa hoặc tính lại theo tuyến; danh sách ảnh dẫn thẳng sang thẻ Ảnh. Tạo cọc tiêu từ POINT đang chọn: nhóm gợi ý dựa trên mô tả (có ghi căn cứ), bạn xác nhận, nhập số trụ
   / tình trạng / ghi chú → **Lưu**; **Chèn/Cập nhật ký hiệu** gọi BHTKYHIEU theo object_id. Điểm đã thuộc hồ sơ khác:
   mặc định **không** tạo mới; dùng chung điểm phải tích ô và xác nhận lần hai.
 * **E Tuyến & báo cáo** — nút gọi các lệnh Lisp sẵn có. Kết quả được đọc lại từ bản vẽ sau khi lệnh chạy xong.
@@ -50,18 +51,43 @@ vẽ (dictionary BHT_V02 / XData) — palette chỉ là giao diện; đóng pale
 | Bước | Việc | Lệnh chính |
 |---|---|---|
 | 1 | Nhập điểm RTK | **`BHTNHAP`** (CSV trực tiếp: tên, Bắc, Đông, Z, mô tả; không tiêu đề) = cách **mặc định**. `BHTNHAPTSV` chỉ dùng cho file TSV trao đổi / chuẩn hóa; **không cần** nhập lại cùng dữ liệu bằng cả hai |
-| 2 | Nhãn điểm | `BHTNHANDIEM`, `BHTANNHAN`, **`BHTSAPNHAN`**, **`BHTNHANTUDONG`** |
+| 2 | Kiểu điểm và nhãn | **`BHTKIEUDIEM`**, `BHTNHANDIEM`, `BHTANNHAN`, **`BHTSAPNHAN`**, **`BHTNHANTUDONG`** |
 | 3 | Nhập TimeMark | `BHTKMZ`, `BHTANHNAP`, `BHTHETOADO` |
 | 4 | Kiểm tra và xem ảnh | `BHTDONGBOANH`, `BHTXEMANH`, `BHTANH`, `BHTTHUMUCANH`, `BHTCHENANH`, `BHTNHANANH` |
 | 5 | Ghép ảnh (chỉ đề xuất, người dùng duyệt) | `BHTGHEPANH`, `BHTXACNHANANH`, `BHTGANANH`, `BHTBOANH` |
 | 6 | Hồ sơ đối tượng | `BHTDOITUONG`, `BHTSUADT`, `BHTXOADT`, `BHTTHEMDIEM`, `BHTBOTDIEM`, `BHTINFO` |
-| 7 | Ký hiệu và thứ tự hiển thị | `BHTKYHIEU`, **`BHTTHUTUVE`** |
+| 7 | Ký hiệu, block và thứ tự hiển thị | `BHTKYHIEU`, **`BHTBLOCK`**, **`BHTTHUTUVE`** |
 | 8 | Tuyến, Km, gói thầu | `BHTTUYEN`, `BHTMOCKM`, `BHTDSMOC`, `BHTLYTRINH`, `BHTGOITHAU`, `BHTPHANDOAN`, `BHTGANDOAN` |
 | 9 | Xuất thống kê | `BHTXUAT`, `BHTKT`, `BHTTRANGTHAI` |
 | Khác | Chẩn đoán | `BHTDIAG`, `BHTTEST`, `BHTHELP` |
 | Bảo trì dữ liệu cũ | Chỉ dùng cho bản vẽ cũ | `BHTNANGCAP` (dữ liệu BHT 0.1), **`BHTVEMODEL`** (thực thể BHT lỡ tạo trong Layout) |
 
-## 3. Lệnh mới / thay đổi trong 0.3.3
+## 3. Thay đổi trong 0.4.2
+
+### Điểm RTK và bố trí nhãn
+
+- Khi nạp BHT, POINT hiển thị mặc định bằng dấu X (`PDMODE=3`) kích thước tuyệt đối 1 đơn vị bản vẽ (`PDSIZE=1`). Tâm dấu X chính là tọa độ POINT; BHT không dời điểm.
+- `BHTKIEUDIEM` cho nhập kích thước dấu X và chọn sắp lại toàn bộ nhãn. Nút **Dấu X 1u + sắp nhãn** trong thẻ RTK áp dụng nhanh kích thước 1.
+- BHT thử 64 vị trí quanh mỗi điểm (8 hướng × 8 khoảng cách), tránh dấu X, nhãn điểm, ký hiệu đối tượng, ký hiệu ảnh và chữ khác của BHT.
+
+### Ảnh và lý trình trong Palette
+
+- Thẻ **Ảnh** không còn dùng các vùng Dock chồng nhau. Khi danh sách rỗng, thẻ nêu rõ cần nhập KMZ hoặc chỉ lại thư mục ảnh.
+- Trong thẻ **Hồ sơ**, ô **Lý trình tay** chấp nhận `Km39+050.50`, `39+050,50` hoặc tổng số mét `39050.5`. Nút **Ghi tay** lưu `ly_trinh_m`, `ly_trinh_km` và trạng thái `NHAP_TAY`; **Xóa** đưa về `CHUA_TINH`; **Tính tuyến** gọi quy trình `BHTLYTRINH`.
+- Trường Ảnh của hồ sơ luôn có thông báo khi chưa gắn ảnh; nút **Xem ở tab Ảnh** chuyển sang quy trình chọn và xác nhận gắn.
+
+### Block ký hiệu tùy chọn
+
+`BHTBLOCK` hoặc nút **Thư viện block** cho nạp một tệp DWG riêng cho từng nhóm đối tượng.
+
+1. Chuẩn bị một DWG chỉ chứa hình ký hiệu cần dùng; đặt `INSBASE` tại đúng tâm chèn mong muốn.
+2. Chạy `BHTBLOCK`, chọn nhóm, chọn `N` và chỉ tới tệp DWG.
+3. Chạy `BHTKYHIEU` để tạo/cập nhật ký hiệu. BHT giữ hình học nguồn và tự áp dụng hệ số đơn vị của DWG.
+4. Chọn `M` trong `BHTBLOCK` để nhóm đó trở lại ký hiệu mặc định; chọn `X` để xem cấu hình hiện tại.
+
+Mỗi nhóm dùng một định nghĩa `BHT_USER_<NHOM>` được lưu trong DWG hiện hành. Tệp nguồn không bị sửa. Nhãn phía trên block có dạng `object_id | mã hiệu`, nên ID luôn nhìn thấy; mã hiệu rỗng thì chỉ hiện ID.
+
+## 4. Lệnh mới / thay đổi từ 0.3.3
 
 ### Nhãn điểm RTK: bố trí tự động, sắp xếp lại, dời tay
 
@@ -76,7 +102,7 @@ vẽ (dictionary BHT_V02 / XData) — palette chỉ là giao diện; đóng pale
 
 Nhãn mới được **bố trí tự động** để tránh chồng lấn:
 
-- BHT thử 8 hướng quanh điểm, mỗi hướng 4 khoảng cách.
+- BHT thử 8 hướng quanh điểm, mỗi hướng 8 khoảng cách.
 - BHT chọn chỗ ít đè nhất lên nhãn khác, ký hiệu đối tượng, ký hiệu ảnh, nhãn mã ảnh và các điểm RTK.
 - **Điểm RTK không bao giờ bị di chuyển.** Chỉ chữ nhãn được đặt chỗ.
 - Chạy lại `BHTNHANDIEM` khi dữ liệu không đổi thì không dời nhãn nào. Chỉ điểm mới, hoặc nhãn thay đổi nội dung / cỡ chữ, mới được bố trí lại.
@@ -173,7 +199,7 @@ Nếu `BHTKT` báo "… thực thể BHT nằm trong Layout":
 2. Trả lời `C` để chuyển các thực thể đó về Model. Tọa độ, layer, XData giữ nguyên; hồ sơ, ảnh và nhãn không mất.
 3. Raster ảnh không chuyển được. Gỡ và chèn lại bằng `BHTCHENANH`.
 
-## 4. Các lệnh từ 0.3.2 (vẫn dùng như cũ)
+## 5. Các lệnh từ 0.3.2 (vẫn dùng như cũ)
 
 ### Nhãn điểm: layer, kiểu chữ, nội dung (như 0.3.2)
 
@@ -250,7 +276,7 @@ Kiểm tra thêm:
 
 Các lệnh và bí danh cũ vẫn dùng được.
 
-## 5. Nguyên tắc dữ liệu (không đổi)
+## 6. Nguyên tắc dữ liệu (không đổi)
 
 - CAD X = Easting (Đông), Y = Northing (Bắc), Z = cao độ. Không làm tròn và không sửa dữ liệu khảo sát. BHT không bao giờ thay đổi tọa độ POINT.
 - Một điểm RTK không phải một biển. Một đối tượng có thể gồm nhiều điểm và nhiều ảnh; một trụ có thể có nhiều mặt biển.
@@ -258,8 +284,8 @@ Các lệnh và bí danh cũ vẫn dùng được.
 - Không đọc hình học của proxy TDT (TDTDBALIGNMENT). Lý trình chỉ tính trên Polyline tham chiếu và mốc Km đã xác nhận.
 - Hệ tọa độ ảnh mặc định là VN-2000 múi 3°, KTT 105°45', k = 0.9999. **Hệ này chưa được xác nhận chính thức**; kiểm tra bằng `BHTHETOADO`.
 
-## 6. Lưu ý
+## 7. Lưu ý
 
 - Luôn làm việc trên **bản sao** bản vẽ.
 - Ảnh GPS 0,0 (`BOT19-P-000204`, `-000205` trong KMZ mẫu) được giữ nhưng không có ký hiệu. Ghép thủ công bằng `BHTGANANH` hoặc `BHTXEMANH` > `G`.
-- Kết quả kiểm thử của bản này nằm ở `TEST_REPORT_0.4.1.md`.
+- Kết quả kiểm thử của bản này nằm ở `TEST_REPORT_0.4.2.md`.
