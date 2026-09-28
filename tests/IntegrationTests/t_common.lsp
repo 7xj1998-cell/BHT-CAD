@@ -1,7 +1,7 @@
-;;; BHT 0.4.4 - ham dung chung cho cac phien kiem thu Core Console
+;;; BHT 0.4.5 - ham dung chung cho cac phien kiem thu Core Console
 ;;; Moi kiem thu ghi 1 dong: PASS / FAIL / SKIP / BLOCKED <ma> <ten> | chi tiet
 (setq *T-DIR* "C:/Users/Le Bao/BHT_TEST_V044/")
-(setq *T-LSP* (strcat *T-DIR* "thư mục có dấu/BHT-0.4.4-rc.lsp"))
+(setq *T-LSP* (strcat *T-DIR* "thư mục có dấu/BHT-0.4.5-rc.lsp"))
 (setq *T-PASS* 0 *T-FAIL* 0 *T-SKIP* 0)
 (defun tlog (s) (write-line s *T-OUT*) (princ (strcat "\n" s)))
 (defun tchk (id name ok detail)

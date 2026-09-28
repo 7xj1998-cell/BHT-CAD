@@ -9,7 +9,7 @@ namespace BHT.Bridge
 {
     /// <summary>
     /// Duong DUY NHAT de .NET goi Lisp BHT: Application.Invoke (acedInvoke) toi cac ham
-    /// bht:api-* ma BHT-0.4.4.lsp dang ky bang vl-acad-defun.
+    /// bht:api-* ma BHT-0.4.5.lsp dang ky bang vl-acad-defun.
     /// BAT BUOC goi trong ngu canh lenh / tai lieu (tu 1 lenh .NET, hoac qua
     /// AcadDispatcher.RunInCommandContext tu palette). Dong bo: tra ve khi Lisp chay xong.
     /// </summary>

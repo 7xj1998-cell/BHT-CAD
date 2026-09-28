@@ -13,7 +13,7 @@ namespace BHT.Palette
         private static readonly Color Border = Color.FromArgb(154, 181, 199);
         private static readonly Color Ink = Color.FromArgb(31, 48, 61);
 
-        public static void Apply(Control root, TabControl tabs, Label document, TextBox status)
+        public static void Apply(Control root, TabControl tabs, Label document, Label status)
         {
             root.BackColor = Canvas;
             document.BackColor = Navy;
@@ -26,6 +26,14 @@ namespace BHT.Palette
             tabs.SizeMode = TabSizeMode.Fixed;
             tabs.DrawItem += DrawTab;
             StyleChildren(root);
+        }
+
+        public static void ApplyDialog(Form dialog)
+        {
+            dialog.BackColor = Canvas;
+            dialog.ForeColor = Ink;
+            dialog.Font = new Font("Segoe UI", 9f);
+            StyleChildren(dialog);
         }
 
         public static Color StatusBack(string text)

@@ -6,7 +6,7 @@ param(
 $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent $PSScriptRoot
 $version = (Get-Content -LiteralPath (Join-Path $root 'VERSION') -Raw).Trim()
-if ($version -ne '0.4.4') { throw "VERSION phải là 0.4.4, đang là $version" }
+if ($version -ne '0.4.5') { throw "VERSION phải là 0.4.5, đang là $version" }
 
 if (-not $SkipBuild) {
   & (Join-Path $PSScriptRoot 'build.ps1') -AcadDir $AcadDir -UseCsc -Test
@@ -53,6 +53,13 @@ New-Item -ItemType Directory -Force -Path $bundleContents | Out-Null
 Copy-Item -LiteralPath (Join-Path $root 'packaging\BHT.bundle\PackageContents.xml') -Destination $bundle
 Copy-Item -LiteralPath $lisp,(Join-Path $bin 'BHT.Core.dll'),(Join-Path $bin 'BHT.Bridge.dll'),(Join-Path $bin 'BHT.Palette.dll') -Destination $bundleContents
 
+# Khong dua ban ve/du lieu/anh khao sat hoac gallery DWG vao goi phat hanh,
+# ke ca khi tep nam trong thu muc tai lieu hay source ban giao.
+$forbiddenExtensions = @('.dwg','.dwl','.dwl2','.bak','.sv$','.kmz','.csv','.tsv','.ntd','.jpg','.jpeg')
+Get-ChildItem -LiteralPath $stage -File -Recurse | Where-Object {
+  $forbiddenExtensions -contains $_.Extension.ToLowerInvariant()
+} | Remove-Item -Force
+
 $hashFile = Join-Path $stage 'SHA256SUMS.txt'
 $hashTargets = Get-ChildItem -LiteralPath $stage -File -Recurse | Where-Object { $_.FullName -ne $hashFile }
 $basePath = $stage.TrimEnd('\') + '\'
@@ -61,6 +68,6 @@ $hashLines = foreach ($f in $hashTargets) {
   '{0}  {1}' -f (Get-FileHash -Algorithm SHA256 -LiteralPath $f.FullName).Hash, $relative
 }
 $hashLines | Set-Content -LiteralPath $hashFile -Encoding UTF8
-Compress-Archive -LiteralPath $stage -DestinationPath $zip -CompressionLevel Optimal
+Compress-Archive -Path $stage -DestinationPath $zip -CompressionLevel Optimal
 
 Get-Item -LiteralPath $stage,$zip | Select-Object FullName,Length,LastWriteTime

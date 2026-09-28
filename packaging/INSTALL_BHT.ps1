@@ -1,4 +1,4 @@
-﻿$ErrorActionPreference = 'Stop'
+$ErrorActionPreference = 'Stop'
 $source = Join-Path $PSScriptRoot 'BHT.bundle'
 $pluginsRoot = Join-Path $env:APPDATA 'Autodesk\ApplicationPlugins'
 $target = Join-Path $pluginsRoot 'BHT.bundle'
@@ -24,5 +24,5 @@ if (Test-Path -LiteralPath $target) {
 }
 
 Copy-Item -LiteralPath $source -Destination $target -Recurse
-Write-Host "Đã cài BHT 0.4.4 vào $target"
+Write-Host "Đã cài BHT 0.4.5 vào $target"
 Write-Host 'Mở lại AutoCAD rồi gõ BTH hoặc BHT. Không cần NETLOAD.'

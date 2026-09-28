@@ -25,7 +25,12 @@ namespace BHT.Palette
             f.Controls.Add(Btn("Tiếp tục công việc", (s, e) => ContinueWorkflow()));
             f.Controls.Add(Btn("Kiểm tra dữ liệu (BHTKT)", (s, e) => CallLisp("bht:api-check", new string[0], "Kiểm tra", r =>
             {
-                if (r.Ok) _ovText.Text = BuildOverviewText() + "\r\n=== KẾT QUẢ BHTKT ===\r\n" + string.Join("\r\n", r.Values.ToArray());
+                if (r.Ok)
+                {
+                    string report = string.Join("\r\n", r.Values.ToArray());
+                    _ovText.Text = BuildOverviewText();
+                    ShowReportDialog("Kiểm tra dữ liệu", report);
+                }
             })));
             f.Controls.Add(Btn("Thống kê ảnh", (s, e) => CallLisp("bht:api-photo-stats", new string[0], "Thống kê ảnh", null)));
             tp.Controls.Add(_ovText);

@@ -7,7 +7,7 @@
 (setq *PH* "C:/Users/Le Bao/BHT_TEST_V032/anh/kmz_out/BHT_PHOTO.tsv")
 (setq *MOVED* (strcat *T-DIR* "anh_da_doi/kmz_out"))
 (setq e (tload))
-(tchk "T00" "nạp BHT-0.4.4" (and (null e) (= *bht-version* "0.4.4")) (if e e *bht-version*))
+(tchk "T00" "nạp BHT-0.4.5" (and (null e) (= *bht-version* "0.4.5")) (if e e *bht-version*))
 (setq *bht-no-launch* T)
 
 ;; ---------- thuc the NGOAI BHT ----------
@@ -193,7 +193,7 @@
     (if (= (cdr (assoc 0 d)) "ENDBLK") (setq done T) (setq out (cons d out))))
   (reverse out))
 (setq bc (t-block-data "BHT_KH_COC_TIEU_V043") bk (t-block-data "BHT_KH_COT_KM_V043"))
-(tchk "K02b" "block mặc định 0.4.4 của Cọc tiêu và Cột Km đã được tạo"
+(tchk "K02b" "block mặc định 0.4.5 của Cọc tiêu và Cột Km đã được tạo"
       (and (>= (length bc) 10) (>= (length bk) 14)
            (vl-some '(lambda (d) (and (= (cdr (assoc 0 d)) "SOLID") (= (cdr (assoc 62 d)) 1))) bc)
            (vl-some '(lambda (d) (= (cdr (assoc 62 d)) 3)) bc)
@@ -202,8 +202,10 @@
 (setq k4 (car (t-kh-ins-of "OBJ-T4")) p4 (cdr (assoc 10 (entget k4))))
 (bht:obj-add-points "OBJ-T4" '("BOT19-R-000042"))
 (setq r (bht:symbol-refresh '("OBJ-T4")) p4b (cdr (assoc 10 (entget k4)))
-      exp4 (bht:obj-position (bht:obj-read "OBJ-T4") (bht:pt-all)))
-(tchk "K03" "thêm điểm vào hồ sơ (ký hiệu tự động) -> ký hiệu dời tới trung bình điểm mới, cùng 1 thực thể (không xóa-vẽ lại)"
+      rec4 (bht:obj-read "OBJ-T4")
+      pos4 (bht:obj-position rec4 (bht:pt-all))
+      exp4 (car (bht:kh-auto-transform rec4 pos4 (bht:kh-scale-for rec4))))
+(tchk "K03" "thêm điểm vào hồ sơ (ký hiệu tự động) -> ký hiệu dời tới vị trí tự động mới, cùng 1 thực thể (không xóa-vẽ lại)"
       (and (equal p4b exp4 1e-9) (not (equal p4 p4b 1e-9)) (entget k4) (= (rv r 'updated) 1)) (list p4 p4b))
 (setq k3 (car (t-kh-ins-of "OBJ-T3")) kh-before (length (t-kh-ins)))
 (bht:obj-delete "OBJ-T3")

@@ -25,6 +25,11 @@ $root = Split-Path -Parent $PSScriptRoot
 if ($AcadDir -eq '') { if ($env:ACAD_INSTALL_DIR) { $AcadDir = $env:ACAD_INSTALL_DIR } else { $AcadDir = 'D:\AutoCAD 2024' } }
 if ($OutDir -eq '') { $OutDir = Join-Path $root 'build\bin' }
 New-Item -ItemType Directory -Force -Path $OutDir | Out-Null
+$expectedOutputs = @('BHT.Core.dll', 'BHT.CoreTests.exe', 'BHT.Bridge.dll', 'BHT.Palette.dll')
+foreach ($name in $expectedOutputs) {
+  $oldOutput = Join-Path $OutDir $name
+  if (Test-Path -LiteralPath $oldOutput) { Remove-Item -LiteralPath $oldOutput -Force }
+}
 $logFile = Join-Path (Split-Path -Parent $OutDir) 'build_log.txt'
 $script:log = New-Object System.Collections.Generic.List[string]
 function Log([string]$s) { $script:log.Add($s); Write-Host $s }
@@ -65,7 +70,9 @@ if ($sdk) {
   if (-not (Test-Path -LiteralPath $csc)) { Log "KHONG tim thay csc.exe cua .NET Framework va khong co .NET SDK -> khong build duoc."; exit 2 }
   Log ("csc: " + $csc)
   $common = @('/nologo', '/noconfig', '/platform:x64', '/optimize+', '/debug:pdbonly', '/warn:4', '/langversion:5', '/utf8output',
-              ('/r:' + (Join-Path $fw 'System.dll')), ('/r:' + (Join-Path $fw 'System.Core.dll')))
+              ('/r:' + (Join-Path $fw 'System.dll')), ('/r:' + (Join-Path $fw 'System.Core.dll')),
+              ('/r:' + (Join-Path $fw 'System.Xml.dll')), ('/r:' + (Join-Path $fw 'System.Xml.Linq.dll')),
+              ('/r:' + (Join-Path $fw 'System.IO.Compression.dll')))
   function Src([string]$dir) { Get-ChildItem -LiteralPath $dir -Recurse -Filter *.cs | Where-Object { $_.FullName -notmatch '\\(obj|bin)\\' } | ForEach-Object { $_.FullName } }
   $core = Join-Path $OutDir 'BHT.Core.dll'
   $a = $common + @('/target:library', ('/out:' + $core)) + (Src (Join-Path $root 'src\dotnet\BHT.Core'))
@@ -77,15 +84,17 @@ if ($sdk) {
     if ($haveBridgeRefs) {
       $br = Join-Path $OutDir 'BHT.Bridge.dll'
       $a = $common + @('/target:library', ('/out:' + $br), ('/r:' + $core), ('/r:' + $refs.acdbmgd), ('/r:' + $refs.accoremgd)) + (Src (Join-Path $root 'src\dotnet\BHT.Bridge'))
-      if ((Run-Tool $csc $a 'csc BHT.Bridge (AcDbMgd + AcCoreMgd)') -ne 0) { $failed = $true }
-      if ($havePaletteRefs) {
+      $bridgeCode = Run-Tool $csc $a 'csc BHT.Bridge (AcDbMgd + AcCoreMgd)'
+      if ($bridgeCode -ne 0) { $failed = $true }
+      if ($havePaletteRefs -and $bridgeCode -eq 0) {
         $pl = Join-Path $OutDir 'BHT.Palette.dll'
         $a = $common + @('/target:library', ('/out:' + $pl), ('/r:' + $core), ('/r:' + $br), ('/r:' + $refs.acdbmgd), ('/r:' + $refs.accoremgd), ('/r:' + $refs.acmgd),
                          ('/r:' + (Join-Path $fw 'System.Windows.Forms.dll')), ('/r:' + (Join-Path $fw 'System.Drawing.dll')),
                          ('/r:' + (Join-Path $fw 'WPF\PresentationCore.dll')), ('/r:' + (Join-Path $fw 'WPF\PresentationFramework.dll')),
                          ('/r:' + (Join-Path $fw 'WPF\WindowsBase.dll')), ('/r:' + (Join-Path $fw 'System.Xaml.dll'))) + (Src (Join-Path $root 'src\dotnet\BHT.Palette'))
         if ((Run-Tool $csc $a 'csc BHT.Palette (+ AcMgd, WinForms)') -ne 0) { $failed = $true }
-      } else { Log "SKIP BHT.Palette: khong co acmgd.dll trong AcadDir." }
+      } elseif (-not $havePaletteRefs) { Log "SKIP BHT.Palette: khong co acmgd.dll trong AcadDir." }
+      else { Log "SKIP BHT.Palette: BHT.Bridge build that bai, khong dung DLL cu." }
     } else { Log "SKIP BHT.Bridge + BHT.Palette: khong co tham chieu AutoCAD (acdbmgd/accoremgd) trong AcadDir - KHONG phai build thanh cong plugin." }
   }
 }

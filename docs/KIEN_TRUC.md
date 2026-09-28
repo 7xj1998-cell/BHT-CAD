@@ -1,12 +1,12 @@
-# BHT 0.4.4 — KIẾN TRÚC
+# BHT 0.4.5 — KIẾN TRÚC
 
 ```
-BHT-0.4.4.lsp  (lõi Lisp + thư viện block: dữ liệu, nhãn / ký hiệu / ảnh / kiểm tra / thứ tự hiển thị)
+BHT-0.4.5.lsp  (lõi Lisp + thư viện block: dữ liệu, nhãn / ký hiệu / ảnh / kiểm tra / thứ tự hiển thị)
       ▲  bht:api-*  (vl-acad-defun, Application.Invoke)            ▲ lệnh Lisp (SendStringToExecute, fire-and-forget)
       │                                                              │
 BHT.Palette.dll  (một PaletteSet WinForms; lệnh chính BTH / BHT; tham chiếu acmgd)
       │
-BHT.Bridge.dll   (truy cập DWG: dictionary BHT_V02 / XRecord / XData; AcadDispatcher; lệnh kiểm thử BHTNET*;
+BHT.Bridge.dll   (truy cập DWG: dictionary BHT_V02 / XRecord / XData; Tdt91Interop; TdtSignLibrary; BHTNET*;
       │           chỉ tham chiếu acdbmgd + accoremgd → NETLOAD được trong Core Console)
 BHT.Core.dll     (thuần .NET: mô hình dữ liệu, mã hóa bản ghi giống Lisp, logic hồ sơ / ảnh / tìm kiếm; kiểm thử CI)
 ```
@@ -30,6 +30,12 @@ BHT.Core.dll     (thuần .NET: mô hình dữ liệu, mã hóa bản ghi giốn
   bản vẽ chỉ lưu tên block/XData như trước nên hợp đồng dữ liệu không đổi.
 * **Lý trình nhập tay** được Palette phân tích bằng logic thuần .NET, sau đó ghi cùng các trường `ly_trinh_*` của Lisp
   với trạng thái `NHAP_TAY`; tính lại theo tuyến vẫn đi qua `BHTLYTRINH`.
+* **Tim TDTSolution 9.1** chỉ được lấy qua `Tdt91Interop`: mở nguồn `ForRead`, `Entity.Explode`, chọn curve dài nhất và
+  tạo/cập nhật Polyline riêng `BHT_TUYEN_TDT`. Lisp không gọi `vlax-curve-*` trên `TDTDBALIGNMENT`; mọi phép chiếu và
+  tính lý trình chạy trên Polyline BHT. Nguồn TDT không bị sửa.
+* **Biển báo TDTSolution 9.1** đi qua `TdtSignLibrary`: đọc catalog XML, giải nén `bienbao.set` vào cache LocalAppData
+  và clone block được chọn vào DWG. Thư viện cài đặt tại `C:\Program Files (x86)\TDT Solution 2022\` chỉ được đọc và
+  không được đóng gói lại. Palette dùng `Mã — Tên biển` để gợi ý; Core tạo báo cáo `.xlsx` Unicode không cần Excel.
 
 ## AcadDispatcher (một lớp dùng chung)
 * `ActiveDocument` — tài liệu hiện hành (có thể null).

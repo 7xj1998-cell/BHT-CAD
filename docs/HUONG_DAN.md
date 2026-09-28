@@ -1,27 +1,27 @@
-# BHT 0.4.4 — Hướng dẫn sử dụng
+# BHT 0.4.5 — Hướng dẫn sử dụng
 
 BHT là bộ lệnh AutoLISP quản lý điểm khảo sát RTK, hồ sơ đối tượng (biển báo, cọc tiêu, cột Km…), ảnh TimeMark (KMZ), tuyến / lý trình và xuất thống kê.
 
 - Lệnh chính: **`BTH`** hoặc **`BHT`** mở một Palette gắn bên trái AutoCAD.
-- Bản 0.4.4 gồm `BHT-0.4.4.lsp`, `BHT.Palette.dll`, `BHT.Bridge.dll` và `BHT.Core.dll`.
+- Bản 0.4.5 gồm `BHT-0.4.5.lsp`, `BHT.Palette.dll`, `BHT.Bridge.dll` và `BHT.Core.dll`.
 - `BHTDCL` mở bảng DCL dự phòng khi Palette không nạp được. DCL dùng UTF-8 BOM để hiển thị đúng tiếng Việt.
-- Định dạng dữ liệu trong bản vẽ không đổi: bản vẽ từ 0.3.2 đến 0.4.3 mở bằng 0.4.4 mà không cần chuyển đổi.
+- Định dạng dữ liệu trong bản vẽ không đổi: bản vẽ từ 0.3.2 đến 0.4.3 mở bằng 0.4.5 mà không cần chuyển đổi.
 - Mục tiêu hỗ trợ AutoCAD 2021–2024 và Civil 3D 2023 trên Windows.
 
 ## 1. Cài đặt khuyến nghị
 
 1. Đóng AutoCAD.
-2. Giải nén gói `BHT-0.4.4.zip` và chạy `INSTALL_BHT.cmd`.
+2. Giải nén gói `BHT-0.4.5.zip` và chạy `INSTALL_BHT.cmd`.
 3. Mở AutoCAD, gõ `BTH` hoặc `BHT`.
 
 AutoCAD tự nhận `BHT.bundle`; không cần `APPLOAD` hoặc `NETLOAD`. Nếu từng cài bản cũ bằng Startup Suite, hãy gỡ file Lisp cũ để tránh hai phiên bản cùng nạp.
 
 ## 1b. Cách di động bằng APPLOAD
 
-1. Đặt `BHT-0.4.4.lsp` và ba DLL trong cùng một thư mục tin cậy.
+1. Đặt `BHT-0.4.5.lsp` và ba DLL trong cùng một thư mục tin cậy.
 2. Kiểm tra **LISPSYS = 1**. Nếu phải đổi từ 0 sang 1, khởi động lại AutoCAD.
-3. Gõ `APPLOAD`, chọn duy nhất `BHT-0.4.4.lsp`. Lisp tự nạp DLL cạnh nó.
-4. Khi dòng lệnh báo `BHT 0.4.4 đã nạp thành công`, gõ `BTH` hoặc `BHT`.
+3. Gõ `APPLOAD`, chọn duy nhất `BHT-0.4.5.lsp`. Lisp tự nạp DLL cạnh nó.
+4. Khi dòng lệnh báo `BHT 0.4.5 đã nạp thành công`, gõ `BTH` hoặc `BHT`.
 
 Nếu Palette không nạp được, gõ `BHTLOAD` để thử lại và đọc lỗi tại dòng lệnh. Bạn vẫn có thể dùng `BHTDCL` trong lúc xử lý DLL.
 
@@ -41,7 +41,9 @@ Nếu Palette không nạp được, gõ `BHTLOAD` để thử lại và đọc 
   lý trình). Có thể ghi lý trình tay, xóa hoặc tính lại theo tuyến; danh sách ảnh dẫn thẳng sang thẻ Ảnh. Tạo cọc tiêu từ POINT đang chọn: nhóm gợi ý dựa trên mô tả (có ghi căn cứ), bạn xác nhận, nhập số trụ
   / tình trạng / ghi chú → **Lưu**; **Chèn/Cập nhật ký hiệu** gọi BHTKYHIEU theo object_id. Điểm đã thuộc hồ sơ khác:
   mặc định **không** tạo mới; dùng chung điểm phải tích ô và xác nhận lần hai.
-* **E Tuyến & báo cáo** — nút gọi các lệnh Lisp sẵn có. Kết quả được đọc lại từ bản vẽ sau khi lệnh chạy xong.
+* **E Tuyến & báo cáo** — sáu thao tác chính: lấy/cập nhật tim TDT 9.1, thêm mốc Km, tính lý trình/phía, sắp nhãn,
+  xuất báo cáo biển báo Excel và kiểm tra dữ liệu. Các lệnh ít dùng nằm trong **Công cụ nâng cao**. Báo cáo dài mở trong
+  hộp thoại riêng để đọc và sao chép.
 
 Palette **từ chối thao tác ghi khi đang có lệnh chạy** (báo "đang có lệnh …, hãy kết thúc lệnh"). Dữ liệu luôn nằm trong bản
 vẽ (dictionary BHT_V02 / XData) — palette chỉ là giao diện; đóng palette không mất gì.
@@ -57,17 +59,29 @@ vẽ (dictionary BHT_V02 / XData) — palette chỉ là giao diện; đóng pale
 | 5 | Ghép ảnh (chỉ đề xuất, người dùng duyệt) | `BHTGHEPANH`, `BHTXACNHANANH`, `BHTGANANH`, `BHTBOANH` |
 | 6 | Hồ sơ đối tượng | `BHTDOITUONG`, `BHTSUADT`, `BHTXOADT`, `BHTTHEMDIEM`, `BHTBOTDIEM`, `BHTINFO` |
 | 7 | Ký hiệu, block và thứ tự hiển thị | `BHTKYHIEU`, **`BHTBLOCK`**, **`BHTBBDANHMUC`**, **`BHTTHUTUVE`** |
-| 8 | Tuyến, Km, gói thầu | `BHTTUYEN`, `BHTMOCKM`, `BHTDSMOC`, `BHTLYTRINH`, `BHTGOITHAU`, `BHTPHANDOAN`, `BHTGANDOAN` |
-| 9 | Xuất thống kê | `BHTXUAT`, `BHTKT`, `BHTTRANGTHAI` |
+| 8 | Tuyến, Km, gói thầu | `BHTTUYENTDT` (tim TDT 9.1), `BHTTUYEN` (Polyline thường), `BHTMOCKM`, `BHTDSMOC`, `BHTLYTRINH`, `BHTGOITHAU`, `BHTPHANDOAN`, `BHTGANDOAN` |
+| 9 | Xuất thống kê | **Xuất báo cáo biển báo Excel** trên Palette, `BHTXUAT` (CSV), `BHTKT`, `BHTTRANGTHAI` |
 | Khác | Chẩn đoán | `BHTDIAG`, `BHTTEST`, `BHTHELP` |
 | Bảo trì dữ liệu cũ | Chỉ dùng cho bản vẽ cũ | `BHTNANGCAP` (dữ liệu BHT 0.1), **`BHTVEMODEL`** (thực thể BHT lỡ tạo trong Layout) |
 
-## 3. Thay đổi trong 0.4.4
+## 3. Thay đổi trong 0.4.5
 
-- Toàn bộ thư viện block nằm trong `BHT-0.4.4.lsp`; không nạp thêm `BHT-BIENBAO.lsp`.
-- BHT nhận mã trong trường **Mã** của hồ sơ biển báo và tự chọn block chuẩn. Các mã hỗ trợ đầu tiên: `W.207`, `W.209`, `W.239a`, `W.245a`, `W.201`, `W.225`, `R.412`, `I.414`, `I.423a`, `I.428a`, `I.434a`, `P.115`, `P.119`, `P.124a`, `P.125`, `P.127`.
-- Các mẫu được chọn từ 205 ảnh KMZ tuyến DT830 và đối chiếu QCVN 41:2024/BGTVT. Điểm chèn `(0,0)` luôn là chân cột; block chưa nhận diện dùng ký hiệu tổng quát có dấu `?`.
-- Gõ `BHTBBDANHMUC`, hoặc `BHTBLOCK` → nhóm Biển báo → `D`, để xem danh mục ngay trong vùng Thông báo của Palette.
+- BHT nhận đúng TDTSolution 9.1 bản thường tại `C:\Program Files (x86)\TDT Solution 2022\`. Bản TDT 9.1 Pro không được dùng.
+- Trường **Mã hiệu** của hồ sơ biển báo là ô gợi ý có thể nhập. Danh mục hiện `Mã — Tên biển` từ 412 mã của TDT; chọn mã có vector để BHT clone block nguồn TDT vào DWG.
+- Block nguồn TDT được bọc trong định nghĩa `BHT_TDT_<MA>` với scale mặt biển `0.2` và cột cao `0.6` đơn vị. BHT chỉ đọc thư viện cài đặt và tạo cache trong LocalAppData; không sửa thư mục TDT và không đóng gói tài sản TDT vào release.
+- Biển báo tự đặt ra ngoài tim theo phía tuyến, xoay theo hướng tuyến, có leader nối về điểm RTK. Nhãn hiện mã biển và lý trình; ID hồ sơ chỉ nằm trong XData.
+- Nút **Xuất báo cáo biển báo Excel** tạo `.xlsx` Unicode gồm sheet tổng hợp và danh sách chi tiết. Báo cáo có STT, công trình, đoạn/gói, loại và tên biển, phía, lý trình, tình trạng, số trụ/mặt, trạng thái kiểm tra, ghi chú và ID hồ sơ.
+- Báo cáo kiểm tra/trạng thái mở trong hộp thoại lớn; vùng thông báo dưới Palette chỉ hiển thị trạng thái ngắn và không nhận con trỏ nhập.
+- Toàn bộ block dự phòng vẫn nằm trong `BHT-0.4.5.lsp`; không nạp thêm `BHT-BIENBAO.lsp`. `BHTBLOCK` tiếp tục nhận DWG tùy chọn khi cần mẫu riêng.
+
+### Lấy tim từ TDTSolution 9.1 bằng `BHTTUYENTDT`
+
+1. Mở AutoCAD bằng profile TDTSolution 9.1 bản thường và chờ TDT nạp xong.
+2. Mở bản vẽ có tim TDT, gõ `BHTTUYENTDT`, rồi chọn đúng đối tượng tim.
+3. `Tdt91Interop` mở đối tượng nguồn ở chế độ `ForRead`, gọi `Entity.Explode` và tạo một Polyline riêng trên layer `BHT_TUYEN_TDT`.
+4. BHT lưu handle/class nguồn để lần chạy sau cập nhật đúng Polyline tham chiếu. Tính lý trình và phía đường diễn ra trên Polyline BHT này.
+
+`BHTTUYENTDT` từ chối tim đang là proxy. Không dùng `BHTTUYENTDT` trong AutoCAD chưa nạp TDT, và không dùng `vlax-curve-*` trực tiếp trên `TDTDBALIGNMENT`. Nếu TDT chưa sẵn sàng, dùng `BHTTUYEN` với một Polyline tham chiếu đã được kiểm tra.
 
 ### Các chức năng kế thừa từ 0.4.3
 
@@ -297,11 +311,12 @@ Các lệnh và bí danh cũ vẫn dùng được.
 - CAD X = Easting (Đông), Y = Northing (Bắc), Z = cao độ. Không làm tròn và không sửa dữ liệu khảo sát. BHT không bao giờ thay đổi tọa độ POINT.
 - Một điểm RTK không phải một biển. Một đối tượng có thể gồm nhiều điểm và nhiều ảnh; một trụ có thể có nhiều mặt biển.
 - GPS ảnh là vị trí **chụp**, không ghi đè RTK. Ghép ảnh tự động chỉ là đề xuất.
-- Không đọc hình học của proxy TDT (TDTDBALIGNMENT). Lý trình chỉ tính trên Polyline tham chiếu và mốc Km đã xác nhận.
+- Không đọc hình học proxy `TDTDBALIGNMENT` bằng `vlax-curve-*`. `BHTTUYENTDT` chỉ chạy khi TDTSolution 9.1 bản thường đã nạp; `Tdt91Interop` dùng `Entity.Explode` trên đối tượng mở `ForRead`, sau đó BHT chỉ tính trên Polyline riêng `BHT_TUYEN_TDT` và mốc Km đã xác nhận.
 - Hệ tọa độ ảnh mặc định là VN-2000 múi 3°, KTT 105°45', k = 0.9999. **Hệ này chưa được xác nhận chính thức**; kiểm tra bằng `BHTHETOADO`.
 
 ## 7. Lưu ý
 
 - Luôn làm việc trên **bản sao** bản vẽ.
 - Ảnh GPS 0,0 (`BOT19-P-000204`, `-000205` trong KMZ mẫu) được giữ nhưng không có ký hiệu. Ghép thủ công bằng `BHTGANANH` hoặc `BHTXEMANH` > `G`.
-- Kết quả kiểm thử của bản này nằm ở `TEST_REPORT_0.4.4.md`.
+- Kết quả kiểm thử của bản này nằm ở `TEST_REPORT_0.4.5.md`.
+- Các giới hạn đã biết nằm ở `KNOWN_ISSUES_0.4.5.md`; checklist Palette/DCL nằm ở `CHECKLIST_NGHIEM_THU_0.4.5.md`.

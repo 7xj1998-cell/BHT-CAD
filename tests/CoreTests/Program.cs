@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using BHT.Core;
 
@@ -46,6 +47,7 @@ namespace BHT.CoreTests
             Safe("C13", "lisp reply", Reply);
             Safe("C14", "groups", GroupsT);
             Safe("C15", "manual chainage", ChainageT);
+            Safe("C16", "xlsx sign report", SignReportT);
             string summary = "TONG BHT.CoreTests: " + pass + " PASS, " + fail + " FAIL";
             log.Add(summary); Console.WriteLine(summary);
             if (args.Length > 0) File.WriteAllLines(Path.Combine(args[0], "coretests_result.txt"), log.ToArray(), new System.Text.UTF8Encoding(false));
@@ -208,10 +210,10 @@ namespace BHT.CoreTests
 
         static void Versions()
         {
-            Check("C11a", "hằng phiên bản", BhtVersion.Version == "0.4.4" && BhtVersion.AssemblyVersion.StartsWith("0.4.4.") && BhtVersion.FileVersion.StartsWith("0.4.4."));
-            Check("C11b", "Lisp phải cùng phiên bản", BhtVersion.LispCompatible("0.4.4", "1") && !BhtVersion.LispCompatible("0.4.3", "1") && !BhtVersion.LispCompatible("0.4.4", "") && !BhtVersion.LispCompatible("0.10.0", "2"));
+            Check("C11a", "hằng phiên bản", BhtVersion.Version == "0.4.5" && BhtVersion.AssemblyVersion.StartsWith("0.4.5.") && BhtVersion.FileVersion.StartsWith("0.4.5."));
+            Check("C11b", "Lisp phải cùng phiên bản", BhtVersion.LispCompatible("0.4.5", "1") && !BhtVersion.LispCompatible("0.4.3", "1") && !BhtVersion.LispCompatible("0.4.5", "") && !BhtVersion.LispCompatible("0.10.0", "2"));
             var asm = typeof(BhtRecord).Assembly.GetName().Version.ToString();
-            Check("C11c", "AssemblyVersion BHT.Core = 0.4.4.x", asm.StartsWith("0.4.4."), asm);
+            Check("C11c", "AssemblyVersion BHT.Core = 0.4.5.x", asm.StartsWith("0.4.5."), asm);
         }
 
         static void PointX()
@@ -249,6 +251,41 @@ namespace BHT.CoreTests
                 && !Chainage.TryParse("KmA+010", out m) && !Chainage.TryParse("-1", out m));
             Check("C15c", "định dạng giống Lisp", Chainage.Format(39050.505) == "Km39+050.51"
                 && Chainage.Format(999.999) == "Km1+000.00" && Chainage.Format(-1) == "");
+        }
+
+        static void SignReportT()
+        {
+            string path = Path.Combine(Path.GetTempPath(), "BHT-sign-report-" + Guid.NewGuid().ToString("N") + ".xlsx");
+            try
+            {
+                var rows = new List<SignReportRow>
+                {
+                    new SignReportRow { Number = 1, Project = "Tuyến thử", SignGroup = "Biển báo nguy hiểm", Code = "W.225",
+                        Description = "Trẻ em", Side = "Phải", Chainage = "Km48+500", Condition = "Hư hỏng nhẹ", Checked = "Đã kiểm tra", ObjectId = "OBJ-000001" }
+                };
+                SignReportWorkbook.Write(path, "Công trình tiếng Việt", rows);
+                bool parts, unicode, xmlOk = true;
+                using (var file = File.OpenRead(path))
+                using (var zip = new ZipArchive(file, ZipArchiveMode.Read))
+                {
+                    var names = new HashSet<string>(zip.Entries.Select(x => x.FullName), StringComparer.Ordinal);
+                    parts = names.Contains("[Content_Types].xml") && names.Contains("xl/workbook.xml")
+                        && names.Contains("xl/styles.xml") && names.Contains("xl/worksheets/sheet1.xml") && names.Contains("xl/worksheets/sheet2.xml");
+                    var detail = zip.GetEntry("xl/worksheets/sheet2.xml");
+                    string text;
+                    using (var reader = new StreamReader(detail.Open(), System.Text.Encoding.UTF8)) text = reader.ReadToEnd();
+                    unicode = text.Contains("Công trình tiếng Việt") && text.Contains("Trẻ em") && text.Contains("Km48+500");
+                    foreach (var entry in zip.Entries.Where(x => x.FullName.EndsWith(".xml", StringComparison.Ordinal)))
+                    {
+                        try { using (var stream = entry.Open()) System.Xml.Linq.XDocument.Load(stream); }
+                        catch { xmlOk = false; }
+                    }
+                }
+                Check("C16a", "xlsx có đủ thành phần", parts);
+                Check("C16b", "xlsx giữ tiếng Việt có dấu", unicode);
+                Check("C16c", "mọi phần XML hợp lệ", xmlOk);
+            }
+            finally { if (File.Exists(path)) File.Delete(path); }
         }
     }
 }

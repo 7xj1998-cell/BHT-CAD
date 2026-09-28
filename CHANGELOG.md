@@ -1,5 +1,17 @@
 # CHANGELOG
 
+## 0.4.5 (2026-09-29)
+
+- Đã tích hợp TDTSolution 9.1 bản thường tại `C:\Program Files (x86)\TDT Solution 2022\`; không dò hoặc dùng TDT 9.1 Pro.
+- Đã thêm `BHTTUYENTDT`: khi module TDT đã nạp và đối tượng tim không còn là proxy, `Tdt91Interop` mở tim `ForRead`, gọi `Entity.Explode` rồi tạo hoặc cập nhật một Polyline riêng trên layer `BHT_TUYEN_TDT`. BHT tính lý trình trên bản sao này và không gọi `vlax-curve-*` trực tiếp trên `TDTDBALIGNMENT`.
+- Đã thêm `TdtSignLibrary`: đọc danh mục 412 mã từ bản TDT đang cài, hiện gợi ý `Mã — Tên biển` trong Palette và clone block vector được chọn vào DWG. Tài sản TDT không được sửa và không nằm trong gói BHT.
+- Đã chuẩn hóa tỷ lệ hiển thị biển TDT: mặt biển scale `0.2`, cột cao `0.6` đơn vị; biển tự đặt ra ngoài tim theo phía đường, có leader về đúng điểm RTK và nhãn chỉ hiện mã biển cùng lý trình.
+- Đã bổ sung báo cáo Excel `.xlsx` Unicode gồm sheet tổng hợp và danh sách biển: STT, công trình, đoạn/gói, loại biển, mã/tên biển, phía, lý trình, tình trạng, số trụ/mặt, trạng thái kiểm tra, ghi chú và ID hồ sơ.
+- Đã rút gọn thẻ Tuyến & báo cáo còn sáu thao tác chính; các lệnh ít dùng nằm trong **Công cụ nâng cao**. Báo cáo dài mở trong hộp thoại có thể thay đổi kích thước và sao chép; vùng trạng thái dưới Palette không còn nhận con trỏ nhập.
+- Đã cập nhật bố trí nhãn, kích thước chữ mặc định và thứ tự hiển thị; POINT RTK vẫn là dấu X kích thước 1 đơn vị, không di chuyển và không làm tròn tọa độ.
+- Đã đồng bộ `BHT-0.4.5.lsp`, `BHT.Core`, `BHT.Bridge`, `BHT.Palette`, Application Bundle và bộ cài về phiên bản 0.4.5.
+- Kiểm thử phát hành: 62 PASS Core; 172 PASS, 0 FAIL, 1 BLOCKED trên AutoCAD Core Console. Mục BLOCKED là mở giao diện DCL do Core Console không có UI và được chuyển sang checklist nghiệm thu thủ công.
+
 ## 0.4.4 (2026-09-28)
 
 - Hợp nhất thư viện biển báo vào `BHT-0.4.4.lsp`; người dùng chỉ APPLOAD một file Lisp.
@@ -25,7 +37,7 @@
 - Mở rộng bố trí nhãn lên 64 vị trí ứng viên, tính cả vùng dấu X; bộ dữ liệu hồi quy 526 điểm còn 0/1574 nhãn chồng lấn sau khi sắp.
 - Sửa bố cục thẻ **Ảnh** để danh sách, ảnh xem trước và nút thao tác không che nhau; thêm hướng dẫn và nút nhập KMZ/chỉ lại thư mục khi chưa có ảnh.
 - Thẻ **Hồ sơ** cho nhập, xóa hoặc tính lý trình; chấp nhận `Km39+050.5`, `39+050,5` hoặc số mét và lưu trạng thái `NHAP_TAY`.
-- Danh sách ảnh của hồ sơ có trạng thái rỗng rõ ràng và điều hướng sang thẻ Ảnh.
+- Danh sách ảnh của hồ sơ hiện rõ `Chưa có ảnh` và điều hướng sang thẻ Ảnh.
 - Nhãn ký hiệu đặt phía trên block và luôn bắt đầu bằng `object_id`, sau đó là mã hiệu.
 - Thêm `BHTBLOCK`: nạp một DWG làm block tùy chọn cho từng nhóm, lấy `INSBASE` làm tâm chèn, tự giữ hệ số đơn vị và có thể trở lại block mặc định.
 - Giữ nguyên hợp đồng dữ liệu `BHT_V02` và khả năng đọc bản vẽ 0.3.2–0.4.1.

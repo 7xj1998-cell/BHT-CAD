@@ -1,9 +1,9 @@
-;;; BHT 0.4.4 - phien S0: nap, phien ban, BHTTEST, DCL tinh
+;;; BHT 0.4.5 - phien S0: nap, phien ban, BHTTEST, DCL tinh
 (load "C:/Users/Le Bao/BHT_TEST_V044/t_common.lsp")
 (tbegin "S0")
 (setq e (tload))
-(tchk "T00" "nạp BHT-0.4.4 (đường dẫn có dấu); *bht-version* = 0.4.4" (and (null e) (= *bht-version* "0.4.4")) (if e e (strcat *bht-version* " / " *bht-build*)))
-(tchk "T01" "thông báo APPLOAD đúng nguyên văn" (= (bht:load-message) "BHT 0.4.4 đã nạp thành công.") (bht:load-message))
+(tchk "T00" "nạp BHT-0.4.5 (đường dẫn có dấu); *bht-version* = 0.4.5" (and (null e) (= *bht-version* "0.4.5")) (if e e (strcat *bht-version* " / " *bht-build*)))
+(tchk "T01" "thông báo APPLOAD đúng nguyên văn" (= (bht:load-message) "BHT 0.4.5 đã nạp thành công.") (bht:load-message))
 (setq r (tsafe "T02" "BHTTEST" '(lambda () (bht:selftest))))
 (if r (tchk "T02" "BHTTEST tự kiểm tra hàm (0 FAIL, >= 45)" (and (= (cadr r) 0) (>= (car r) 45)) (strcat (itoa (car r)) " pass, " (itoa (cadr r)) " fail")))
 (setq bad nil keys nil)
@@ -24,7 +24,7 @@
       (strcat "nút=" (itoa (length *bht-ui-buttons*)) " lỗi=" (vl-princ-to-string bad) " thiếu=" (vl-princ-to-string unk)
               " {=" (itoa opn) " }=" (itoa cls) " sót=" (vl-princ-to-string left)))
 (setq cmds '(c:BHTSAPNHAN c:BHTNHANTUDONG c:BHTTHUTUVE c:BHTVEMODEL c:BHTKYHIEU c:BHTDOITUONG c:BHTCHENANH))
-(tchk "T04" "lệnh 0.3.3 vẫn được định nghĩa trong 0.4.4" (vl-every '(lambda (c) (eval c)) cmds) nil)
+(tchk "T04" "lệnh 0.3.3 vẫn được định nghĩa trong 0.4.5" (vl-every '(lambda (c) (eval c)) cmds) nil)
 (setq r (vl-catch-all-apply 'bht:ui-validate nil))
 (if (and (not (vl-catch-all-error-p r)) r)
   (tchk "T05" "load_dialog DCL trong Core Console" T nil)
@@ -36,7 +36,7 @@
 ;; --- API cho plugin .NET, Lisp khong phu thuoc palette ---
 (tchk "T07" "14 hàm bht:api-* đăng ký vl-acad-defun (gọi được từ .NET Application.Invoke)" (= *bht-api-registered* 14) *bht-api-registered*)
 (setq r (bht:api-version))
-(tchk "T08" "bht:api-version = (OK 0.4.4 1 build)" (equal r (list "OK" "0.4.4" "1" *bht-build*)) r)
+(tchk "T08" "bht:api-version = (OK 0.4.5 1 build)" (equal r (list "OK" "0.4.5" "1" *bht-build*)) r)
 (setq *bht-screen-messages* nil)
 (bht:msg "Thông báo có dấu từ Lisp")
 (setq r (bht:api-messages "DRAIN") r2 (bht:api-messages "PEEK"))

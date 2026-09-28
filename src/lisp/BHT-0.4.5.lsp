@@ -1,5 +1,5 @@
 ;;; ======================================================================
-;;; BHT-0.4.4.lsp - BHT 0.4.4 (build 2026-09-28)
+;;; BHT-0.4.5.lsp - BHT 0.4.5 (build 2026-09-29)
 ;;; Quan ly khao sat bao hieu / coc tieu / cot Km / bang va cong trinh ven
 ;;; tuyen: diem RTK, ho so doi tuong, anh TimeMark (KMZ), tuyen tham chieu,
 ;;; ly trinh, goi thau / doan tuyen, xuat CSV cho Excel.
@@ -12,15 +12,17 @@
 ;;; Muc tieu: AutoCAD 2021-2024, Civil 3D 2023 (Windows). File luu UTF-8,
 ;;; can LISPSYS = 1 (mac dinh tu AutoCAD 2021) de hien tieng Viet co dau.
 ;;;
-;;; NHAT KY THAY DOI 0.4.4 (chi tiet: CHANGELOG.md)
-;;;  + Hop nhat thu vien block vao mot file Lisp duy nhat; khong can nap
-;;;    BHT-BIENBAO.lsp rieng.
-;;;  + Thu vien bien bao duoc xay dung tu 205 anh trong KMZ DT830, uu tien
-;;;    cac mau xuat hien tren tuyen va doi chieu QCVN 41:2024/BGTVT.
-;;;  + Tu chon block bien bao theo ma hieu cua ho so (W.207, W.209, W.239a,
-;;;    W.245a, R.412, I.414, I.423a, I.428a, I.434a, P.115, P.119,
-;;;    P.124a, P.125, P.127); diem chen cua moi block la chan cot (0,0).
-;;;  + BHTBBDANHMUC liet ke thu vien chuan; BHTBLOCK > D mo cung danh muc.
+;;; NHAT KY THAY DOI 0.4.5 (chi tiet: CHANGELOG.md)
+;;;  + BHTTUYENTDT goi Tdt91Interop de doc tim TDTSolution 9.1 ban thuong
+;;;    dang hoat dong: mo ForRead, Entity.Explode, tao/cap nhat Polyline rieng
+;;;    tren layer BHT_TUYEN_TDT; khong dung vlax-curve tren TDTDBALIGNMENT.
+;;;  + TdtSignLibrary doc 412 ma tu TDT Solution 2022, goi y ten bien va clone
+;;;    block vector duoc chon vao DWG; khong sua/khong dong goi tai san TDT.
+;;;  + Bien TDT scale mat 0.2, cot 0.6 unit; tu day ra ngoai tim, ve leader ve
+;;;    diem RTK. POINT RTK khong bi di chuyen hay lam tron toa do.
+;;;  + Palette xuat bao cao Excel .xlsx Unicode (tong hop + danh sach bien),
+;;;    mo bao cao dai trong hop thoai lon va rut gon nhom lenh thuong dung.
+;;;  + Van giu block tich hop/BHTBLOCK lam du phong khi TDT chua san sang.
 ;;;
 ;;; NHAT KY THAY DOI 0.4.3
 ;;;  + BTH / BHT mo mot Palette .NET duy nhat; Lisp tu nap DLL cung thu muc.
@@ -78,12 +80,12 @@
 
 (vl-load-com)
 
-(setq *bht-version* "0.4.4")
-(setq *bht-build* "2026-09-28")
+(setq *bht-version* "0.4.5")
+(setq *bht-build* "2026-09-29")
 
 ;; Luu duong dan ngay khi APPLOAD / Application Bundle nap Lisp. DLL dat canh
 ;; file Lisp de nguoi dung chi can APPLOAD mot lan, khong phai tu NETLOAD.
-(setq *bht-lsp-file* (findfile "BHT-0.4.4.lsp"))
+(setq *bht-lsp-file* (findfile "BHT-0.4.5.lsp"))
 (setq *bht-lsp-dir*
   (if *bht-lsp-file* (vl-filename-directory *bht-lsp-file*) nil))
 (setq *bht-palette-dll*
@@ -1132,11 +1134,11 @@
 (setq *bht-lbl-tol* 1e-4)
 
 (defun bht:lbl-settings (/ h off)
-  (setq h (bht:num (bht:meta "nhan_h" "1.0")) off (bht:num (bht:meta "nhan_offset" "0.5")))
+  (setq h (bht:num (bht:meta "nhan_h" "0.5")) off (bht:num (bht:meta "nhan_offset" "0.65")))
   (list (cons 'mode (strcase (bht:meta "nhan_che_do" "TMC")))
         (cons 'id (= (bht:meta "nhan_id" "0") "1"))
-        (cons 'h (if (and h (> h 0)) h 1.0))
-        (cons 'off (if off off 0.5))
+        (cons 'h (if (and h (> h 0)) h 0.5))
+        (cons 'off (if off off 0.65))
         (cons 'style (bht:meta "nhan_kieu_chu" "BHT_ARIAL"))
         (cons 'hidden (= (bht:meta "nhan_an" "0") "1"))
         (cons 'prio (= (bht:meta "nhan_uu_tien_dt" "0") "1")))
@@ -1601,8 +1603,8 @@
 )
 
 (defun bht:lbl-ask-settings (/ h off sty)
-  (setq h (bht:num (bht:ask-string "Chiều cao chữ nhãn" (bht:meta "nhan_h" "1.0")))
-        off (bht:num (bht:ask-string "Khoảng lệch nhãn so với điểm (đơn vị bản vẽ)" (bht:meta "nhan_offset" "0.5")))
+  (setq h (bht:num (bht:ask-string "Chiều cao chữ nhãn" (bht:meta "nhan_h" "0.5")))
+        off (bht:num (bht:ask-string "Khoảng lệch nhãn so với điểm (đơn vị bản vẽ)" (bht:meta "nhan_offset" "0.65")))
         sty (bht:ask-string "Kiểu chữ (BHT_ARIAL = Arial TrueType, hiện tiếng Việt)" (bht:meta "nhan_kieu_chu" "BHT_ARIAL")))
   (cond
     ((not (and h (> h 0) off)) (bht:msg "BHT: giá trị không hợp lệ, giữ cài đặt cũ.") nil)
@@ -1655,7 +1657,7 @@
   (bht:msg (strcat "Nhãn điểm RTK: chế độ " (bht:lbl-mode-name (cdr (assoc 'mode st)))
                    (if (cdr (assoc 'id st)) " + ID nội bộ" "")
                    (if (cdr (assoc 'prio st)) " | ưu tiên hồ sơ: BẬT" "")
-                   " | cao chữ " (bht:meta "nhan_h" "1.0") " | lệch " (bht:meta "nhan_offset" "0.5")
+                   " | cao chữ " (bht:meta "nhan_h" "0.5") " | lệch " (bht:meta "nhan_offset" "0.65")
                    " | kiểu chữ " (bht:meta "nhan_kieu_chu" "BHT_ARIAL")
                    (if (cdr (assoc 'hidden st)) " | ĐANG ẨN" "")))
   (setq v (strcase (bht:ask-string "[1=Tên/2=Tên+mô tả/3=Tên+mô tả+cao độ/4=Ưu tiên hồ sơ bật-tắt/I=Bật-tắt ID nội bộ/S=Sắp xếp lại/R=Trả nhãn về tự động/A=Ẩn/H=Hiện/C=Cài đặt/X=Xóa nhãn]" cur)))
@@ -2579,9 +2581,9 @@
                          lcreated lupdated valid seen)
   (setq z (bht:crs-current) created 0 updated 0 kept 0 dupdel 0 removed 0 invalid 0 lcreated 0 lupdated 0
         valid 0 seen nil s (bht:photo-scale)
-        h (bht:num (bht:meta "anh_nhan_h" "1.0"))
+        h (bht:num (bht:meta "anh_nhan_h" "0.45"))
         style (bht:text-style (bht:meta "nhan_kieu_chu" "BHT_ARIAL")))
-  (if (or (null h) (<= h 0)) (setq h 1.0))
+  (if (or (null h) (<= h 0)) (setq h 0.45))
   (bht:photo-block)
   (bht:layer "BHT_ANH_TEN" 4)
   (bht:regapp "BHT_ANHTEN")
@@ -3588,6 +3590,72 @@
   (princ)
 )
 
+;; Tim ban ghi tuyen da tao tu cung mot TdtDbAlignment.
+(defun bht:route-by-tdt-source (source-handle / hit rec)
+  (setq hit nil)
+  (foreach id (bht:route-ids)
+    (setq rec (bht:route-read id))
+    (if (= (strcase (bht:get rec "tdt_source_handle")) (strcase source-handle))
+      (setq hit id)))
+  hit
+)
+
+;; Tich hop TDTSolution 9.1 ban thuong. Bridge chi mo tim TDT ForRead, Explode vao bo nho,
+;; roi tao/cap nhat mot LWPOLYLINE tham chieu rieng tren layer BHT_TUYEN_TDT.
+;; BHT tinh ly trinh tren ban sao nay de khong sua hoac khoa doi tuong goc cua TDT.
+(defun c:BHTTUYENTDT (/ *error* sel src src-h existing-id existing-rec existing-h id maxoff extrap r ref res rec)
+  (setq *error* bht:on-error)
+  (if (not (fboundp 'BHTTDT91ROUTE))
+    (bht:msg "BHT: Bridge 0.4.5 chưa được nạp. Đóng AutoCAD, cài lại BHT 0.4.5 rồi mở bằng profile TDT 9.1.")
+    (if (setq sel (entsel "\nChọn tim tuyến TDTSolution 9.1: "))
+      (progn
+        (setq src (car sel) src-h (cdr (assoc 5 (entget src)))
+              existing-id (bht:route-by-tdt-source src-h)
+              existing-rec (if existing-id (bht:route-read existing-id) nil)
+              existing-h (if existing-rec (bht:get existing-rec "handle") ""))
+        (if existing-id
+          (setq id existing-id maxoff (bht:num (bht:get existing-rec "max_offset"))
+                extrap (bht:num (bht:get existing-rec "ngoai_suy_m")))
+          (progn
+            (setq id (strcase (bht:ask-string "ID tuyến BHT" (strcat "TUYEN" (itoa (1+ (length (bht:route-ids)))))))
+                  maxoff (bht:num (bht:ask-string "Khoảng cách tối đa từ đối tượng tới tim (m)" "100"))
+                  extrap (bht:num (bht:ask-string "Cho phép ngoại suy ngoài mốc tối đa (m, 0 = không)" "0")))))
+        (if (and (bht:valid-id id) maxoff (> maxoff 0.0) extrap)
+          (progn
+            (setq r (vl-catch-all-apply 'BHTTDT91ROUTE (list src-h existing-h)))
+            (cond
+              ((vl-catch-all-error-p r)
+               (bht:msg (strcat "BHT: không gọi được tích hợp TDT 9.1: " (vl-catch-all-error-message r))))
+              ((or (not (listp r)) (/= (strcase (bht:str (car r))) "OK"))
+               (bht:msg (strcat "BHT: " (if (and (listp r) (cadr r)) (bht:str (cadr r)) "không lấy được hình học tim TDT 9.1."))))
+              (T
+               (setq ref (handent (cadr r)))
+               (if (null ref)
+                 (bht:msg "BHT: Bridge đã trả về nhưng không tìm thấy Polyline tham chiếu.")
+                 (progn
+                   (if existing-id
+                     (setq res (list T existing-id))
+                     (setq res (bht:route-create id ref "TIM_DUONG" maxoff extrap nil
+                                 "Bản sao tham chiếu từ TDTSolution 9.1")))
+                   (if (car res)
+                     (progn
+                       (setq rec (bht:route-read id)
+                             rec (bht:set rec "handle" (cadr r))
+                             rec (bht:set rec "nguon" "TDTSolution 9.1 bản thường (đọc tim gốc, tính trên bản sao)")
+                             rec (bht:set rec "tdt_source_handle" src-h)
+                             rec (bht:set rec "tdt_source_class" (bht:str (caddr r)))
+                             rec (bht:set rec "tdt_refreshed_at" (bht:now)))
+                       (bht:route-write id rec)
+                       (bht:msg (strcat "BHT: " (if existing-id "đã cập nhật" "đã tạo") " tuyến " id
+                                        " từ tim TDT 9.1; Polyline tham chiếu handle " (cadr r)
+                                        ". Dùng BHTMOCKM để khai báo mốc Km.")))
+                     (progn
+                       (if (not existing-id) (entdel ref))
+                       (bht:msg (strcat "BHT: " (cadr res))))))))))))))
+  (bht:log-flush)
+  (princ)
+)
+
 ;; Tuong thich v0.1: goc ly trinh tai dau polyline, chieu theo huong ve.
 (defun c:BHTROUTE (/ *error* sel ent base maxoff id res)
   (setq *error* bht:on-error)
@@ -3878,9 +3946,37 @@
 
 ;; Chon block theo ma hieu ho so. Bien the a,b,c... dung chung hinh tong quat
 ;; cua cung ma; gia tri so 20/40 cua P.127 duoc giu rieng neu co trong ma.
-(defun bht:bb-block-for (code / k)
-  (setq k (bht:bb-code-key code))
+(defun bht:tdt-block-name (code / s out i ch a under)
+  (setq s (strcase (bht:trim code)) out "BHT_TDT_" i 1 under nil)
+  (while (<= i (strlen s))
+    (setq ch (substr s i 1) a (ascii ch))
+    (if (or (and (>= a 48) (<= a 57)) (and (>= a 65) (<= a 90)))
+      (progn (setq out (strcat out ch)) (setq under nil))
+      (if (not under) (progn (setq out (strcat out "_")) (setq under T))))
+    (setq i (1+ i)))
+  (vl-string-right-trim "_" out)
+)
+
+;; BHTTDTBLOCK do BHT.Bridge dang ky. Ham clone dung block cua thu vien TDT
+;; tren may, boc lai voi cot cao 0.6 va scale mat bien 0.2 (mat TDT goc cao 7).
+;; Neu may khong co TDT/Bridge hoac ma khong co hinh, BHT dung block noi bo ben duoi.
+(defun bht:tdt-import-block (code / want r)
+  (setq want (bht:tdt-block-name code))
   (cond
+    ((tblsearch "BLOCK" want) want)
+    ((= (bht:trim code) "") nil)
+    (T
+     (setq r (vl-catch-all-apply 'BHTTDTBLOCK (list code)))
+     (if (and (not (vl-catch-all-error-p r)) (listp r) (= (strcase (bht:str (car r))) "OK")
+              (cadr r) (tblsearch "BLOCK" (cadr r)))
+       (cadr r)
+       nil)))
+)
+
+(defun bht:bb-block-for (code / k tdt)
+  (setq k (bht:bb-code-key code) tdt (bht:tdt-import-block code))
+  (cond
+    (tdt tdt)
     ((wcmatch k "*W207*") "BHT_KH_BB_W207_V044")
     ((wcmatch k "*W209*") "BHT_KH_BB_W209_V044")
     ((wcmatch k "*W239*") "BHT_KH_BB_W239A_V044")
@@ -4251,7 +4347,71 @@
         detail (cond ((/= code "") (bht:kh-code-label group code))
                      ((/= chainage "") (bht:kh-code-label group chainage))
                      (T "")))
-  (strcat (bht:group-label group) (if (/= detail "") (strcat " " detail) ""))
+  (if (= group "BIEN_BAO")
+    (strcat (if (/= code "") (bht:kh-code-label group code) "Biển báo")
+            (if (/= chainage "") (strcat "  " chainage) ""))
+    (strcat (bht:group-label group) (if (/= detail "") (strcat " " detail) "")))
+)
+
+;; Vi tri/goc ky hieu tu dong theo tim: bien bao duoc day ra ngoai phia duong,
+;; giu diem RTK lam moc that va noi bang duong dan. Cac nhom khac dat dung tam diem.
+(defun bht:kh-auto-transform (rec pos sc / rid rrec ent pr cp par der dl off ux uy side gap rot)
+  (if (or (null pos) (/= (bht:get rec "nhom") "BIEN_BAO"))
+    (list pos 0.0)
+    (progn
+      (setq rid (bht:get rec "route_id") rrec (if (/= rid "") (bht:route-read rid) nil)
+            ent (if rrec (bht:route-ent rrec) nil) pr (if ent (bht:curve-project ent pos) nil)
+            side (strcase (if (/= (bht:get rec "phia_tuyen") "") (bht:get rec "phia_tuyen") (bht:get rec "phia_duong")))
+            gap (* 2.8 sc))
+      (if pr
+        (progn
+          (setq cp (cadddr pr) par (vl-catch-all-apply 'vlax-curve-getParamAtPoint (list ent cp))
+                der (if (and par (not (vl-catch-all-error-p par)))
+                      (vl-catch-all-apply 'vlax-curve-getFirstDeriv (list ent par)) nil))
+          (if (or (null der) (vl-catch-all-error-p der))
+            (list pos 0.0)
+            (progn
+              (setq dl (distance '(0.0 0.0 0.0) (list (car der) (cadr der) 0.0))
+                    off (distance (list (car cp) (cadr cp)) (list (car pos) (cadr pos))))
+              (if (< dl 1e-9)
+                (list pos 0.0)
+                (progn
+                  (setq rot (angle '(0.0 0.0 0.0) (list (car der) (cadr der) 0.0)))
+                  (if (> off 0.05)
+                    (setq ux (/ (- (car pos) (car cp)) off) uy (/ (- (cadr pos) (cadr cp)) off))
+                    (if (= side "TRAI")
+                      (setq ux (/ (- (cadr der)) dl) uy (/ (car der) dl))
+                      (setq ux (/ (cadr der) dl) uy (/ (- (car der)) dl))))
+                  (list (list (+ (car pos) (* gap ux)) (+ (cadr pos) (* gap uy)) (caddr pos)) rot))))))
+        ;; Chua co tim: van tach bien khoi dau diem theo phia da khai bao.
+        (if (= side "TRAI")
+          (list (list (- (car pos) gap) (+ (cadr pos) gap) (caddr pos)) 0.0)
+          (list (list (+ (car pos) gap) (+ (cadr pos) gap) (caddr pos)) 0.0))))))
+
+(defun bht:kh-readable-angle (a / two)
+  (setq two (* 2.0 pi))
+  (while (< a 0.0) (setq a (+ a two)))
+  (while (>= a two) (setq a (- a two)))
+  (if (and (> a (/ pi 2.0)) (< a (* 1.5 pi))) (- a pi) a)
+)
+
+(defun bht:kh-leader-xdata (oid)
+  (list -3 (list "BHT_KH" (cons 1000 oid) (cons 1000 "DAN")))
+)
+
+;; Dong bo mot duong dan. Tra ve so ban trung/thua da xoa.
+(defun bht:kh-leader-sync-one (oid a b ents / e d nd n)
+  (setq e (car ents) n 0)
+  (foreach e2 (cdr ents) (if (entget e2) (progn (entdel e2) (setq n (1+ n)))))
+  (if (and a b (> (distance a b) 0.05))
+    (if (and e (setq d (entget e)))
+      (progn
+        (setq nd (bht:dxf-put (bht:dxf-put (bht:dxf-put d 10 a) 11 b) 8 "BHT_DUONG_DAN"))
+        (if (not (equal nd d)) (progn (entmod (append nd (list (bht:kh-leader-xdata oid)))) (entupd e))))
+      (entmakex (list '(0 . "LINE") '(410 . "Model") '(8 . "BHT_DUONG_DAN") (cons 10 a) (cons 11 b)
+                      (bht:kh-leader-xdata oid))))
+    (if (and e (entget e)) (progn (entdel e) (setq n (1+ n)))))
+  n
 )
 
 (defun bht:kh-xdata-ins (oid state pt rot sc)
@@ -4302,18 +4462,19 @@
 ;;  create nil = chi cap nhat ky hieu da co (khong tao moi).
 ;; Ky hieu mo coi (ho so da xoa) luon bi xoa. Tra ve assoc:
 ;;  created updated unchanged removed duplicates manual nopos total
-(defun bht:symbol-sync-ex (scope create / s h ins txt index oids rec pos blk g e d nd nx st anchor sc rot lpos
-                                       created updated same removed dup manual nopos all lbl ok)
+(defun bht:symbol-sync-ex (scope create / s h ins txt dan index oids rec pos blk g e d nd nx st anchor sc rot lpos
+                                       auto tr trot created updated same removed dup manual nopos all lbl ok)
   (setq s (bht:kh-scale) h (bht:kh-h) created 0 updated 0 same 0 removed 0 dup 0 manual 0 nopos 0)
-  (bht:layer "BHT_KYHIEU" 1) (bht:layer "BHT_NHAN" 2)
+  (bht:layer "BHT_KYHIEU" 1) (bht:layer "BHT_NHAN" 2) (bht:layer "BHT_DUONG_DAN" 6)
   (bht:regapp "BHT_KH")
   (bht:symbol-blocks)
   (setq ins (bht:group-pairs (bht:tagged-pairs "INSERT" "BHT_KH" 1))
         txt (bht:group-pairs (bht:tagged-pairs "TEXT" "BHT_KH" 1))
+        dan (bht:group-pairs (bht:tagged-pairs "LINE" "BHT_KH" 1))
         all (bht:obj-ids) index (bht:pt-all)
         oids (if scope (mapcar 'strcase scope) all))
   ;; ky hieu cua ho so da xoa
-  (foreach gr (append ins txt)
+  (foreach gr (append ins txt dan)
     (if (not (member (car gr) all))
       (foreach e2 (cdr gr) (if (entget e2) (progn (entdel e2) (setq removed (1+ removed)))))))
   (foreach oid oids
@@ -4321,16 +4482,17 @@
     (if rec
       (progn
         (setq pos (bht:obj-position rec index) blk (bht:kh-block rec) sc (bht:kh-scale-for rec)
+              tr (bht:kh-auto-transform rec pos sc) auto (car tr) rot (cadr tr)
               g (cdr (assoc oid ins)) anchor nil)
         (foreach e2 (cdr g) (entdel e2) (setq dup (1+ dup)))
         (cond
           ((setq e (car g))
-           (setq d (entget e) st (bht:kh-ins-state e pos))
+           (setq d (entget e) st (bht:kh-ins-state e auto))
            (cond
-             ((and (eq st 'AUTO) pos)
-               (setq nd (bht:dxf-put (bht:dxf-put (bht:dxf-put (bht:dxf-put (bht:dxf-put d 10 pos) 41 sc) 42 sc) 43 sc) 50 0.0)
+             ((and (eq st 'AUTO) auto)
+               (setq nd (bht:dxf-put (bht:dxf-put (bht:dxf-put (bht:dxf-put (bht:dxf-put d 10 auto) 41 sc) 42 sc) 43 sc) 50 rot)
                     nd (bht:dxf-put (bht:dxf-put nd 2 blk) 8 "BHT_KYHIEU")
-                    nx (bht:kh-xdata-ins oid "TU_DONG" pos 0.0 sc)))
+                    nx (bht:kh-xdata-ins oid "TU_DONG" auto rot sc)))
              ((eq st 'AUTO)
               ;; ho so khong con diem hop le: giu ky hieu tai cho
               (setq nopos (1+ nopos) nd (bht:dxf-put d 2 blk)
@@ -4341,20 +4503,23 @@
            (if (bht:ent-same-p e d nd nx)
              (setq same (1+ same))
              (progn (entmod (append nd (list nx))) (entupd e) (setq updated (1+ updated))))
-           (setq d (entget e) anchor (list (cdr (assoc 10 d)) (abs (cdr (assoc 41 d))))))
-          ((and pos create)
-            (setq e (bht:insert blk pos "BHT_KYHIEU" sc))
+           (setq d (entget e) anchor (list (cdr (assoc 10 d)) (abs (cdr (assoc 41 d))) (cdr (assoc 50 d)))))
+          ((and auto create)
+            (setq e (bht:insert blk auto "BHT_KYHIEU" sc))
            (if e
              (progn
-                (entmod (append (entget e) (list (bht:kh-xdata-ins oid "TU_DONG" pos 0.0 sc))))
+                (setq d (bht:dxf-put (entget e) 50 rot))
+                (entmod (append d (list (bht:kh-xdata-ins oid "TU_DONG" auto rot sc))))
                (entupd e)
-                (setq created (1+ created) anchor (list pos sc)))))
+                (setq created (1+ created) anchor (list auto sc rot)))))
           ((null pos) (setq nopos (1+ nopos))))
+        (setq dup (+ dup (bht:kh-leader-sync-one oid pos (if anchor (car anchor) nil) (cdr (assoc oid dan)))))
         ;; nhan ky hieu (theo vi tri ky hieu thuc te)
         (if anchor
           (progn
-            (setq lbl (bht:kh-label oid rec) sc (cadr anchor)
-                  lpos (list (car (car anchor)) (+ (cadr (car anchor)) (* 2.2 sc)) (caddr (car anchor)))
+            (setq lbl (bht:kh-label oid rec) sc (cadr anchor) rot (caddr anchor)
+                  trot (bht:kh-readable-angle rot)
+                  lpos (polar (car anchor) (+ rot (/ pi 2.0)) (* 2.2 sc))
                   g (cdr (assoc oid txt)))
             (foreach e2 (cdr g) (entdel e2) (setq dup (1+ dup)))
             (if (setq e (car g))
@@ -4362,7 +4527,7 @@
                 (setq d (entget e)
                       st (bht:kh-txt-state e (if pos (list (+ (car pos) (* 1.5 (bht:kh-scale))) (+ (cadr pos) (* 1.0 (bht:kh-scale)))) nil)))
                 (if (eq st 'AUTO)
-                  (setq nd (bht:dxf-put (bht:dxf-put (bht:dxf-put (bht:dxf-put d 10 lpos) 1 lbl) 40 h) 8 "BHT_NHAN")
+                  (setq nd (bht:dxf-put (bht:dxf-put (bht:dxf-put (bht:dxf-put (bht:dxf-put d 10 lpos) 1 lbl) 40 h) 8 "BHT_NHAN") 50 trot)
                         nx (bht:kh-xdata-txt oid "TU_DONG" lpos))
                   (setq manual (1+ manual)
                         nd (bht:dxf-put (bht:dxf-put d 1 lbl) 40 h)
@@ -4371,7 +4536,7 @@
                   (progn (entmod (append nd (list nx))) (entupd e))))
               (progn
                 (setq e (bht:text lbl lpos h "BHT_NHAN"))
-                (if e (progn (entmod (append (entget e) (list (bht:kh-xdata-txt oid "TU_DONG" lpos)))) (entupd e))))))))))
+                (if e (progn (entmod (append (bht:dxf-put (entget e) 50 trot) (list (bht:kh-xdata-txt oid "TU_DONG" lpos)))) (entupd e))))))))))
   (bht:log (strcat "Ký hiệu theo ID: tạo " (itoa created) ", cập nhật " (itoa updated) ", giữ " (itoa same)
                    ", xóa (hồ sơ đã xóa) " (itoa removed) ", xóa trùng " (itoa dup) ", vị trí tay giữ " (itoa manual)))
   (list (cons 'created created) (cons 'updated updated) (cons 'unchanged same) (cons 'removed removed)
@@ -4590,7 +4755,7 @@
   (setq labels (append (bht:ents-tagged "TEXT" '("BHT_NHAN" "BHT_KH" "BHT_ANHTEN")))
         mid (append (bht:ents-tagged "INSERT" '("BHT_KH" "BHT_ANHPT"))
                     (bht:ents-tagged "POINT" '("BHT_PT" "BHT_RTK"))
-                    (bht:ents-tagged "LINE" '("BHT_ANHDAN")))
+                    (bht:ents-tagged "LINE" '("BHT_ANHDAN" "BHT_KH")))
         raster (bht:ents-tagged "IMAGE" '("BHT_ANHRS")))
   (setq ss (ssget "_X" '((0 . "IMAGE") (410 . "Model"))) i 0)
   (if ss
@@ -5883,7 +6048,7 @@
     (bht:msg "BHT: Palette đã sẵn sàng. Gõ BTH hoặc BHT để mở bảng.")
     (progn
       (bht:msg "BHT: không nạp được Palette.")
-      (bht:msg "  Kiểm tra BHT.Palette.dll, BHT.Bridge.dll và BHT.Core.dll nằm cạnh BHT-0.4.4.lsp.")
+      (bht:msg "  Kiểm tra BHT.Palette.dll, BHT.Bridge.dll và BHT.Core.dll nằm cạnh BHT-0.4.5.lsp.")
       (bht:msg "  Có thể dùng bảng dự phòng bằng lệnh BHTDCL.")))
   (princ)
 )

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Windows.Forms;
@@ -14,8 +15,8 @@ namespace BHT.Palette
         // ================================================================ D. HO SO DOI TUONG
         private TabPage _tabObjects;
         private ListView _objList;
-        private TextBox _oId, _oCode, _oDesc, _oPoles, _oFaces, _oFaceCodes, _oCond, _oNote, _oChainage, _oInfo;
-        private ComboBox _oGroup, _oCodeType, _oSide;
+        private TextBox _oId, _oDesc, _oPoles, _oFaces, _oFaceCodes, _oCond, _oNote, _oChainage, _oInfo;
+        private ComboBox _oGroup, _oCode, _oCodeType, _oSide;
         private CheckBox _oChecked, _oAllowShared;
         private ListBox _oPoints, _oPhotos;
         private Label _oMode;
@@ -37,7 +38,21 @@ namespace BHT.Palette
             _oId = new TextBox { Dock = DockStyle.Fill };
             _oGroup = new ComboBox { Dock = DockStyle.Fill, DropDownStyle = ComboBoxStyle.DropDownList };
             foreach (var g in Groups.All) _oGroup.Items.Add(g[1] + " - " + g[2]);
-            _oCode = new TextBox { Dock = DockStyle.Fill };
+            _oCode = new ComboBox
+            {
+                Dock = DockStyle.Fill,
+                DropDownStyle = ComboBoxStyle.DropDown,
+                AutoCompleteMode = AutoCompleteMode.SuggestAppend,
+                AutoCompleteSource = AutoCompleteSource.ListItems,
+                MaxDropDownItems = 18,
+                DropDownWidth = 390
+            };
+            try
+            {
+                foreach (var sign in TdtSignLibrary.GetCatalog()) _oCode.Items.Add(sign);
+            }
+            catch { }
+            _oCode.SelectedIndexChanged += (s, e) => ApplySelectedSignSuggestion();
             _oCodeType = new ComboBox { Dock = DockStyle.Fill, DropDownStyle = ComboBoxStyle.DropDownList };
             _oCodeType.Items.AddRange(new object[] { "CHUA_XAC_DINH", "QCVN", "NOI_BO" });
             _oDesc = new TextBox { Dock = DockStyle.Fill };
@@ -144,7 +159,7 @@ namespace BHT.Palette
             _oMode.Text = "HỒ SƠ MỚI (chưa lưu)";
             _oId.Text = ""; _oId.ReadOnly = false;
             _oGroup.SelectedIndex = Groups.All.Length - 1;
-            _oCode.Text = ""; _oCodeType.SelectedIndex = 0; _oDesc.Text = ""; _oPoles.Text = ""; _oFaces.Text = ""; _oFaceCodes.Text = "";
+            _oCode.SelectedIndex = -1; _oCode.Text = ""; _oCodeType.SelectedIndex = 0; _oDesc.Text = ""; _oPoles.Text = ""; _oFaces.Text = ""; _oFaceCodes.Text = "";
             _oCond.Text = ""; _oSide.SelectedIndex = 0; _oChecked.Checked = false; _oNote.Text = "";
             _oPoints.Items.Clear(); _oPhotos.Items.Clear();
             _oPhotos.Items.Add("(chưa gắn ảnh — bấm Nhập KMZ hoặc sang tab Ảnh)");
@@ -156,6 +171,22 @@ namespace BHT.Palette
             for (int i = 0; i < c.Items.Count; i++)
                 if (((string)c.Items[i]).Split(' ')[0] == value) { c.SelectedIndex = i; return; }
             if (!string.IsNullOrEmpty(value)) { c.Items.Add(value); c.SelectedIndex = c.Items.Count - 1; }
+        }
+
+        private void ApplySelectedSignSuggestion()
+        {
+            var sign = _oCode.SelectedItem as TdtSignEntry;
+            if (sign == null) return;
+            SelectCombo(_oGroup, "BIEN_BAO");
+            SelectCombo(_oCodeType, "QCVN");
+            if (string.IsNullOrWhiteSpace(_oDesc.Text) || _oDesc.Text == "bb" || _oDesc.Text.StartsWith("bb.", StringComparison.OrdinalIgnoreCase))
+                _oDesc.Text = sign.Description;
+        }
+
+        private string EditorSignCode()
+        {
+            var sign = _oCode.SelectedItem as TdtSignEntry;
+            return sign == null ? _oCode.Text.Trim() : sign.Code;
         }
 
         private void LoadObject(string oid)
@@ -293,7 +324,7 @@ namespace BHT.Palette
         {
             var f = new BhtRecord()
                 .Add(ObjFields.Group, ((string)_oGroup.SelectedItem ?? "CHUA_XAC_DINH").Split(' ')[0])
-                .Add(ObjFields.Code, _oCode.Text.Trim())
+                .Add(ObjFields.Code, EditorSignCode())
                 .Add(ObjFields.CodeType, ((string)_oCodeType.SelectedItem ?? "CHUA_XAC_DINH"))
                 .Add(ObjFields.Desc, _oDesc.Text)
                 .Add(ObjFields.PoleCount, _oPoles.Text.Trim())
@@ -402,21 +433,40 @@ namespace BHT.Palette
         private TabPage BuildRoutesTab()
         {
             var tp = new TabPage("Tuyến");
-            var f = new FlowLayoutPanel { Dock = DockStyle.Fill, FlowDirection = FlowDirection.TopDown, WrapContents = false, AutoScroll = true, Padding = new Padding(4) };
-            f.Controls.Add(new Label { Text = "Các nút gửi lệnh Lisp BHT (tương tác ở dòng lệnh). 'Đã gửi' chưa phải 'xong':\npalette chờ AutoCAD báo lệnh kết thúc rồi đọc lại dữ liệu.", AutoSize = true, MaximumSize = new Size(380, 0) });
+            var f = new FlowLayoutPanel { Dock = DockStyle.Fill, FlowDirection = FlowDirection.TopDown, WrapContents = false, AutoScroll = true, Padding = new Padding(7) };
+            string root = Tdt91Installation.FindRoot();
+            string tdt = root == ""
+                ? "TDTSolution 9.1: chưa tìm thấy bản thường."
+                : "TDTSolution 9.1 bản thường: sẵn sàng • " + TdtSignLibrary.GetCatalog().Count + " mã biển • tim tuyến đọc ở chế độ chỉ đọc.";
+            f.Controls.Add(new Label { Text = tdt, AutoSize = true, MaximumSize = new Size(390, 0), ForeColor = root == "" ? Color.DarkRed : Color.DarkGreen, Font = new Font("Segoe UI Semibold", 9f) });
+            f.Controls.Add(new Label { Text = "Quy trình chính", AutoSize = true, Margin = new Padding(2, 10, 2, 3), Font = new Font("Segoe UI Semibold", 9.5f) });
+
+            string[][] primary =
+            {
+                new[] { "BHTTUYENTDT", "1. Lấy hoặc cập nhật tim từ TDT 9.1" },
+                new[] { "BHTMOCKM", "2. Khai báo mốc Km đã xác nhận" },
+                new[] { "BHTLYTRINH", "3. Tính lý trình và phía tuyến" },
+                new[] { "BHTSAPNHAN", "4. Sắp xếp nhãn trên bản vẽ" }
+            };
+            foreach (var c in primary) AddRouteCommandButton(f, c[0], c[1], 375);
+            var export = Btn("5. Xuất báo cáo biển báo Excel", (s, e) => ExportSignReport());
+            export.Width = 375; export.TextAlign = ContentAlignment.MiddleLeft; f.Controls.Add(export);
+            var check = Btn("6. Kiểm tra dữ liệu và mở báo cáo", (s, e) => CallLisp("bht:api-check", new string[0], "Kiểm tra", r =>
+            {
+                if (r.Ok) ShowReportDialog("Kiểm tra dữ liệu", string.Join("\r\n", r.Values.ToArray()));
+            }));
+            check.Width = 375; check.TextAlign = ContentAlignment.MiddleLeft; f.Controls.Add(check);
+
+            var advanced = new FlowLayoutPanel { FlowDirection = FlowDirection.TopDown, WrapContents = false, AutoSize = true, Visible = false, Margin = new Padding(0) };
             string[][] cmds =
             {
-                new[] { "BHTTUYEN", "Khai báo Polyline tuyến tham chiếu" },
-                new[] { "BHTMOCKM", "Thêm mốc Km đã xác nhận" },
+                new[] { "BHTTUYEN", "Dùng Polyline thường làm tuyến" },
                 new[] { "BHTDSMOC", "Xem / xóa mốc Km" },
-                new[] { "BHTLYTRINH", "Tính lý trình / offset" },
                 new[] { "BHTGOITHAU", "Nạp bảng gói thầu" },
                 new[] { "BHTPHANDOAN", "Gán đoạn / gói tự động" },
                 new[] { "BHTGANDOAN", "Gán đoạn thủ công" },
-                new[] { "BHTXUAT", "Xuất CSV thống kê" },
-                new[] { "BHTTRANGTHAI", "Trạng thái bản vẽ" },
-                new[] { "BHTKT", "Kiểm tra toàn vẹn" },
-                new[] { "BHTSAPNHAN", "Sắp xếp nhãn theo phạm vi" },
+                new[] { "BHTXUAT", "Xuất bộ CSV dữ liệu kỹ thuật" },
+                new[] { "BHTTRANGTHAI", "Trạng thái chi tiết bản vẽ" },
                 new[] { "BHTKIEUDIEM", "Dấu X của điểm và sắp lại nhãn" },
                 new[] { "BHTBLOCK", "Danh mục chuẩn / nạp block tùy chọn" },
                 new[] { "BHTTHUTUVE", "Thứ tự hiển thị" },
@@ -425,13 +475,104 @@ namespace BHT.Palette
             };
             foreach (var c in cmds)
             {
-                string cmd = c[0];
-                var b = Btn(c[0] + " - " + c[1], (s, e) => SendCmd(cmd));
-                b.TextAlign = ContentAlignment.MiddleLeft;
-                f.Controls.Add(b);
+                AddRouteCommandButton(advanced, c[0], c[0] + " — " + c[1], 375);
             }
+            var showAdvanced = new CheckBox { Text = "Hiện công cụ nâng cao", AutoSize = true, Margin = new Padding(3, 10, 3, 3) };
+            showAdvanced.CheckedChanged += (s, e) => advanced.Visible = showAdvanced.Checked;
+            f.Controls.Add(showAdvanced);
+            f.Controls.Add(advanced);
             tp.Controls.Add(f);
             return tp;
+        }
+
+        private void AddRouteCommandButton(Control parent, string command, string text, int width)
+        {
+            string cmd = command;
+            var button = Btn(text, (s, e) => SendCmd(cmd));
+            button.Width = width;
+            button.TextAlign = ContentAlignment.MiddleLeft;
+            parent.Controls.Add(button);
+        }
+
+        private void ExportSignReport()
+        {
+            if (!NeedDoc()) return;
+            string project = Path.GetFileNameWithoutExtension(SafeName(_doc));
+            var source = _svc.GetObjects()
+                .Where(x => string.Equals(x.Value.Get(ObjFields.Group), "BIEN_BAO", StringComparison.OrdinalIgnoreCase))
+                .OrderBy(x => x.Value.Get(ObjFields.ChainageM) == "" ? double.MaxValue : ParseDouble(x.Value.Get(ObjFields.ChainageM)))
+                .ThenBy(x => x.Key, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+            var rows = new List<SignReportRow>();
+            int number = 1;
+            foreach (var pair in source)
+            {
+                var record = pair.Value;
+                string code = record.Get(ObjFields.Code);
+                var sign = TdtSignLibrary.Find(code);
+                string description = record.Get(ObjFields.Desc);
+                if (string.IsNullOrWhiteSpace(description) && sign != null) description = sign.Description;
+                rows.Add(new SignReportRow
+                {
+                    Number = number++,
+                    Project = project,
+                    Segment = record.Get(ObjFields.Segment),
+                    Package = record.Get(ObjFields.Package),
+                    SignGroup = sign == null || string.IsNullOrWhiteSpace(sign.Group) ? "Biển báo" : sign.Group,
+                    Code = code,
+                    Description = description,
+                    Side = DisplaySide(record.Get(ObjFields.RoadSide) == "" ? record.Get(ObjFields.RouteSide) : record.Get(ObjFields.RoadSide)),
+                    Chainage = record.Get(ObjFields.ChainageKm),
+                    Condition = record.Get(ObjFields.Condition),
+                    PoleCount = record.Get(ObjFields.PoleCount),
+                    FaceCount = record.Get(ObjFields.FaceCount),
+                    Checked = record.Get(ObjFields.CheckState) == "DA_KIEM_TRA" ? "Đã kiểm tra" : "Chưa kiểm tra",
+                    Note = record.Get(ObjFields.Note),
+                    ObjectId = pair.Key
+                });
+            }
+
+            using (var dialog = new SaveFileDialog())
+            {
+                dialog.Title = "Xuất báo cáo biển báo BHT";
+                dialog.Filter = "Excel Workbook (*.xlsx)|*.xlsx";
+                dialog.DefaultExt = "xlsx";
+                dialog.AddExtension = true;
+                dialog.FileName = "BHT_BAO_CAO_BIEN_BAO_" + (project == "" ? "BAN_VE" : project) + ".xlsx";
+                string folder = CurrentDwgPrefix();
+                if (!string.IsNullOrEmpty(folder) && Directory.Exists(folder)) dialog.InitialDirectory = folder;
+                if (dialog.ShowDialog() != DialogResult.OK) return;
+                try
+                {
+                    SignReportWorkbook.Write(dialog.FileName, project, rows);
+                    Status("Đã xuất " + rows.Count + " biển báo: " + dialog.FileName);
+                    ShowReportDialog("Xuất báo cáo biển báo",
+                        "Đã tạo tệp Excel UTF-8/Unicode:\r\n" + dialog.FileName
+                        + "\r\n\r\nSố hồ sơ biển báo: " + rows.Count
+                        + "\r\nTrang Tổng hợp: đếm theo mã và tình trạng."
+                        + "\r\nTrang Danh sách biển: công trình, đoạn tuyến, gói, loại biển, phía, lý trình, tình trạng và ghi chú.");
+                }
+                catch (Exception ex) { Status("Lỗi xuất Excel: " + ex.Message); }
+            }
+        }
+
+        private static double ParseDouble(string value)
+        {
+            double number;
+            return double.TryParse(value, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out number)
+                ? number : double.MaxValue;
+        }
+
+        private static string DisplaySide(string value)
+        {
+            switch ((value ?? "").ToUpperInvariant())
+            {
+                case "TRAI": return "Trái";
+                case "PHAI": return "Phải";
+                case "HAI_BEN": return "Hai bên";
+                case "TREN_TUYEN": return "Trên tuyến";
+                default: return "Chưa xác định";
+            }
         }
     }
 }

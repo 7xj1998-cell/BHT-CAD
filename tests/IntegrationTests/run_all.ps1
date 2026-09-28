@@ -1,7 +1,7 @@
-# BHT 0.4.4 - chay toan bo kiem thu Core Console
-#  Hoi quy 0.3.3 tren BHT-0.4.4.lsp: S0, A, B, L, R, L2
+# BHT 0.4.5 - chay toan bo kiem thu Core Console
+#  Hoi quy 0.3.3 tren BHT-0.4.5.lsp: S0, A, B, L, R, L2
 #  Plugin .NET: N (ban ve 0.3.3 + BHT.Bridge), N2 (mo lai), NL (ban ve 0.3.2 + BHT.Bridge), P (thu NETLOAD BHT.Palette)
-# Can: $w\thu muc co dau\BHT-0.4.4-rc.lsp, $w\bin\BHT.*.dll, $w\data\survey.csv, $w\run\route_src.dwg,
+# Can: $w\thu muc co dau\BHT-0.4.5-rc.lsp, $w\bin\BHT.*.dll, $w\data\survey.csv, $w\run\route_src.dwg,
 #      $w\run\legacy_032_src.dwg, $w\run\v033_A_out.dwg (A_out.dwg cua bo kiem thu 0.3.3), $w\anh_da_doi\kmz_out, $w\irt\*.jpg
 param([string[]]$Only = @())
 $w = 'C:\Users\Le Bao\BHT_TEST_V044'
@@ -42,6 +42,7 @@ if (Want 'N') {
 if (Want 'N2') { Copy-Item run\N_out.dwg run\N_out_mo_lai.dwg -Force; & .\run_session.ps1 -Name test_N2 -Dwg "$w\run\N_out_mo_lai.dwg" -TimeoutSec 900 }
 if (Want 'NL') { Copy-Item run\legacy_032_src.dwg run\NL_in.dwg -Force; & .\run_session.ps1 -Name test_NL -Dwg "$w\run\NL_in.dwg" -TimeoutSec 900 }
 if (Want 'P') { & .\run_session.ps1 -Name test_P -TimeoutSec 300 -After @('BTH', '(t-p-after)') }
+if (Want 'D') { & .\run_session.ps1 -Name test_D -TimeoutSec 600 }
 Get-ChildItem run\result_*.txt | % { Get-Content -Encoding UTF8 $_.FullName | Select-String '^TONG' }
 if (Want 'T') {
   $td = "$w\nen\tiles"; New-Item -ItemType Directory $td -Force | Out-Null

@@ -31,7 +31,7 @@ namespace BHT.Palette
         private string _lispMsg = "chưa kiểm tra";
 
         private readonly TabControl _tabs = new TabControl();
-        private readonly TextBox _status = new TextBox();
+        private readonly Label _status = new Label();
         private readonly Label _docLabel = new Label();
 
         public BhtPaletteControl()
@@ -40,9 +40,9 @@ namespace BHT.Palette
             Dock = DockStyle.Fill;
             _docLabel.Dock = DockStyle.Top; _docLabel.Height = 20; _docLabel.Padding = new Padding(4, 3, 0, 0);
             _docLabel.BackColor = Color.FromArgb(45, 45, 48); _docLabel.ForeColor = Color.White;
-            _status.Dock = DockStyle.Bottom; _status.Height = 72; _status.Margin = new Padding(4);
-            _status.Multiline = true; _status.ReadOnly = true; _status.ScrollBars = ScrollBars.Vertical;
-            _status.BorderStyle = BorderStyle.FixedSingle; _status.TabStop = false;
+            _status.Dock = DockStyle.Bottom; _status.Height = 52; _status.Margin = new Padding(4);
+            _status.Padding = new Padding(7, 5, 7, 5); _status.BorderStyle = BorderStyle.FixedSingle;
+            _status.AutoEllipsis = true; _status.TabStop = false;
             _tabs.Dock = DockStyle.Fill; _tabs.Multiline = false;
             _tabs.TabPages.Add(BuildOverviewTab());
             _tabs.TabPages.Add(BuildPointsTab());
@@ -167,8 +167,46 @@ namespace BHT.Palette
         {
             _status.Text = s ?? "";
             _status.BackColor = PaletteTheme.StatusBack(s);
-            _status.SelectionStart = _status.TextLength;
-            _status.ScrollToCaret();
+        }
+
+        protected void ShowReportDialog(string title, string content)
+        {
+            using (var dialog = new Form())
+            {
+                dialog.Text = "BHT " + BhtVersion.Version + " — " + (title ?? "Báo cáo");
+                dialog.StartPosition = FormStartPosition.CenterScreen;
+                dialog.Size = new Size(860, 620);
+                dialog.MinimumSize = new Size(620, 420);
+                dialog.ShowIcon = false;
+                var body = new RichTextBox
+                {
+                    Dock = DockStyle.Fill,
+                    ReadOnly = true,
+                    DetectUrls = false,
+                    WordWrap = false,
+                    Font = new Font("Consolas", 10f),
+                    BackColor = Color.White,
+                    Text = content ?? ""
+                };
+                var buttons = new FlowLayoutPanel
+                {
+                    Dock = DockStyle.Bottom,
+                    Height = 42,
+                    FlowDirection = System.Windows.Forms.FlowDirection.RightToLeft,
+                    Padding = new Padding(5)
+                };
+                var close = Btn("Đóng", (s, e) => dialog.Close());
+                var copy = Btn("Sao chép", (s, e) =>
+                {
+                    try { Clipboard.SetText(body.Text ?? ""); Status("Đã sao chép nội dung báo cáo."); }
+                    catch (Exception ex) { Status("Không sao chép được: " + ex.Message); }
+                });
+                close.Width = 90; copy.Width = 100;
+                buttons.Controls.Add(close); buttons.Controls.Add(copy);
+                dialog.Controls.Add(body); dialog.Controls.Add(buttons);
+                PaletteTheme.ApplyDialog(dialog);
+                dialog.ShowDialog();
+            }
         }
 
         /// <summary>Dua viec ve luong giao dien, sau khi callback AutoCAD ket thuc (tranh tai nhap).</summary>
@@ -247,7 +285,12 @@ namespace BHT.Palette
                 {
                     RefreshAll(false);
                     string head = "Lệnh " + cmd + (state == "KET_THUC" ? " đã kết thúc." : state == "HUY" ? " đã bị hủy." : " bị lỗi.");
-                    Status(r.Ok && r.Values.Count > 0 ? head + "\r\n" + string.Join("\r\n", r.Values.ToArray()) : head);
+                    string detail = r.Ok && r.Values.Count > 0 ? string.Join("\r\n", r.Values.ToArray()) : "";
+                    string upper = (cmd ?? "").ToUpperInvariant();
+                    bool report = upper.Contains("BHTKT") || upper.Contains("BHTTRANGTHAI")
+                        || upper.Contains("BHTXUAT") || detail.Length > 220 || r.Values.Count > 3;
+                    Status(detail == "" ? head : head + " " + r.Values.Count + " dòng kết quả.");
+                    if (report && detail != "") ShowReportDialog(head, detail);
                 }));
             });
         }
