@@ -1,9 +1,9 @@
-;;; BHT 0.4.3 - phien S0: nap, phien ban, BHTTEST, DCL tinh
-(load "C:/Users/Le Bao/BHT_TEST_V043/t_common.lsp")
+;;; BHT 0.4.4 - phien S0: nap, phien ban, BHTTEST, DCL tinh
+(load "C:/Users/Le Bao/BHT_TEST_V044/t_common.lsp")
 (tbegin "S0")
 (setq e (tload))
-(tchk "T00" "nạp BHT-0.4.3 (đường dẫn có dấu); *bht-version* = 0.4.3" (and (null e) (= *bht-version* "0.4.3")) (if e e (strcat *bht-version* " / " *bht-build*)))
-(tchk "T01" "thông báo APPLOAD đúng nguyên văn" (= (bht:load-message) "BHT 0.4.3 đã nạp thành công.") (bht:load-message))
+(tchk "T00" "nạp BHT-0.4.4 (đường dẫn có dấu); *bht-version* = 0.4.4" (and (null e) (= *bht-version* "0.4.4")) (if e e (strcat *bht-version* " / " *bht-build*)))
+(tchk "T01" "thông báo APPLOAD đúng nguyên văn" (= (bht:load-message) "BHT 0.4.4 đã nạp thành công.") (bht:load-message))
 (setq r (tsafe "T02" "BHTTEST" '(lambda () (bht:selftest))))
 (if r (tchk "T02" "BHTTEST tự kiểm tra hàm (0 FAIL, >= 45)" (and (= (cadr r) 0) (>= (car r) 45)) (strcat (itoa (car r)) " pass, " (itoa (cadr r)) " fail")))
 (setq bad nil keys nil)
@@ -24,7 +24,7 @@
       (strcat "nút=" (itoa (length *bht-ui-buttons*)) " lỗi=" (vl-princ-to-string bad) " thiếu=" (vl-princ-to-string unk)
               " {=" (itoa opn) " }=" (itoa cls) " sót=" (vl-princ-to-string left)))
 (setq cmds '(c:BHTSAPNHAN c:BHTNHANTUDONG c:BHTTHUTUVE c:BHTVEMODEL c:BHTKYHIEU c:BHTDOITUONG c:BHTCHENANH))
-(tchk "T04" "lệnh 0.3.3 vẫn được định nghĩa trong 0.4.3" (vl-every '(lambda (c) (eval c)) cmds) nil)
+(tchk "T04" "lệnh 0.3.3 vẫn được định nghĩa trong 0.4.4" (vl-every '(lambda (c) (eval c)) cmds) nil)
 (setq r (vl-catch-all-apply 'bht:ui-validate nil))
 (if (and (not (vl-catch-all-error-p r)) r)
   (tchk "T05" "load_dialog DCL trong Core Console" T nil)
@@ -36,7 +36,7 @@
 ;; --- API cho plugin .NET, Lisp khong phu thuoc palette ---
 (tchk "T07" "14 hàm bht:api-* đăng ký vl-acad-defun (gọi được từ .NET Application.Invoke)" (= *bht-api-registered* 14) *bht-api-registered*)
 (setq r (bht:api-version))
-(tchk "T08" "bht:api-version = (OK 0.4.3 1 build)" (equal r (list "OK" "0.4.3" "1" *bht-build*)) r)
+(tchk "T08" "bht:api-version = (OK 0.4.4 1 build)" (equal r (list "OK" "0.4.4" "1" *bht-build*)) r)
 (setq *bht-screen-messages* nil)
 (bht:msg "Thông báo có dấu từ Lisp")
 (setq r (bht:api-messages "DRAIN") r2 (bht:api-messages "PEEK"))
@@ -61,5 +61,58 @@
       (and (not (vl-catch-all-error-p r)) r (tblsearch "BLOCK" r) (> *bht-block-load-factor* 0.0)
            (null (ssget "_X" (list '(0 . "INSERT") (cons 2 r)))))
       (if (vl-catch-all-error-p r) (vl-catch-all-error-message r) (list r *bht-block-load-factor*)))
+(bht:symbol-blocks)
+(setq bbmaps
+  (list
+    (list "W.207a" "BHT_KH_BB_W207_V044")
+    (list "W-209" "BHT_KH_BB_W209_V044")
+    (list "W.239a + S.509a" "BHT_KH_BB_W239A_V044")
+    (list "W.245b" "BHT_KH_BB_W245A_V044")
+    (list "R.412c" "BHT_KH_BB_R412_V044")
+    (list "I.414a" "BHT_KH_BB_I414_V044")
+    (list "I.423a" "BHT_KH_BB_I423A_V044")
+    (list "I.428" "BHT_KH_BB_I428A_V044")
+    (list "I.434a" "BHT_KH_BB_I434A_V044")
+    (list "P.127 - 20" "BHT_KH_BB_P127_20_V044")
+    (list "P.127/40" "BHT_KH_BB_P127_40_V044")
+    (list "KHONG_RO" "BHT_KH_BIEN_BAO_V044")))
+(setq bad nil)
+(foreach p bbmaps
+  (if (/= (bht:bb-block-for (car p)) (cadr p))
+    (setq bad (cons (list (car p) (bht:bb-block-for (car p)) (cadr p)) bad))))
+(tchk "T16" "mã biển báo và biến thể trong KMZ chọn đúng block chuẩn; mã lạ về block tổng quát"
+      (null bad) bad)
+(setq bbnames
+  '("BHT_KH_BIEN_BAO_V044" "BHT_KH_BB_W207_V044" "BHT_KH_BB_W209_V044"
+    "BHT_KH_BB_W239A_V044" "BHT_KH_BB_W245A_V044" "BHT_KH_BB_W201_V044"
+    "BHT_KH_BB_W225_V044" "BHT_KH_BB_R412_V044" "BHT_KH_BB_I414_V044"
+    "BHT_KH_BB_I423A_V044" "BHT_KH_BB_I428A_V044" "BHT_KH_BB_I434A_V044"
+    "BHT_KH_BB_P115_V044" "BHT_KH_BB_P119_V044" "BHT_KH_BB_P124A_V044"
+    "BHT_KH_BB_P125_V044" "BHT_KH_BB_P127_V044" "BHT_KH_BB_P127_20_V044"
+    "BHT_KH_BB_P127_40_V044"))
+(setq missing nil)
+(foreach n bbnames (if (not (tblsearch "BLOCK" n)) (setq missing (cons n missing))))
+(tchk "T17" "tạo đủ 19 block biển báo tích hợp trong một tệp Lisp"
+      (and (null missing) (= (length bbnames) 19)) missing)
+(defun t-bb-data (name / e d out done)
+  (setq e (tblobjname "BLOCK" name) out nil done nil)
+  (while (and e (not done) (setq e (entnext e)))
+    (setq d (entget e))
+    (if (= (cdr (assoc 0 d)) "ENDBLK") (setq done T) (setq out (cons d out))))
+  (reverse out))
+(setq bad nil)
+(foreach n bbnames
+  (foreach d (t-bb-data n)
+    (cond
+      ((= (cdr (assoc 0 d)) "ATTDEF") (setq bad (cons (list n "ATTDEF") bad)))
+      ((and (= (cdr (assoc 0 d)) "TEXT") (or (null (assoc 40 d)) (<= (cdr (assoc 40 d)) 0.0)))
+       (setq bad (cons (list n "TEXT_HEIGHT") bad)))
+      ((and (= (cdr (assoc 0 d)) "LINE") (equal (cdr (assoc 10 d)) (cdr (assoc 11 d)) 1e-12))
+       (setq bad (cons (list n "ZERO_LINE") bad))))))
+(tchk "T18" "hình học biển báo không có ATTDEF, text âm/rỗng hoặc đường thẳng dài 0"
+      (null bad) bad)
+(setq rec '(("nhom" . "BIEN_BAO") ("ma_hieu" . "W.207a")))
+(tchk "T19" "hồ sơ BIEN_BAO dùng mã hiệu để chọn block, không cần lệnh rời"
+      (= (bht:kh-block rec) "BHT_KH_BB_W207_V044") (bht:kh-block rec))
 (tend "S0")
 (princ)

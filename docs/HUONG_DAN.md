@@ -1,27 +1,27 @@
-# BHT 0.4.3 — Hướng dẫn sử dụng
+# BHT 0.4.4 — Hướng dẫn sử dụng
 
 BHT là bộ lệnh AutoLISP quản lý điểm khảo sát RTK, hồ sơ đối tượng (biển báo, cọc tiêu, cột Km…), ảnh TimeMark (KMZ), tuyến / lý trình và xuất thống kê.
 
 - Lệnh chính: **`BTH`** hoặc **`BHT`** mở một Palette gắn bên trái AutoCAD.
-- Bản 0.4.3 gồm `BHT-0.4.3.lsp`, `BHT.Palette.dll`, `BHT.Bridge.dll` và `BHT.Core.dll`.
+- Bản 0.4.4 gồm `BHT-0.4.4.lsp`, `BHT.Palette.dll`, `BHT.Bridge.dll` và `BHT.Core.dll`.
 - `BHTDCL` mở bảng DCL dự phòng khi Palette không nạp được. DCL dùng UTF-8 BOM để hiển thị đúng tiếng Việt.
-- Định dạng dữ liệu trong bản vẽ không đổi: bản vẽ từ 0.3.2 đến 0.4.2 mở bằng 0.4.3 mà không cần chuyển đổi.
+- Định dạng dữ liệu trong bản vẽ không đổi: bản vẽ từ 0.3.2 đến 0.4.3 mở bằng 0.4.4 mà không cần chuyển đổi.
 - Mục tiêu hỗ trợ AutoCAD 2021–2024 và Civil 3D 2023 trên Windows.
 
 ## 1. Cài đặt khuyến nghị
 
 1. Đóng AutoCAD.
-2. Giải nén gói `BHT-0.4.3.zip` và chạy `INSTALL_BHT.cmd`.
+2. Giải nén gói `BHT-0.4.4.zip` và chạy `INSTALL_BHT.cmd`.
 3. Mở AutoCAD, gõ `BTH` hoặc `BHT`.
 
 AutoCAD tự nhận `BHT.bundle`; không cần `APPLOAD` hoặc `NETLOAD`. Nếu từng cài bản cũ bằng Startup Suite, hãy gỡ file Lisp cũ để tránh hai phiên bản cùng nạp.
 
 ## 1b. Cách di động bằng APPLOAD
 
-1. Đặt `BHT-0.4.3.lsp` và ba DLL trong cùng một thư mục tin cậy.
+1. Đặt `BHT-0.4.4.lsp` và ba DLL trong cùng một thư mục tin cậy.
 2. Kiểm tra **LISPSYS = 1**. Nếu phải đổi từ 0 sang 1, khởi động lại AutoCAD.
-3. Gõ `APPLOAD`, chọn duy nhất `BHT-0.4.3.lsp`. Lisp tự nạp DLL cạnh nó.
-4. Khi dòng lệnh báo `BHT 0.4.3 đã nạp thành công`, gõ `BTH` hoặc `BHT`.
+3. Gõ `APPLOAD`, chọn duy nhất `BHT-0.4.4.lsp`. Lisp tự nạp DLL cạnh nó.
+4. Khi dòng lệnh báo `BHT 0.4.4 đã nạp thành công`, gõ `BTH` hoặc `BHT`.
 
 Nếu Palette không nạp được, gõ `BHTLOAD` để thử lại và đọc lỗi tại dòng lệnh. Bạn vẫn có thể dùng `BHTDCL` trong lúc xử lý DLL.
 
@@ -56,13 +56,20 @@ vẽ (dictionary BHT_V02 / XData) — palette chỉ là giao diện; đóng pale
 | 4 | Kiểm tra và xem ảnh | `BHTDONGBOANH`, `BHTXEMANH`, `BHTANH`, `BHTTHUMUCANH`, `BHTCHENANH`, `BHTNHANANH` |
 | 5 | Ghép ảnh (chỉ đề xuất, người dùng duyệt) | `BHTGHEPANH`, `BHTXACNHANANH`, `BHTGANANH`, `BHTBOANH` |
 | 6 | Hồ sơ đối tượng | `BHTDOITUONG`, `BHTSUADT`, `BHTXOADT`, `BHTTHEMDIEM`, `BHTBOTDIEM`, `BHTINFO` |
-| 7 | Ký hiệu, block và thứ tự hiển thị | `BHTKYHIEU`, **`BHTBLOCK`**, **`BHTTHUTUVE`** |
+| 7 | Ký hiệu, block và thứ tự hiển thị | `BHTKYHIEU`, **`BHTBLOCK`**, **`BHTBBDANHMUC`**, **`BHTTHUTUVE`** |
 | 8 | Tuyến, Km, gói thầu | `BHTTUYEN`, `BHTMOCKM`, `BHTDSMOC`, `BHTLYTRINH`, `BHTGOITHAU`, `BHTPHANDOAN`, `BHTGANDOAN` |
 | 9 | Xuất thống kê | `BHTXUAT`, `BHTKT`, `BHTTRANGTHAI` |
 | Khác | Chẩn đoán | `BHTDIAG`, `BHTTEST`, `BHTHELP` |
 | Bảo trì dữ liệu cũ | Chỉ dùng cho bản vẽ cũ | `BHTNANGCAP` (dữ liệu BHT 0.1), **`BHTVEMODEL`** (thực thể BHT lỡ tạo trong Layout) |
 
-## 3. Thay đổi trong 0.4.3
+## 3. Thay đổi trong 0.4.4
+
+- Toàn bộ thư viện block nằm trong `BHT-0.4.4.lsp`; không nạp thêm `BHT-BIENBAO.lsp`.
+- BHT nhận mã trong trường **Mã** của hồ sơ biển báo và tự chọn block chuẩn. Các mã hỗ trợ đầu tiên: `W.207`, `W.209`, `W.239a`, `W.245a`, `W.201`, `W.225`, `R.412`, `I.414`, `I.423a`, `I.428a`, `I.434a`, `P.115`, `P.119`, `P.124a`, `P.125`, `P.127`.
+- Các mẫu được chọn từ 205 ảnh KMZ tuyến DT830 và đối chiếu QCVN 41:2024/BGTVT. Điểm chèn `(0,0)` luôn là chân cột; block chưa nhận diện dùng ký hiệu tổng quát có dấu `?`.
+- Gõ `BHTBBDANHMUC`, hoặc `BHTBLOCK` → nhóm Biển báo → `D`, để xem danh mục ngay trong vùng Thông báo của Palette.
+
+### Các chức năng kế thừa từ 0.4.3
 
 - Palette dùng bảng màu xanh dễ đọc, mở mặc định bên trái rộng 430 px và không còn hàng gợi ý rời bị cắt chữ.
 - Kết quả của các lệnh Lisp được đưa vào vùng **Thông báo** nhiều dòng ở cuối Palette.
@@ -87,10 +94,10 @@ vẽ (dictionary BHT_V02 / XData) — palette chỉ là giao diện; đóng pale
 
 ### Block ký hiệu tùy chọn
 
-`BHTBLOCK` hoặc nút **Thư viện block** cho nạp một tệp DWG riêng cho từng nhóm đối tượng.
+`BHTBLOCK` hoặc nút **Thư viện block** mở danh mục chuẩn và cho nạp một tệp DWG riêng cho từng nhóm đối tượng.
 
-1. Chuẩn bị một DWG chỉ chứa hình ký hiệu cần dùng; đặt `INSBASE` tại đúng tâm chèn mong muốn.
-2. Chạy `BHTBLOCK`, chọn nhóm, chọn `N` và chỉ tới tệp DWG.
+1. Với biển báo chuẩn, nhập mã QCVN trong hồ sơ rồi chạy `BHTKYHIEU`; BHT tự chọn block tương ứng.
+2. Với mẫu riêng, chuẩn bị một DWG chỉ chứa hình ký hiệu; đặt `INSBASE` tại đúng tâm chèn, chạy `BHTBLOCK`, chọn nhóm, chọn `N` và chỉ tới tệp DWG.
 3. Chạy `BHTKYHIEU` để tạo/cập nhật ký hiệu. BHT giữ hình học nguồn và tự áp dụng hệ số đơn vị của DWG.
 4. Chọn `M` trong `BHTBLOCK` để nhóm đó trở lại ký hiệu mặc định; chọn `X` để xem cấu hình hiện tại.
 
@@ -297,4 +304,4 @@ Các lệnh và bí danh cũ vẫn dùng được.
 
 - Luôn làm việc trên **bản sao** bản vẽ.
 - Ảnh GPS 0,0 (`BOT19-P-000204`, `-000205` trong KMZ mẫu) được giữ nhưng không có ký hiệu. Ghép thủ công bằng `BHTGANANH` hoặc `BHTXEMANH` > `G`.
-- Kết quả kiểm thử của bản này nằm ở `TEST_REPORT_0.4.3.md`.
+- Kết quả kiểm thử của bản này nằm ở `TEST_REPORT_0.4.4.md`.

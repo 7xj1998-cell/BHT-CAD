@@ -1,5 +1,5 @@
 ;;; ======================================================================
-;;; BHT-0.4.3.lsp - BHT 0.4.3 (build 2026-09-28)
+;;; BHT-0.4.4.lsp - BHT 0.4.4 (build 2026-09-28)
 ;;; Quan ly khao sat bao hieu / coc tieu / cot Km / bang va cong trinh ven
 ;;; tuyen: diem RTK, ho so doi tuong, anh TimeMark (KMZ), tuyen tham chieu,
 ;;; ly trinh, goi thau / doan tuyen, xuat CSV cho Excel.
@@ -12,7 +12,17 @@
 ;;; Muc tieu: AutoCAD 2021-2024, Civil 3D 2023 (Windows). File luu UTF-8,
 ;;; can LISPSYS = 1 (mac dinh tu AutoCAD 2021) de hien tieng Viet co dau.
 ;;;
-;;; NHAT KY THAY DOI 0.4.3 (chi tiet: CHANGELOG.md)
+;;; NHAT KY THAY DOI 0.4.4 (chi tiet: CHANGELOG.md)
+;;;  + Hop nhat thu vien block vao mot file Lisp duy nhat; khong can nap
+;;;    BHT-BIENBAO.lsp rieng.
+;;;  + Thu vien bien bao duoc xay dung tu 205 anh trong KMZ DT830, uu tien
+;;;    cac mau xuat hien tren tuyen va doi chieu QCVN 41:2024/BGTVT.
+;;;  + Tu chon block bien bao theo ma hieu cua ho so (W.207, W.209, W.239a,
+;;;    W.245a, R.412, I.414, I.423a, I.428a, I.434a, P.115, P.119,
+;;;    P.124a, P.125, P.127); diem chen cua moi block la chan cot (0,0).
+;;;  + BHTBBDANHMUC liet ke thu vien chuan; BHTBLOCK > D mo cung danh muc.
+;;;
+;;; NHAT KY THAY DOI 0.4.3
 ;;;  + BTH / BHT mo mot Palette .NET duy nhat; Lisp tu nap DLL cung thu muc.
 ;;;  + DCL chi con la giao dien du phong BHTDCL, khong mo trong luong thuong.
 ;;;  + File DCL tam ghi UTF-8 BOM de AutoCAD 2024 doc dung tieng Viet.
@@ -68,12 +78,12 @@
 
 (vl-load-com)
 
-(setq *bht-version* "0.4.3")
+(setq *bht-version* "0.4.4")
 (setq *bht-build* "2026-09-28")
 
 ;; Luu duong dan ngay khi APPLOAD / Application Bundle nap Lisp. DLL dat canh
 ;; file Lisp de nguoi dung chi can APPLOAD mot lan, khong phai tu NETLOAD.
-(setq *bht-lsp-file* (findfile "BHT-0.4.3.lsp"))
+(setq *bht-lsp-file* (findfile "BHT-0.4.4.lsp"))
 (setq *bht-lsp-dir*
   (if *bht-lsp-file* (vl-filename-directory *bht-lsp-file*) nil))
 (setq *bht-palette-dll*
@@ -595,12 +605,44 @@
 (defun bht:text-color-g (s p h color)
   (list '(0 . "TEXT") '(8 . "0") (cons 62 color) (cons 10 p) (cons 40 h) (cons 1 s) '(50 . 0.0)))
 
+;; TEXT can giua theo ca hai truc. Dung cho noi dung ngan ben trong mat bien.
+(defun bht:text-center-color-g (s p h color)
+  (list '(0 . "TEXT") '(8 . "0") (cons 62 color) (cons 10 p) (cons 11 p)
+        (cons 40 h) (cons 1 s) '(50 . 0.0) '(72 . 1) '(73 . 2)))
+
+;; Hinh tron to mau bang cac tam giac SOLID; n >= 8. Entity tao sau nam tren
+;; entity tao truoc, cho phep ghep dia mau thanh vong tron co vien.
+(defun bht:disc-g (c r n color / out i a1 a2 p1 p2)
+  (setq out nil i 0)
+  (repeat n
+    (setq a1 (* 2.0 pi (/ (* 1.0 i) n))
+          a2 (* 2.0 pi (/ (* 1.0 (1+ i)) n))
+          p1 (list (+ (car c) (* r (cos a1))) (+ (cadr c) (* r (sin a1))) (caddr c))
+          p2 (list (+ (car c) (* r (cos a2))) (+ (cadr c) (* r (sin a2))) (caddr c))
+          out (cons (bht:solid-g c p1 p2 p2 color) out)
+          i (1+ i)))
+  (reverse out)
+)
+
+(defun bht:rect-fill-g (x1 y1 x2 y2 color)
+  (bht:solid-g (list x1 y1 0.0) (list x2 y1 0.0)
+               (list x1 y2 0.0) (list x2 y2 0.0) color)
+)
+
 (defun bht:poly-g (pts / out i)
   (setq out nil i 0)
   (while (< i (length pts))
     (setq out (cons (bht:line-g (nth i pts) (nth (rem (1+ i) (length pts)) pts)) out)
           i (1+ i)))
   out
+)
+
+(defun bht:poly-color-g (pts color / out i)
+  (setq out nil i 0)
+  (while (< i (length pts))
+    (setq out (cons (bht:line-color-g (nth i pts) (nth (rem (1+ i) (length pts)) pts) color) out)
+          i (1+ i)))
+  (reverse out)
 )
 
 (defun bht:insert (blk pt layer scale / )
@@ -3809,8 +3851,219 @@
 ;;;  la nguon du lieu; ky hieu chi la lop the hien.
 ;;; ----------------------------------------------------------------------
 
+(setq *bht-bb-catalog*
+  '(("W.207"  "BHT_KH_BB_W207_V044"       "Giao nhau với đường không ưu tiên")
+    ("W.209"  "BHT_KH_BB_W209_V044"       "Giao nhau có tín hiệu đèn")
+    ("W.239a" "BHT_KH_BB_W239A_V044"      "Đường cáp điện phía trên + S.509a")
+    ("W.245a" "BHT_KH_BB_W245A_V044"      "Đi chậm")
+    ("W.201"  "BHT_KH_BB_W201_V044"       "Chỗ ngoặt nguy hiểm")
+    ("W.225"  "BHT_KH_BB_W225_V044"       "Trẻ em")
+    ("R.412"  "BHT_KH_BB_R412_V044"       "Làn dành riêng cho từng loại xe")
+    ("I.414"  "BHT_KH_BB_I414_V044"       "Chỉ hướng đường")
+    ("I.423a" "BHT_KH_BB_I423A_V044"      "Vị trí người đi bộ sang ngang")
+    ("I.428a" "BHT_KH_BB_I428A_V044"      "Cửa hàng xăng dầu")
+    ("I.434a" "BHT_KH_BB_I434A_V044"      "Bến xe buýt")
+    ("P.115"  "BHT_KH_BB_P115_V044"       "Hạn chế trọng tải toàn bộ xe")
+    ("P.119"  "BHT_KH_BB_P119_V044"       "Hạn chế chiều dài xe")
+    ("P.124a" "BHT_KH_BB_P124A_V044"      "Cấm quay đầu xe")
+    ("P.125"  "BHT_KH_BB_P125_V044"       "Cấm vượt")
+    ("P.127"  "BHT_KH_BB_P127_V044"       "Tốc độ tối đa cho phép")))
+
+(defun bht:bb-code-key (s / u)
+  (setq u (strcase (bht:trim s)))
+  (foreach ch '(" " "." "-" "_" "/" "+" "," ";" ":")
+    (setq u (bht:replace u ch "")))
+  u
+)
+
+;; Chon block theo ma hieu ho so. Bien the a,b,c... dung chung hinh tong quat
+;; cua cung ma; gia tri so 20/40 cua P.127 duoc giu rieng neu co trong ma.
+(defun bht:bb-block-for (code / k)
+  (setq k (bht:bb-code-key code))
+  (cond
+    ((wcmatch k "*W207*") "BHT_KH_BB_W207_V044")
+    ((wcmatch k "*W209*") "BHT_KH_BB_W209_V044")
+    ((wcmatch k "*W239*") "BHT_KH_BB_W239A_V044")
+    ((wcmatch k "*W245*") "BHT_KH_BB_W245A_V044")
+    ((wcmatch k "*W201*") "BHT_KH_BB_W201_V044")
+    ((wcmatch k "*W225*") "BHT_KH_BB_W225_V044")
+    ((wcmatch k "*R412*") "BHT_KH_BB_R412_V044")
+    ((wcmatch k "*I414*") "BHT_KH_BB_I414_V044")
+    ((wcmatch k "*I423*") "BHT_KH_BB_I423A_V044")
+    ((wcmatch k "*I428*") "BHT_KH_BB_I428A_V044")
+    ((wcmatch k "*I434*") "BHT_KH_BB_I434A_V044")
+    ((wcmatch k "*P115*") "BHT_KH_BB_P115_V044")
+    ((wcmatch k "*P119*") "BHT_KH_BB_P119_V044")
+    ((wcmatch k "*P124*") "BHT_KH_BB_P124A_V044")
+    ((wcmatch k "*P125*") "BHT_KH_BB_P125_V044")
+    ((and (wcmatch k "*P127*") (wcmatch k "*20*")) "BHT_KH_BB_P127_20_V044")
+    ((and (wcmatch k "*P127*") (wcmatch k "*40*")) "BHT_KH_BB_P127_40_V044")
+    ((wcmatch k "*P127*") "BHT_KH_BB_P127_V044")
+    (T "BHT_KH_BIEN_BAO_V044"))
+)
+
+(defun bht:bb-post-g ()
+  (list (bht:line-color-g '(0.0 0.0 0.0) '(0.0 0.62 0.0) 7)
+        (bht:circle-g '(0.0 0.0 0.0) 0.07))
+)
+
+(defun bht:bb-triangle-base (/ ot ol orr it il ir)
+  (setq ot '(0.0 1.86 0.0) ol '(-0.75 0.56 0.0) orr '(0.75 0.56 0.0)
+        it '(0.0 1.68 0.0) il '(-0.58 0.67 0.0) ir '(0.58 0.67 0.0))
+  (append (bht:bb-post-g)
+          (list (bht:solid-g ot ol orr orr 1)
+                (bht:solid-g it il ir ir 2))
+          (bht:poly-color-g (list ot ol orr) 1)
+          (bht:poly-color-g (list it il ir) 1))
+)
+
+(defun bht:bb-circle-base (/ c)
+  (setq c '(0.0 1.20 0.0))
+  (append (bht:bb-post-g)
+          (bht:disc-g c 0.63 24 1)
+          (bht:disc-g c 0.49 24 7)
+          (list (bht:circle-g c 0.63) (bht:circle-g c 0.49)))
+)
+
+(defun bht:bb-blue-base (/ out)
+  (append (bht:bb-post-g)
+          (list (bht:rect-fill-g -0.68 0.56 0.68 1.84 5)
+                (bht:rect-fill-g -0.51 0.72 0.51 1.68 7))
+          (bht:poly-color-g '((-0.68 0.56 0.0) (0.68 0.56 0.0)
+                              (0.68 1.84 0.0) (-0.68 1.84 0.0)) 5))
+)
+
+(defun bht:bb-blue-wide-base ()
+  (append (bht:bb-post-g)
+          (list (bht:rect-fill-g -1.08 0.62 1.08 1.72 5))
+          (bht:poly-color-g '((-1.08 0.62 0.0) (1.08 0.62 0.0)
+                              (1.08 1.72 0.0) (-1.08 1.72 0.0)) 7))
+)
+
+(defun bht:bb-speed-g (value)
+  (append (bht:bb-circle-base)
+          (list (bht:text-center-color-g value '(0.0 1.20 0.0) 0.30 250)))
+)
+
+(defun bht:bb-catalog-report (/ item)
+  (bht:msg "BHT - Danh mục block biển báo chuẩn theo ảnh KMZ DT830:")
+  (foreach item *bht-bb-catalog*
+    (bht:msg (strcat "  " (car item) " - " (caddr item))))
+  (bht:msg "Nhập mã này vào trường Mã của hồ sơ BIEN_BAO, rồi chạy BHTKYHIEU.")
+  (bht:msg "Mã chưa nhận diện dùng block biển báo tổng quát; BHTBLOCK vẫn cho nạp DWG tùy chọn.")
+  (princ)
+)
+
+(defun c:BHTBBDANHMUC (/ *error*)
+  (setq *error* bht:on-error)
+  (bht:symbol-blocks)
+  (bht:bb-catalog-report)
+)
+
 (defun bht:symbol-blocks ()
-  (bht:block "BHT_KH_BIEN_BAO" (list (bht:circle-g '(0.0 0.0 0.0) 1.0) (bht:line-g '(0.0 -1.0 0.0) '(0.0 -2.0 0.0))))
+  ;; Block tong quat: diem chen o chan cot; dau hoi cho biet chua co ma QCVN.
+  (bht:block "BHT_KH_BIEN_BAO_V044"
+    (append (bht:bb-post-g)
+            (list (bht:rect-fill-g -0.58 0.66 0.58 1.70 8)
+                  (bht:text-center-color-g "?" '(0.0 1.18 0.0) 0.45 7))))
+
+  ;; W.207 - nhom pho bien nhat trong KMZ: truc duong chinh va nhanh ben.
+  (bht:block "BHT_KH_BB_W207_V044"
+    (append (bht:bb-triangle-base)
+            (list (bht:rect-fill-g -0.07 0.82 0.07 1.48 250)
+                  (bht:rect-fill-g 0.04 1.13 0.42 1.27 250))))
+  ;; W.209 - den tin hieu theo thu tu do, vang, xanh.
+  (bht:block "BHT_KH_BB_W209_V044"
+    (append (bht:bb-triangle-base)
+            (list (bht:rect-fill-g -0.18 0.83 0.18 1.52 250))
+            (bht:disc-g '(0.0 1.39 0.0) 0.09 12 1)
+            (bht:disc-g '(0.0 1.18 0.0) 0.09 12 2)
+            (bht:disc-g '(0.0 0.97 0.0) 0.09 12 3)))
+  ;; W.239a + S.509a: bo canh bao cap dien / chieu cao 4,75 m gap nhieu tren DT830.
+  (bht:block "BHT_KH_BB_W239A_V044"
+    (append (bht:bb-triangle-base)
+            (list (bht:solid-g '(-0.08 1.53 0.0) '(0.18 1.53 0.0)
+                                '(-0.02 1.17 0.0) '(0.08 1.20 0.0) 250)
+                  (bht:solid-g '(-0.02 1.23 0.0) '(0.16 1.23 0.0)
+                                '(-0.20 0.84 0.0) '(-0.07 1.16 0.0) 250)
+                  (bht:rect-fill-g -0.58 0.15 0.58 0.50 5)
+                  (bht:text-center-color-g "4,75 m" '(0.0 0.33 0.0) 0.16 7))))
+  (bht:block "BHT_KH_BB_W245A_V044"
+    (append (bht:bb-triangle-base)
+            (list (bht:text-center-color-g "ĐI" '(0.0 1.34 0.0) 0.17 250)
+                  (bht:text-center-color-g "CHẬM" '(0.0 1.08 0.0) 0.13 250))))
+  (bht:block "BHT_KH_BB_W201_V044"
+    (append (bht:bb-triangle-base)
+            (list (bht:line-color-g '(-0.28 0.88 0.0) '(-0.05 1.08 0.0) 250)
+                  (bht:line-color-g '(-0.05 1.08 0.0) '(0.08 1.36 0.0) 250)
+                  (bht:line-color-g '(0.08 1.36 0.0) '(0.31 1.49 0.0) 250))))
+  (bht:block "BHT_KH_BB_W225_V044"
+    (append (bht:bb-triangle-base)
+            (bht:disc-g '(-0.12 1.37 0.0) 0.07 10 250)
+            (bht:disc-g '(0.19 1.28 0.0) 0.06 10 250)
+            (list (bht:line-color-g '(-0.12 1.30 0.0) '(-0.02 1.02 0.0) 250)
+                  (bht:line-color-g '(0.19 1.22 0.0) '(0.10 0.98 0.0) 250)
+                  (bht:line-color-g '(-0.08 1.18 0.0) '(0.18 1.12 0.0) 250))))
+
+  ;; R.412 - so do phan lan tong quat, dung cho cac bang nhom xe trong KMZ.
+  (bht:block "BHT_KH_BB_R412_V044"
+    (append (bht:bb-blue-wide-base)
+            (list (bht:line-color-g '(0.0 0.72 0.0) '(0.0 1.62 0.0) 7)
+                  (bht:line-color-g '(-0.48 0.82 0.0) '(-0.48 1.52 0.0) 7)
+                  (bht:line-color-g '(0.48 0.82 0.0) '(0.48 1.52 0.0) 7)
+                  (bht:text-center-color-g "Ô TÔ" '(-0.52 1.16 0.0) 0.17 7)
+                  (bht:text-center-color-g "XE MÁY" '(0.52 1.16 0.0) 0.15 7))))
+  (bht:block "BHT_KH_BB_I414_V044"
+    (append (bht:bb-blue-wide-base)
+            (list (bht:line-color-g '(-0.75 1.17 0.0) '(0.62 1.17 0.0) 7)
+                  (bht:line-color-g '(0.62 1.17 0.0) '(0.34 1.43 0.0) 7)
+                  (bht:line-color-g '(0.62 1.17 0.0) '(0.34 0.91 0.0) 7)
+                  (bht:text-center-color-g "HƯỚNG" '(-0.30 1.48 0.0) 0.14 7))))
+  (bht:block "BHT_KH_BB_I423A_V044"
+    (append (bht:bb-blue-base)
+            (list (bht:solid-g '(0.0 1.58 0.0) '(-0.40 0.80 0.0)
+                                '(0.40 0.80 0.0) '(0.40 0.80 0.0) 7))
+            (bht:disc-g '(0.0 1.32 0.0) 0.06 10 250)
+            (list (bht:line-color-g '(0.0 1.25 0.0) '(-0.08 1.06 0.0) 250)
+                  (bht:line-color-g '(-0.08 1.06 0.0) '(-0.24 0.89 0.0) 250)
+                  (bht:line-color-g '(-0.08 1.06 0.0) '(0.14 0.91 0.0) 250))))
+  (bht:block "BHT_KH_BB_I428A_V044"
+    (append (bht:bb-blue-base)
+            (list (bht:rect-fill-g -0.20 0.88 0.12 1.48 250)
+                  (bht:rect-fill-g -0.14 1.31 0.06 1.42 7)
+                  (bht:line-color-g '(0.12 1.39 0.0) '(0.28 1.28 0.0) 250)
+                  (bht:line-color-g '(0.28 1.28 0.0) '(0.28 0.98 0.0) 250))))
+  (bht:block "BHT_KH_BB_I434A_V044"
+    (append (bht:bb-blue-base)
+            (list (bht:rect-fill-g -0.35 0.97 0.35 1.43 250)
+                  (bht:rect-fill-g -0.27 1.23 0.27 1.36 7))
+            (bht:disc-g '(-0.22 0.94 0.0) 0.07 10 250)
+            (bht:disc-g '(0.22 0.94 0.0) 0.07 10 250)))
+
+  ;; Nhom bien cam ghi tri so / hinh tu anh KMZ.
+  (bht:block "BHT_KH_BB_P115_V044"
+    (append (bht:bb-circle-base)
+            (list (bht:text-center-color-g "2,5 t" '(0.0 1.20 0.0) 0.25 250))))
+  (bht:block "BHT_KH_BB_P119_V044"
+    (append (bht:bb-circle-base)
+            (list (bht:text-center-color-g "8 m" '(0.0 1.20 0.0) 0.25 250)
+                  (bht:line-color-g '(-0.34 0.94 0.0) '(0.34 0.94 0.0) 250))))
+  (bht:block "BHT_KH_BB_P124A_V044"
+    (append (bht:bb-circle-base)
+            (list (bht:text-center-color-g "U" '(0.0 1.20 0.0) 0.42 250)
+                  (bht:line-color-g '(-0.40 1.60 0.0) '(0.40 0.80 0.0) 1))))
+  (bht:block "BHT_KH_BB_P125_V044"
+    (append (bht:bb-circle-base)
+            (list (bht:rect-fill-g -0.36 1.08 -0.04 1.30 250)
+                  (bht:rect-fill-g 0.04 1.08 0.36 1.30 1))
+            (bht:disc-g '(-0.28 1.05 0.0) 0.06 10 250)
+            (bht:disc-g '(-0.10 1.05 0.0) 0.06 10 250)
+            (bht:disc-g '(0.10 1.05 0.0) 0.06 10 1)
+            (bht:disc-g '(0.28 1.05 0.0) 0.06 10 1)))
+  (bht:block "BHT_KH_BB_P127_V044" (bht:bb-speed-g "MAX"))
+  (bht:block "BHT_KH_BB_P127_20_V044" (bht:bb-speed-g "20"))
+  (bht:block "BHT_KH_BB_P127_40_V044" (bht:bb-speed-g "40"))
+
   ;; 0.4.3: hinh chieu bang cua coc tieu theo mau thuc dia: than trang,
   ;; chan phan quang do, dau phan quang xanh. Diem chen = tam chan coc (0,0).
   (bht:block "BHT_KH_COC_TIEU_V043"
@@ -3877,8 +4130,9 @@
 (defun bht:kh-custom-src-key (group) (strcat "kh_block_src_" (strcase group T)))
 (defun bht:kh-custom-factor-key (group) (strcat "kh_block_factor_" (strcase group T)))
 
-(defun bht:kh-default-block (group)
-  (cond ((= group "COC_TIEU") "BHT_KH_COC_TIEU_V043")
+(defun bht:kh-default-block (group code)
+  (cond ((= group "BIEN_BAO") (bht:bb-block-for code))
+        ((= group "COC_TIEU") "BHT_KH_COC_TIEU_V043")
         ((= group "COT_KM") "BHT_KH_COT_KM_V043")
         (T (strcat "BHT_KH_" group)))
 )
@@ -3950,7 +4204,7 @@
 (defun bht:kh-block (rec / blk custom)
   (bht:symbol-blocks)
   (setq custom (bht:meta (bht:kh-custom-key (bht:get rec "nhom")) "")
-        blk (bht:kh-default-block (bht:get rec "nhom")))
+        blk (bht:kh-default-block (bht:get rec "nhom") (bht:get rec "ma_hieu")))
   (cond ((and (/= custom "") (tblsearch "BLOCK" custom)) custom)
         ((tblsearch "BLOCK" blk) blk)
         (T "BHT_KH_CHUA_XAC_DINH"))
@@ -4201,10 +4455,15 @@
   (setq gv (bht:ask-string "Chọn nhóm (số hoặc mã nhóm)" "1")
         group (bht:group-code gv))
   (if group
-    (setq action (strcase (bht:ask-string "[N=Nạp DWG tùy chọn/M=Dùng block mặc định/X=Xem cấu hình]" "N"))))
+    (setq action (strcase (bht:ask-string "[D=Danh mục chuẩn/N=Nạp DWG tùy chọn/M=Dùng block mặc định/X=Xem cấu hình]"
+                                          (if (= group "BIEN_BAO") "D" "N")))))
   (cond
     ((null group)
      (bht:msg "BHT: nhóm không hợp lệ."))
+    ((= action "D")
+     (if (= group "BIEN_BAO")
+       (bht:bb-catalog-report)
+       (bht:msg (strcat "BHT: nhóm " group " dùng block mặc định " (bht:kh-default-block group "") "."))))
     ((= action "M")
      (bht:meta-set (bht:kh-custom-key group) "")
      (bht:meta-set (bht:kh-custom-src-key group) "")
@@ -4217,7 +4476,8 @@
      (setq name (bht:meta (bht:kh-custom-key group) ""))
      (bht:msg (strcat "BHT: nhóm " group " -> "
                       (if (= name "")
-                        (strcat "mặc định " (bht:kh-default-block group))
+                         (strcat "mặc định " (bht:kh-default-block group "")
+                                 (if (= group "BIEN_BAO") " (tự chọn theo trường Mã)" ""))
                         (strcat name " | hệ số đơn vị " (bht:meta (bht:kh-custom-factor-key group) "1")
                                 " | nguồn " (bht:meta (bht:kh-custom-src-key group) ""))))))
     (T
@@ -5088,7 +5348,8 @@
       "  BHTLYTRINH   Tính lý trình/offset cho đối tượng (không mốc = chưa xác định)"
       "  BHTGOITHAU   Nạp BHT_GOI_THAU.tsv   BHTPHANDOAN  Gán đoạn/gói tự động   BHTGANDOAN  Gán tay"
       "  BHTKYHIEU    Chèn / cập nhật ký hiệu theo object_id (giữ vị trí người dùng đặt; R = trả về tự động)"
-      "  BHTBLOCK     Nạp DWG làm block tùy chọn theo nhóm / trở lại block mặc định (INSBASE là tâm chèn)"
+      "  BHTBLOCK     Danh mục block chuẩn / nạp DWG tùy chọn / trở lại mặc định"
+      "  BHTBBDANHMUC Danh mục biển báo từ ảnh KMZ DT830, đối chiếu QCVN 41:2024"
       "  BHTTHUTUVE   Thứ tự hiển thị: nhãn > ký hiệu/điểm > raster BHT > ảnh nền IRT"
       "  BHTXUAT      Xuất CSV: DIEM_RTK, DOI_TUONG, ANH, TONG_HOP (BHTEXPORT, BHTSUMMARY)"
       "  BHTKT        Kiểm tra toàn vẹn (BHTCHECK)   BHTINFO  Xem dữ liệu   BHTDIAG  Chẩn đoán đối tượng/proxy"
@@ -5622,7 +5883,7 @@
     (bht:msg "BHT: Palette đã sẵn sàng. Gõ BTH hoặc BHT để mở bảng.")
     (progn
       (bht:msg "BHT: không nạp được Palette.")
-      (bht:msg "  Kiểm tra BHT.Palette.dll, BHT.Bridge.dll và BHT.Core.dll nằm cạnh BHT-0.4.3.lsp.")
+      (bht:msg "  Kiểm tra BHT.Palette.dll, BHT.Bridge.dll và BHT.Core.dll nằm cạnh BHT-0.4.4.lsp.")
       (bht:msg "  Có thể dùng bảng dự phòng bằng lệnh BHTDCL.")))
   (princ)
 )

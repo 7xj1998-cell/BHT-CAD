@@ -1,11 +1,11 @@
-# BHT 0.4.3 - chay 1 phien AutoCAD Core Console (accoreconsole) voi 1 file kiem thu .lsp
+# BHT 0.4.4 - chay 1 phien AutoCAD Core Console (accoreconsole) voi 1 file kiem thu .lsp
 # -Name  : ten file kiem thu (khong duoi) trong $w ; -Dwg : ban ve mo (BAN SAO), trong = ban ve moi
 # -After : cac dong script them sau khi nap .lsp (lenh .NET, bieu thuc Lisp, SAVEAS ...)
 # -Saved : ban ve da SAVEAS trong -After -> chi QUIT (khong can _Y)
 param([string]$Name, [string]$Dwg = '', [int]$TimeoutSec = 600, [string[]]$After = @(), [switch]$Saved)
-$w = 'C:\Users\Le Bao\BHT_TEST_V043'
+$w = 'C:\Users\Le Bao\BHT_TEST_V044'
 $scr = Join-Path $w "run\$Name.scr"
-$lines = @("(load `"C:/Users/Le Bao/BHT_TEST_V043/$Name.lsp`")")
+$lines = @("(load `"C:/Users/Le Bao/BHT_TEST_V044/$Name.lsp`")")
 $lines += $After
 $lines += '_.QUIT'
 if (-not $Saved) { $lines += '_Y' }

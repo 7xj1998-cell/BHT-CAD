@@ -24,5 +24,5 @@ if (Test-Path -LiteralPath $target) {
 }
 
 Copy-Item -LiteralPath $source -Destination $target -Recurse
-Write-Host "Đã cài BHT 0.4.3 vào $target"
+Write-Host "Đã cài BHT 0.4.4 vào $target"
 Write-Host 'Mở lại AutoCAD rồi gõ BTH hoặc BHT. Không cần NETLOAD.'
