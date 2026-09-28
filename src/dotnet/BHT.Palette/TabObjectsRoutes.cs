@@ -418,7 +418,7 @@ namespace BHT.Palette
                 new[] { "BHTKT", "Kiểm tra toàn vẹn" },
                 new[] { "BHTSAPNHAN", "Sắp xếp nhãn theo phạm vi" },
                 new[] { "BHTKIEUDIEM", "Dấu X của điểm và sắp lại nhãn" },
-                new[] { "BHTBLOCK", "Nạp / bỏ block tùy chọn theo nhóm" },
+                new[] { "BHTBLOCK", "Danh mục chuẩn / nạp block tùy chọn" },
                 new[] { "BHTTHUTUVE", "Thứ tự hiển thị" },
                 new[] { "BHTGHEPANH", "Đề xuất ghép ảnh (chỉ đề xuất)" },
                 new[] { "BHTTHUMUCANH", "Chỉ lại thư mục ảnh" }

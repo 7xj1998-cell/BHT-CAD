@@ -1,7 +1,7 @@
-# BHT 0.4.3 — KIẾN TRÚC
+# BHT 0.4.4 — KIẾN TRÚC
 
 ```
-BHT-0.4.3.lsp  (lõi Lisp: nhập dữ liệu, thuật toán nhãn / ký hiệu / ký hiệu ảnh / kiểm tra / thứ tự hiển thị)
+BHT-0.4.4.lsp  (lõi Lisp + thư viện block: dữ liệu, nhãn / ký hiệu / ảnh / kiểm tra / thứ tự hiển thị)
       ▲  bht:api-*  (vl-acad-defun, Application.Invoke)            ▲ lệnh Lisp (SendStringToExecute, fire-and-forget)
       │                                                              │
 BHT.Palette.dll  (một PaletteSet WinForms; lệnh chính BTH / BHT; tham chiếu acmgd)
@@ -26,6 +26,8 @@ BHT.Core.dll     (thuần .NET: mô hình dữ liệu, mã hóa bản ghi giốn
   build được bằng csc.exe của .NET Framework khi máy không có SDK/Visual Studio.
 * **Block tùy chọn** được Lisp nạp từ DWG vào định nghĩa `BHT_USER_<NHOM>` trong bản vẽ. `INSBASE` là tâm chèn;
   hệ số đơn vị được ghi vào META và kết hợp với tỷ lệ ký hiệu. Palette chỉ gọi lệnh `BHTBLOCK` để giữ một luồng xử lý.
+* **Block chuẩn tích hợp** nằm trong cùng file Lisp. Với nhóm `BIEN_BAO`, `bht:bb-block-for` chọn định nghĩa theo `ma_hieu`;
+  bản vẽ chỉ lưu tên block/XData như trước nên hợp đồng dữ liệu không đổi.
 * **Lý trình nhập tay** được Palette phân tích bằng logic thuần .NET, sau đó ghi cùng các trường `ly_trinh_*` của Lisp
   với trạng thái `NHAP_TAY`; tính lại theo tuyến vẫn đi qua `BHTLYTRINH`.
 

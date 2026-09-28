@@ -6,7 +6,7 @@ param(
 $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent $PSScriptRoot
 $version = (Get-Content -LiteralPath (Join-Path $root 'VERSION') -Raw).Trim()
-if ($version -ne '0.4.3') { throw "VERSION phải là 0.4.3, đang là $version" }
+if ($version -ne '0.4.4') { throw "VERSION phải là 0.4.4, đang là $version" }
 
 if (-not $SkipBuild) {
   & (Join-Path $PSScriptRoot 'build.ps1') -AcadDir $AcadDir -UseCsc -Test
@@ -34,6 +34,10 @@ Copy-Item -LiteralPath (Join-Path $bin 'BHT.Core.dll'),(Join-Path $bin 'BHT.Brid
 Copy-Item -LiteralPath (Join-Path $root 'README.md'),(Join-Path $root 'CHANGELOG.md') -Destination $stage
 Copy-Item -LiteralPath (Join-Path $root 'docs') -Destination $stage -Recurse
 Copy-Item -LiteralPath (Join-Path $root 'packaging\INSTALL_BHT.ps1'),(Join-Path $root 'packaging\INSTALL_BHT.cmd'),(Join-Path $root 'packaging\README_INSTALL.md') -Destination $stage
+
+$toolStage = Join-Path $stage 'scripts'
+New-Item -ItemType Directory -Force -Path $toolStage | Out-Null
+Copy-Item -LiteralPath (Join-Path $root 'scripts\audit_tdt_library.ps1') -Destination $toolStage
 
 # Ban giao kem ma nguon co the build lai, khong kem .git, build, DLL Autodesk hay du lieu khao sat.
 $sourceStage = Join-Path $stage 'source\BHT-CAD'

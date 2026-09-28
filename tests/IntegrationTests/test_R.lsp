@@ -1,9 +1,9 @@
 ;;; BHT 0.3.3 - phien R (dung lai nguyen kich ban hoi quy cua 0.3.2): HOI QUY chuc nang 0.2.0/0.3.1 (dung lai kich ban test_A cua 0.2.0,
 ;;; chi doi duong dan nap Lisp, phien ban va thu muc xuat). Ban ve: BAN SAO sample-route.dwg.
-(load "C:/Users/Le Bao/BHT_TEST_V043/t_common.lsp")
+(load "C:/Users/Le Bao/BHT_TEST_V044/t_common.lsp")
 (tbegin "R")
 (setq e (tload))
-(tchk "A01" "nạp BHT 0.4.3 từ đường dẫn có dấu" (and (null e) (= *bht-version* "0.4.3")) (if e e *bht-version*))
+(tchk "A01" "nạp BHT 0.4.4 từ đường dẫn có dấu" (and (null e) (= *bht-version* "0.4.4")) (if e e *bht-version*))
 ;; A02
 (setq r (tsafe "A02" "selftest" '(lambda () (bht:selftest))))
 (if r (tchk "A02" "BHTTEST hàm thuần" (= (cadr r) 0) (strcat (itoa (car r)) " pass, " (itoa (cadr r)) " fail")))

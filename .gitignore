@@ -24,6 +24,7 @@ data/
 # Ket qua chay kiem thu
 tests/IntegrationTests/run/
 *.console.txt
+*.log
 *.scr
 BHT_LOG*
 # Goi phat hanh (nam o release/ ngoai repo)
