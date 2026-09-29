@@ -6,7 +6,7 @@ param(
 $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent $PSScriptRoot
 $version = (Get-Content -LiteralPath (Join-Path $root 'VERSION') -Raw).Trim()
-if ($version -ne '0.4.5') { throw "VERSION phải là 0.4.5, đang là $version" }
+if ($version -ne '0.4.6') { throw "VERSION phải là 0.4.6, đang là $version" }
 
 if (-not $SkipBuild) {
   & (Join-Path $PSScriptRoot 'build.ps1') -AcadDir $AcadDir -UseCsc -Test

@@ -1,9 +1,9 @@
-# BHT — HỢP ĐỒNG DỮ LIỆU DWG (0.4.5)
+# BHT — HỢP ĐỒNG DỮ LIỆU DWG (0.4.6)
 
-Tài liệu này mô tả **đúng định dạng mà mã Lisp (BHT-0.4.5.lsp) ghi vào bản vẽ**, lấy trực tiếp từ mã nguồn
+Tài liệu này mô tả **đúng định dạng mà mã Lisp (BHT-0.4.6.lsp) ghi vào bản vẽ**, lấy trực tiếp từ mã nguồn
 (`bht:rec-encode`, `bht:rec-decode`, `bht:rec-write`, `bht:pt-write-xdata`, `bht:obj-create`, `bht:photo-link`,
 các hàm ký hiệu / nhãn). Plugin .NET (BHT.Bridge) đọc/ghi **chính định dạng này**; DWG là nguồn dữ liệu duy nhất.
-Định dạng 0.4.5 **giống hệt 0.3.3 / 0.3.2** (không đổi cấu trúc) — bản vẽ cũ mở bình thường.
+Định dạng 0.4.6 **giống hệt 0.4.5 / 0.3.3 / 0.3.2** (không đổi cấu trúc) — bản vẽ cũ mở bình thường.
 
 ## 1. Kho bản ghi: Named Object Dictionary `BHT_V02`
 

@@ -1,7 +1,7 @@
-# BHT 0.4.5 - chay toan bo kiem thu Core Console
-#  Hoi quy 0.3.3 tren BHT-0.4.5.lsp: S0, A, B, L, R, L2
+# BHT 0.4.6 - chay toan bo kiem thu Core Console
+#  Hoi quy 0.3.3 tren BHT-0.4.6.lsp: S0, A, B, L, R, L2
 #  Plugin .NET: N (ban ve 0.3.3 + BHT.Bridge), N2 (mo lai), NL (ban ve 0.3.2 + BHT.Bridge), P (thu NETLOAD BHT.Palette)
-# Can: $w\thu muc co dau\BHT-0.4.5-rc.lsp, $w\bin\BHT.*.dll, $w\data\survey.csv, $w\run\route_src.dwg,
+# Can: $w\thu muc co dau\BHT-0.4.6-rc.lsp, $w\bin\BHT.*.dll, $w\data\survey.csv, $w\run\route_src.dwg,
 #      $w\run\legacy_032_src.dwg, $w\run\v033_A_out.dwg (A_out.dwg cua bo kiem thu 0.3.3), $w\anh_da_doi\kmz_out, $w\irt\*.jpg
 param([string[]]$Only = @())
 $w = 'C:\Users\Le Bao\BHT_TEST_V044'

@@ -43,7 +43,7 @@ namespace BHT.Palette
             _status.Dock = DockStyle.Bottom; _status.Height = 52; _status.Margin = new Padding(4);
             _status.Padding = new Padding(7, 5, 7, 5); _status.BorderStyle = BorderStyle.FixedSingle;
             _status.AutoEllipsis = true; _status.TabStop = false;
-            _tabs.Dock = DockStyle.Fill; _tabs.Multiline = false;
+            _tabs.Dock = DockStyle.Fill; _tabs.Multiline = true;
             _tabs.TabPages.Add(BuildOverviewTab());
             _tabs.TabPages.Add(BuildPointsTab());
             _tabs.TabPages.Add(BuildPhotosTab());
@@ -167,6 +167,7 @@ namespace BHT.Palette
         {
             _status.Text = s ?? "";
             _status.BackColor = PaletteTheme.StatusBack(s);
+            _status.ForeColor = PaletteTheme.StatusFore(s);
         }
 
         protected void ShowReportDialog(string title, string content)

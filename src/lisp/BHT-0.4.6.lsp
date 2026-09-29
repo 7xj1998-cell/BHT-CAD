@@ -1,5 +1,5 @@
 ;;; ======================================================================
-;;; BHT-0.4.5.lsp - BHT 0.4.5 (build 2026-09-29)
+;;; BHT-0.4.6.lsp - BHT 0.4.6 (build 2026-09-29)
 ;;; Quan ly khao sat bao hieu / coc tieu / cot Km / bang va cong trinh ven
 ;;; tuyen: diem RTK, ho so doi tuong, anh TimeMark (KMZ), tuyen tham chieu,
 ;;; ly trinh, goi thau / doan tuyen, xuat CSV cho Excel.
@@ -12,7 +12,16 @@
 ;;; Muc tieu: AutoCAD 2021-2024, Civil 3D 2023 (Windows). File luu UTF-8,
 ;;; can LISPSYS = 1 (mac dinh tu AutoCAD 2021) de hien tieng Viet co dau.
 ;;;
-;;; NHAT KY THAY DOI 0.4.5 (chi tiet: CHANGELOG.md)
+;;; NHAT KY THAY DOI 0.4.6 (chi tiet: CHANGELOG.md)
+;;;  + Palette toi mau than-xanh, chu hanh dong vang, thong tin cyan; thanh
+;;;    chon 5 the dat doc sat mep phai de tiet kiem chieu ngang.
+;;;  + Kieu diem moi BHT_RTK dung Arial Unicode width factor 0.85 cho ban ve
+;;;    moi; ten/mo ta/cao do la mot cum nhan. Ban ve legacy giu BHT_ARIAL va
+;;;    khong bi doi font hay doi vi tri nhan o lan cap nhat dau.
+;;;  + Doi chieu cau hinh scale 1:1 cua TDT 9.1 va mo hinh point style cua
+;;;    DPSurvey; van giu dau X 1 unit, khong di chuyen/lam tron POINT RTK.
+;;;
+;;; NHAT KY THAY DOI 0.4.5
 ;;;  + BHTTUYENTDT goi Tdt91Interop de doc tim TDTSolution 9.1 ban thuong
 ;;;    dang hoat dong: mo ForRead, Entity.Explode, tao/cap nhat Polyline rieng
 ;;;    tren layer BHT_TUYEN_TDT; khong dung vlax-curve tren TDTDBALIGNMENT.
@@ -80,12 +89,12 @@
 
 (vl-load-com)
 
-(setq *bht-version* "0.4.5")
+(setq *bht-version* "0.4.6")
 (setq *bht-build* "2026-09-29")
 
 ;; Luu duong dan ngay khi APPLOAD / Application Bundle nap Lisp. DLL dat canh
 ;; file Lisp de nguoi dung chi can APPLOAD mot lan, khong phai tu NETLOAD.
-(setq *bht-lsp-file* (findfile "BHT-0.4.5.lsp"))
+(setq *bht-lsp-file* (findfile "BHT-0.4.6.lsp"))
 (setq *bht-lsp-dir*
   (if *bht-lsp-file* (vl-filename-directory *bht-lsp-file*) nil))
 (setq *bht-palette-dll*
@@ -687,10 +696,11 @@
 
 ;; Kieu chu TrueType hien tieng Viet. Tra ve ten kieu dung duoc.
 (defun bht:text-style (name)
-  (if (or (null name) (= name "")) (setq name "BHT_ARIAL"))
-  (if (and (= (strcase name) "BHT_ARIAL") (not (tblsearch "STYLE" name)))
+  (if (or (null name) (= name "")) (setq name "BHT_RTK"))
+  (if (and (member (strcase name) '("BHT_ARIAL" "BHT_RTK")) (not (tblsearch "STYLE" name)))
     (entmake (list '(0 . "STYLE") '(100 . "AcDbSymbolTableRecord") '(100 . "AcDbTextStyleTableRecord")
-                   (cons 2 name) '(70 . 0) '(40 . 0.0) '(41 . 1.0) '(50 . 0.0) '(71 . 0)
+                   (cons 2 name) '(70 . 0) '(40 . 0.0) (cons 41 (if (= (strcase name) "BHT_RTK") 0.85 1.0))
+                   '(50 . 0.0) '(71 . 0)
                    '(42 . 1.0) '(3 . "arial.ttf") '(4 . ""))))
   (if (tblsearch "STYLE" name) name "Standard")
 )
@@ -911,14 +921,18 @@
 
 ;; Nhap danh sach ban ghi vao DWG, chong trung.
 ;; Tra ve assoc: added same conflict dupcontent adopted invalid dupfile
-(defun bht:import-records (recs bad / index cmap lmap ss i ent x loc p id ds row name n e z desc src
-                                 key added same conflict dupc adopted dupfile seen tm cls old dsrec)
+(defun bht:import-records (recs bad / index fresh cmap lmap ss i ent x loc p id ds row name n e z desc src
+                                  key added same conflict dupc adopted dupfile seen tm cls old dsrec)
   (setq added 0 same 0 conflict 0 dupc 0 adopted 0 dupfile 0 seen nil tm (bht:now))
   (bht:layer *bht-pt-layer* 3)
   (bht:point-style-apply nil nil)
   (bht:regapp "BHT_RTK") (bht:regapp "BHT_PT")
   ;; Chi muc hien co
-  (setq index (bht:pt-all) cmap nil lmap nil)
+  (setq index (bht:pt-all) fresh (null index) cmap nil lmap nil)
+  ;; DPSurvey tach kieu diem khoi du lieu. BHT cung chi dat kieu RTK gon cho
+  ;; BAN VE MOI o lan nhap dau; ban ve legacy khong bi doi font hay doi vi tri nhan.
+  (if (and fresh (= (bht:get (bht:rec-read "META" "CONFIG") "nhan_kieu_chu") ""))
+    (bht:meta-set "nhan_kieu_chu" "BHT_RTK"))
   (foreach it index
     (setq p (cdr it))
     (setq cmap (cons (cons (bht:content-key (bht:pv p 'name) (bht:pv p 'n) (bht:pv p 'e)
@@ -1139,6 +1153,8 @@
         (cons 'id (= (bht:meta "nhan_id" "0") "1"))
         (cons 'h (if (and h (> h 0)) h 0.5))
         (cons 'off (if off off 0.65))
+        ;; Ban ve cu khong co khoa nay: giu BHT_ARIAL de tuyet doi khong doi vi tri nhan.
+        ;; Ban ve moi duoc bht:import-records ghi ro BHT_RTK o lan nhap diem dau tien.
         (cons 'style (bht:meta "nhan_kieu_chu" "BHT_ARIAL"))
         (cons 'hidden (= (bht:meta "nhan_an" "0") "1"))
         (cons 'prio (= (bht:meta "nhan_uu_tien_dt" "0") "1")))
@@ -1196,6 +1212,10 @@
     (if (/= s "") (setq out (append out (list (list k s (cadr (assoc k *bht-lbl-kinds*))))))))
   out
 )
+
+;; Khoang dong compact: cac dong ten / mo ta / cao do cua cung mot diem
+;; luon la mot cum nhan, khong bi tach va tan ra rieng le.
+(defun bht:lbl-line-step (h) (* 1.5 h))
 
 (defun bht:lbl-xdata (pid kind state pt)
   (list -3 (list "BHT_NHAN" (cons 1000 pid) (cons 1000 kind) (cons 1000 state)
@@ -1458,7 +1478,7 @@
        (setq w 0.0 nl (length autol))
        (foreach al autol
          (setq tb (bht:lbl-tbox (cadr al) h style) w (max w (car (cadr tb)))))
-       (setq hh (+ h (* (1- nl) 1.5 h) (* 0.25 h)))
+        (setq hh (+ h (* (1- nl) (bht:lbl-line-step h)) (* 0.25 h)))
        (setq items (cons (list pid (car (bht:pv p 'xyz)) (cadr (bht:pv p 'xyz)) w hh) items)
              plans (cons (list pid autol (bht:pv p 'xyz) hh) plans)))
       (T
@@ -1485,7 +1505,7 @@
         (setq pl (assoc (car r) plans) bx (cadr r) by (caddr r) nl (length (cadr pl)) i 0
               cost (+ cost (cadddr r)))
         (foreach al (cadr pl)
-          (setq pt (list bx (+ by (* 0.25 h) (* (- nl 1 i) 1.5 h)) (caddr (caddr pl))))
+          (setq pt (list bx (+ by (* 0.25 h) (* (- nl 1 i) (bht:lbl-line-step h))) (caddr (caddr pl))))
           (if (nth 3 al)
             (progn
               (setq d (entget (nth 3 al))
@@ -1605,10 +1625,10 @@
 (defun bht:lbl-ask-settings (/ h off sty)
   (setq h (bht:num (bht:ask-string "Chiều cao chữ nhãn" (bht:meta "nhan_h" "0.5")))
         off (bht:num (bht:ask-string "Khoảng lệch nhãn so với điểm (đơn vị bản vẽ)" (bht:meta "nhan_offset" "0.65")))
-        sty (bht:ask-string "Kiểu chữ (BHT_ARIAL = Arial TrueType, hiện tiếng Việt)" (bht:meta "nhan_kieu_chu" "BHT_ARIAL")))
+        sty (bht:ask-string "Kiểu chữ (BHT_RTK = Arial gọn, hiện tiếng Việt)" (bht:meta "nhan_kieu_chu" "BHT_ARIAL")))
   (cond
     ((not (and h (> h 0) off)) (bht:msg "BHT: giá trị không hợp lệ, giữ cài đặt cũ.") nil)
-    ((and (/= (strcase sty) "BHT_ARIAL") (not (tblsearch "STYLE" sty)))
+    ((and (not (member (strcase sty) '("BHT_ARIAL" "BHT_RTK"))) (not (tblsearch "STYLE" sty)))
      (bht:msg (strcat "BHT: không có kiểu chữ " sty " trong bản vẽ, giữ cài đặt cũ.")) nil)
     (T (bht:meta-set "nhan_h" (bht:fnum h 3))
        (bht:meta-set "nhan_offset" (bht:fnum off 3))
@@ -3606,7 +3626,7 @@
 (defun c:BHTTUYENTDT (/ *error* sel src src-h existing-id existing-rec existing-h id maxoff extrap r ref res rec)
   (setq *error* bht:on-error)
   (if (not (fboundp 'BHTTDT91ROUTE))
-    (bht:msg "BHT: Bridge 0.4.5 chưa được nạp. Đóng AutoCAD, cài lại BHT 0.4.5 rồi mở bằng profile TDT 9.1.")
+    (bht:msg "BHT: Bridge 0.4.6 chưa được nạp. Đóng AutoCAD, cài lại BHT 0.4.6 rồi mở bằng profile TDT 9.1.")
     (if (setq sel (entsel "\nChọn tim tuyến TDTSolution 9.1: "))
       (progn
         (setq src (car sel) src-h (cdr (assoc 5 (entget src)))
@@ -5445,6 +5465,7 @@
                               (= (bht:box-ov '(0.0 0.0 1.0 1.0) '(1.0 0.0 2.0 1.0)) 0.0)))
   (setq r (bht:lbl-cands 10.0 20.0 4.0 1.0 0.5 1.0))
   (bht:st-chk "64 vị trí ứng viên, đầu tiên Đông-Bắc" (and (= (length r) 64) (equal (car r) '(10.5 20.5) 1e-9)))
+  (bht:st-chk "cụm nhãn giữ khoảng dòng an toàn 1,5H" (equal (bht:lbl-line-step 2.0) 3.0 1e-9))
   (setq r (bht:lbl-layout (list (list "A" 0.0 0.0 4.0 1.25) (list "B" 0.0 0.0 4.0 1.25)) nil 0.5 1.0))
   (bht:st-chk "hai nhãn cùng vị trí không chồng nhau"
               (and (= (length r) 2)
@@ -6048,7 +6069,7 @@
     (bht:msg "BHT: Palette đã sẵn sàng. Gõ BTH hoặc BHT để mở bảng.")
     (progn
       (bht:msg "BHT: không nạp được Palette.")
-      (bht:msg "  Kiểm tra BHT.Palette.dll, BHT.Bridge.dll và BHT.Core.dll nằm cạnh BHT-0.4.5.lsp.")
+      (bht:msg "  Kiểm tra BHT.Palette.dll, BHT.Bridge.dll và BHT.Core.dll nằm cạnh BHT-0.4.6.lsp.")
       (bht:msg "  Có thể dùng bảng dự phòng bằng lệnh BHTDCL.")))
   (princ)
 )

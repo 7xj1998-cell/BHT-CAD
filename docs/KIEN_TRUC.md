@@ -1,7 +1,7 @@
-# BHT 0.4.5 — KIẾN TRÚC
+# BHT 0.4.6 — KIẾN TRÚC
 
 ```
-BHT-0.4.5.lsp  (lõi Lisp + thư viện block: dữ liệu, nhãn / ký hiệu / ảnh / kiểm tra / thứ tự hiển thị)
+BHT-0.4.6.lsp  (lõi Lisp + thư viện block: dữ liệu, nhãn / ký hiệu / ảnh / kiểm tra / thứ tự hiển thị)
       ▲  bht:api-*  (vl-acad-defun, Application.Invoke)            ▲ lệnh Lisp (SendStringToExecute, fire-and-forget)
       │                                                              │
 BHT.Palette.dll  (một PaletteSet WinForms; lệnh chính BTH / BHT; tham chiếu acmgd)

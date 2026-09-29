@@ -1,4 +1,4 @@
-# BHT 0.4.5 - chay 1 phien AutoCAD Core Console (accoreconsole) voi 1 file kiem thu .lsp
+# BHT 0.4.6 - chay 1 phien AutoCAD Core Console (accoreconsole) voi 1 file kiem thu .lsp
 # -Name  : ten file kiem thu (khong duoi) trong $w ; -Dwg : ban ve mo (BAN SAO), trong = ban ve moi
 # -After : cac dong script them sau khi nap .lsp (lenh .NET, bieu thuc Lisp, SAVEAS ...)
 # -Saved : ban ve da SAVEAS trong -After -> chi QUIT (khong can _Y)

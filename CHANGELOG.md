@@ -1,5 +1,15 @@
 # CHANGELOG
 
+## 0.4.6 (2026-09-29)
+
+- Đổi Palette sang bảng màu tối phù hợp AutoCAD: nền than–xanh, chữ thao tác vàng chanh, thông tin cyan và trạng thái lỗi/cảnh báo có màu tương phản riêng.
+- Chuyển năm thẻ `Tổng quan / RTK / Ảnh / Hồ sơ / Tuyến` thành thanh dọc sát mép phải, giải phóng chiều ngang và giữ phần nhập liệu theo bố cục nhãn trái–điều khiển phải.
+- Nghiên cứu chỉ đọc TDT 9.1 bản thường và DPSurvey 3.3: giữ nguyên nguyên tắc block tỷ lệ 1:1 của TDT, đồng thời áp dụng mô hình kiểu điểm tách biệt dữ liệu của DPSurvey cho BHT.
+- Thêm kiểu chữ `BHT_RTK` dùng Arial Unicode với hệ số rộng `0,85` cho lần nhập RTK đầu tiên trên bản vẽ mới; tên, mô tả và cao độ tiếp tục được bố trí như một cụm nhãn.
+- Bảo toàn bản vẽ cũ: bản vẽ không có khóa kiểu chữ tiếp tục dùng `BHT_ARIAL`; lần cập nhật đầu không đổi font hoặc dời nhãn legacy. Dấu X vẫn đúng tâm, kích thước 1 unit; POINT RTK không bị di chuyển hoặc làm tròn.
+- Đồng bộ `BHT-0.4.6.lsp`, `BHT.Core`, `BHT.Bridge`, `BHT.Palette`, Application Bundle, bộ cài và kiểm thử về phiên bản 0.4.6.
+- Kiểm thử phát hành: 62 PASS Core; 172 PASS, 0 FAIL, 1 BLOCKED trên AutoCAD Core Console. Mục BLOCKED là mở giao diện DCL do Core Console không có UI; Palette tối và thanh tab phải được đưa vào checklist nghiệm thu thủ công.
+
 ## 0.4.5 (2026-09-29)
 
 - Đã tích hợp TDTSolution 9.1 bản thường tại `C:\Program Files (x86)\TDT Solution 2022\`; không dò hoặc dùng TDT 9.1 Pro.

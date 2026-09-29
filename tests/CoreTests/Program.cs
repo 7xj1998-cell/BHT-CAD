@@ -210,10 +210,10 @@ namespace BHT.CoreTests
 
         static void Versions()
         {
-            Check("C11a", "hằng phiên bản", BhtVersion.Version == "0.4.5" && BhtVersion.AssemblyVersion.StartsWith("0.4.5.") && BhtVersion.FileVersion.StartsWith("0.4.5."));
-            Check("C11b", "Lisp phải cùng phiên bản", BhtVersion.LispCompatible("0.4.5", "1") && !BhtVersion.LispCompatible("0.4.3", "1") && !BhtVersion.LispCompatible("0.4.5", "") && !BhtVersion.LispCompatible("0.10.0", "2"));
+            Check("C11a", "hằng phiên bản", BhtVersion.Version == "0.4.6" && BhtVersion.AssemblyVersion.StartsWith("0.4.6.") && BhtVersion.FileVersion.StartsWith("0.4.6."));
+            Check("C11b", "Lisp phải cùng phiên bản", BhtVersion.LispCompatible("0.4.6", "1") && !BhtVersion.LispCompatible("0.4.5", "1") && !BhtVersion.LispCompatible("0.4.6", "") && !BhtVersion.LispCompatible("0.10.0", "2"));
             var asm = typeof(BhtRecord).Assembly.GetName().Version.ToString();
-            Check("C11c", "AssemblyVersion BHT.Core = 0.4.5.x", asm.StartsWith("0.4.5."), asm);
+            Check("C11c", "AssemblyVersion BHT.Core = 0.4.6.x", asm.StartsWith("0.4.6."), asm);
         }
 
         static void PointX()
