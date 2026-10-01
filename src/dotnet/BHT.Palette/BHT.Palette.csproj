@@ -7,6 +7,9 @@
     <UseWindowsForms>true</UseWindowsForms>
   </PropertyGroup>
   <ItemGroup>
+    <EmbeddedResource Include="..\..\..\assets\sign-previews\*.png">
+      <LogicalName>BHT.SignPreviews.%(Filename)%(Extension)</LogicalName>
+    </EmbeddedResource>
     <ProjectReference Include="..\BHT.Core\BHT.Core.csproj" />
     <ProjectReference Include="..\BHT.Bridge\BHT.Bridge.csproj" />
   </ItemGroup>

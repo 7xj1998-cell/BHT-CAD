@@ -51,6 +51,11 @@ if (-not $UseCsc -and (Get-Command dotnet -ErrorAction SilentlyContinue)) {
 $failed = $false
 function Run-Tool([string]$exe, [string[]]$argv, [string]$label) {
   Log ("--- " + $label)
+  if ([IO.Path]::GetFileName($exe) -eq 'csc.exe') {
+    $responseFile = Join-Path $OutDir 'compile.rsp'
+    [IO.File]::WriteAllLines($responseFile, @($argv | Where-Object { $_ -ne '/noconfig' } | ForEach-Object { '"' + $_ + '"' }), [Text.UTF8Encoding]::new($true))
+    $argv = @('/noconfig', ('@' + $responseFile))
+  }
   $out = & $exe @argv 2>&1 | ForEach-Object { $_.ToString() }
   $code = $LASTEXITCODE
   foreach ($l in $out) { Log ("    " + $l) }
@@ -93,6 +98,7 @@ if ($sdk) {
                          ('/r:' + (Join-Path $fw 'System.Windows.Forms.dll')), ('/r:' + (Join-Path $fw 'System.Drawing.dll')),
                          ('/r:' + (Join-Path $fw 'WPF\PresentationCore.dll')), ('/r:' + (Join-Path $fw 'WPF\PresentationFramework.dll')),
                          ('/r:' + (Join-Path $fw 'WPF\WindowsBase.dll')), ('/r:' + (Join-Path $fw 'System.Xaml.dll'))) + (Src (Join-Path $root 'src\dotnet\BHT.Palette'))
+        $a += Get-ChildItem -LiteralPath (Join-Path $root 'assets\sign-previews') -Filter *.png | ForEach-Object { '/resource:' + $_.FullName + ',BHT.SignPreviews.' + $_.Name }
         if ((Run-Tool $csc $a 'csc BHT.Palette (+ AcMgd, WinForms)') -ne 0) { $failed = $true }
       } elseif (-not $havePaletteRefs) { Log "SKIP BHT.Palette: khong co acmgd.dll trong AcadDir." }
       else { Log "SKIP BHT.Palette: BHT.Bridge build that bai, khong dung DLL cu." }

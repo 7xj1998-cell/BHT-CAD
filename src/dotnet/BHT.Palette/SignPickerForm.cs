@@ -101,9 +101,11 @@ namespace BHT.Palette
                 if (sign.Code.StartsWith("Biển số ", StringComparison.OrdinalIgnoreCase)) continue;
                 var card = new Panel { Width = 160, Height = 175, BorderStyle = BorderStyle.FixedSingle, Margin = new Padding(5), Tag = sign };
                 var picture = new PictureBox { Dock = DockStyle.Top, Height = 108, SizeMode = PictureBoxSizeMode.Zoom, BackColor = Color.White };
+                picture.Image = BundledPreview(sign.Code) ?? BundledPreview(sign.NameFrom);
+                if (picture.Image != null) images.Add(picture.Image);
                 string path;
-                if (paths.TryGetValue(SignSearch.CodeKey(sign.Code), out path) ||
-                    (!string.IsNullOrEmpty(sign.NameFrom) && paths.TryGetValue(SignSearch.CodeKey(sign.NameFrom), out path)))
+                if (picture.Image == null && (paths.TryGetValue(SignSearch.CodeKey(sign.Code), out path) ||
+                    (!string.IsNullOrEmpty(sign.NameFrom) && paths.TryGetValue(SignSearch.CodeKey(sign.NameFrom), out path))))
                 {
                     try { using (var original = Image.FromFile(path)) picture.Image = new Bitmap(original); images.Add(picture.Image); }
                     catch (ArgumentException) { } catch (IOException) { }
@@ -127,6 +129,19 @@ namespace BHT.Palette
             if (initial != null) { Choose(initial); grid.ScrollControlIntoView(initial); }
         }
         // Identifiable code card only: never imply an exact regulatory icon when no bitmap is available.
+        private static Image BundledPreview(string code)
+        {
+            if (string.IsNullOrWhiteSpace(code)) return null;
+            var assembly = typeof(SignPickerForm).Assembly;
+            string key = SignSearch.CodeKey(code);
+            string resource = assembly.GetManifestResourceNames().FirstOrDefault(name =>
+                name.StartsWith("BHT.SignPreviews.", StringComparison.Ordinal) &&
+                SignSearch.CodeKey(name.Substring("BHT.SignPreviews.".Length).Replace(".png", "")) == key);
+            if (resource == null) return null;
+            using (var stream = assembly.GetManifestResourceStream(resource))
+            using (var original = Image.FromStream(stream)) return new Bitmap(original);
+        }
+
         private static Image CodePreview(TdtSignEntry sign)
         {
             var bitmap = new Bitmap(160,108);

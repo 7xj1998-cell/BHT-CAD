@@ -1,4 +1,9 @@
-﻿## 0.6.5 (2026-10-02)
+﻿## v0.6.6 — 2026-10-02
+
+- Nhúng ảnh biển báo vào DLL Palette, bảo đảm R.122 và toàn bộ thư viện có ảnh ngay cả khi thiếu thư mục Images. Giữ hỗ trợ ảnh TDT cho mã ngoài bộ ảnh đi kèm.
+- Kiểm tra riêng ảnh R.122, P.131c, S.508a/b và toàn bộ mục thư viện bằng WinForms.
+
+## 0.6.5 (2026-10-02)
 
 - Tiếp tục từ v0.6.3; không lấy v0.6.4 làm nền.
 - Gốc cọc tiêu tại chân đuôi; nhãn trên đầu, hướng theo ký hiệu. Đặt tự do và xoay theo tuyến áp dụng mọi nhóm.

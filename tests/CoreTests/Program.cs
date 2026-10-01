@@ -263,7 +263,7 @@ namespace BHT.CoreTests
 
         static void Versions()
         {
-            Check("C11a", "hằng phiên bản", BhtVersion.Version == "0.6.5" && BhtVersion.AssemblyVersion == BhtVersion.Version + ".0" && BhtVersion.FileVersion == BhtVersion.AssemblyVersion);
+            Check("C11a", "hằng phiên bản", BhtVersion.Version == "0.6.6" && BhtVersion.AssemblyVersion == BhtVersion.Version + ".0" && BhtVersion.FileVersion == BhtVersion.AssemblyVersion);
             Check("C11b", "Lisp phải cùng phiên bản", BhtVersion.LispCompatible(BhtVersion.Version, "1") && BhtVersion.LispCompatible(" " + BhtVersion.Version + " ", "1")
                 && !BhtVersion.LispCompatible("5.0", "1") && !BhtVersion.LispCompatible("0.4.6-fix3", "1") && !BhtVersion.LispCompatible(BhtVersion.Version, "") && !BhtVersion.LispCompatible(BhtVersion.Version, "0"));
             var asm = typeof(BhtRecord).Assembly.GetName().Version.ToString();

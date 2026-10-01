@@ -1,8 +1,8 @@
-﻿;;; BHT 0.6.5 - phien N2: MO LAI N_out.dwg (SAVEAS 2018 cua phien N). Du lieu do C# ghi con nguyen; C# = Lisp.
+﻿;;; BHT 0.6.6 - phien N2: MO LAI N_out.dwg (SAVEAS 2018 cua phien N). Du lieu do C# ghi con nguyen; C# = Lisp.
 (load "C:/Users/Le Bao/BHT_TEST_V044/t_common.lsp")
 (tbegin "N2")
 (setq e (tload) ST (t-state-load "net_N") NID (car ST) PH (cadr ST))
-(tchk "M00" "nạp BHT-5.0 trên bản vẽ đã lưu ở phiên N" (and (null e) (= *bht-version* "0.6.5") (wcmatch (strcase (getvar "DWGNAME")) "N_OUT*")) (getvar "DWGNAME"))
+(tchk "M00" "nạp BHT-5.0 trên bản vẽ đã lưu ở phiên N" (and (null e) (= *bht-version* "0.6.6") (wcmatch (strcase (getvar "DWGNAME")) "N_OUT*")) (getvar "DWGNAME"))
 (setq e (t-netload "BHT.Bridge.dll"))
 (t-dump (t-run "N2_L.txt"))
 (command "BHTNETDUMP" (t-run "N2_C.txt"))

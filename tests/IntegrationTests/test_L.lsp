@@ -9,7 +9,7 @@
   out)
 ;; truoc khi nap 0.3.3: chi doc
 (setq e (tload))
-(tchk "L00" "nạp BHT-5.0 trên bản vẽ 0.3.2" (and (null e) (= *bht-version* "0.6.5")) e)
+(tchk "L00" "nạp BHT-5.0 trên bản vẽ 0.3.2" (and (null e) (= *bht-version* "0.6.6")) e)
 (setq *bht-no-launch* T)
 (setq REC0 (t-dump-recs) PTS0 (t-pt-coords) POS0 (t-lbl-positions)
       C0 (list (length (bht:pt-all)) (t-lbl-count "TEN") (t-lbl-count "MOTA") (t-lbl-count "CAODO") (t-lbl-count "ID")

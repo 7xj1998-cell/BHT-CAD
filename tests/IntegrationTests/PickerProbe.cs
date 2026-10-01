@@ -18,6 +18,13 @@ class PickerProbe
     static void Test()
     {
         Application.EnableVisualStyles();
+        var loadPreview = typeof(BHT.Palette.SignPickerForm).GetMethod("BundledPreview", BindingFlags.Static | BindingFlags.NonPublic);
+        foreach (string code in new[] { "R.122", "P.131c", "S.508a", "S.508b" })
+            using (var image = (Image)loadPreview.Invoke(null, new object[] { code }))
+            {
+                if (image == null || image.Width < 10 || image.Height < 10) throw new Exception("Missing embedded preview " + code);
+            }
+        Console.WriteLine("PASS embedded-R122-P131c-S508ab-without-image-folder");
         using (var combo = new BHT.Palette.NoWheelComboBox())
         {
             combo.Items.AddRange(new object[] { "QCVN", "NOI_BO", "CHUA_XAC_DINH" }); combo.SelectedIndex = 0;
