@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using Autodesk.AutoCAD.DatabaseServices;
 using Autodesk.AutoCAD.Runtime;
 using BHT.Core;
@@ -44,7 +45,7 @@ public class SignLibraryProbe
     {
         var lines = new List<string>();
         var db = App.DocumentManager.MdiActiveDocument.Database;
-        foreach (string code in new[] { "P.127-80", "P.127-40", "P.127", "I.434a", "R.415", "W.207c" })
+        foreach (string code in new[] { "P.127-80", "P.127-40", "P.127", "I.434a", "R.415", "W.207c", "S.501@350", "S.502@150", "S.509a@4.5", "P.117@3.8", "P.118@2.8", "P.119@8", "P.120@9" })
         {
             var result = TdtSignLibrary.EnsureBlock(db, code);
             lines.Add((result.Ok ? "PASS " : "FAIL ") + code + " import " + result.Error + " scale=" + result.FaceScale);
@@ -53,6 +54,13 @@ public class SignLibraryProbe
             {
                 var table = (BlockTable)tr.GetObject(db.BlockTableId, OpenMode.ForRead);
                 var wrapper = (BlockTableRecord)tr.GetObject(table[result.BlockName], OpenMode.ForRead);
+                string metres = SignPresentation.MetreValue(code);
+                if (metres != "")
+                {
+                    var texts = new List<string>(); VisibleText(tr, wrapper.ObjectId, texts, new HashSet<ObjectId>());
+                    var numbers = texts.Where(t => System.Text.RegularExpressions.Regex.IsMatch(t, @"^\d+(?:[.,]\d+)?\s*(m)?$"));
+                    lines.Add((numbers.Any() && numbers.All(t => t.Replace(" m", "").Trim() == metres) && !texts.Any(t => System.Text.RegularExpressions.Regex.IsMatch(t, @"^\d+[.,]$")) ? "PASS " : "FAIL ") + code + " visible-metre-number-no-old-fragments");
+                }
                 foreach (ObjectId id in wrapper)
                 {
                     var face = tr.GetObject(id, OpenMode.ForRead) as BlockReference;
@@ -74,6 +82,26 @@ public class SignLibraryProbe
             lines.Add((TdtSignLibrary.EnsureOutlineBlock(db, filled) == outline ? "PASS " : "FAIL ") + code + " outline-cache");
         }
         var speed80 = TdtSignLibrary.EnsureBlock(db, SignPresentation.ResolveCode("P.127", "bbtron1m25 gioihan80"));
+        var main = TdtSignLibrary.EnsureBlock(db, "W.239");
+        var extra = TdtSignLibrary.EnsureBlock(db, "S.509a@4.5");
+        string assembly = SignAssembly.Ensure(db, new[] { main.BlockName, extra.BlockName });
+        using (var tr = db.TransactionManager.StartTransaction())
+        {
+            var bt = (BlockTable)tr.GetObject(db.BlockTableId, OpenMode.ForRead);
+            var definition = (BlockTableRecord)tr.GetObject(bt[assembly], OpenMode.ForRead);
+            var entities = definition.Cast<ObjectId>().Select(id => (Entity)tr.GetObject(id, OpenMode.ForRead)).ToList();
+            lines.Add((entities.OfType<BlockReference>().Count() == 2 && entities.OfType<Line>().Count() == 1 ? "PASS " : "FAIL ") + "one-post-two-plates");
+            lines.Add((Math.Abs(entities.OfType<Line>().Single().EndPoint.Y - 0.6) < 1e-6 ? "PASS " : "FAIL ") + "outline-pole-does-not-cross-plates");
+            var bottom = entities.OfType<BlockReference>().First(); var top = entities.OfType<BlockReference>().Last();
+            lines.Add((bottom.GeometricExtents.MaxPoint.Y < top.GeometricExtents.MinPoint.Y ? "PASS " : "FAIL ") + "primary-above-supplementary");
+            var values = new List<string>(); VisibleText(tr, bottom.BlockTableRecord, values, new HashSet<ObjectId>());
+            lines.Add((values.Contains("4.5 m") ? "PASS " : "FAIL ") + "assembly-retains-metre-value");
+        }
+        lines.Add((assembly == SignAssembly.Ensure(db, new[] { main.BlockName, extra.BlockName }) ? "PASS " : "FAIL ") + "assembly-cache");
+        string repeated = SignAssembly.Ensure(db, new[] { main.BlockName, main.BlockName });
+        lines.Add((repeated != assembly ? "PASS " : "FAIL ") + "repeated-plates-not-collapsed");
+        string assemblyOutline = TdtSignLibrary.EnsureOutlineBlock(db, assembly);
+        lines.Add((FillCount(db, assemblyOutline) == 0 && FillCount(db, assembly) > 0 ? "PASS " : "FAIL ") + "assembly-outline-independent");
         lines.Add((speed80.Ok && speed80.BlockName == TdtSignLibrary.WrapperName("P.127-80") ? "PASS " : "FAIL ") + "description-speed80-reuse");
         File.WriteAllLines(Path.Combine(Path.GetDirectoryName(typeof(SignLibraryProbe).Assembly.Location), "probe.txt"), lines);
         foreach (string line in lines) App.DocumentManager.MdiActiveDocument.Editor.WriteMessage("\n" + line);
@@ -84,6 +112,18 @@ public class SignLibraryProbe
         {
             var table = (BlockTable)tr.GetObject(db.BlockTableId, OpenMode.ForRead);
             return Count(tr, table[name], new HashSet<ObjectId>());
+        }
+    }
+    private static void VisibleText(Transaction tr, ObjectId id, List<string> values, HashSet<ObjectId> seen)
+    {
+        if (!seen.Add(id)) return;
+        foreach (ObjectId child in (BlockTableRecord)tr.GetObject(id, OpenMode.ForRead))
+        {
+            var e = (Entity)tr.GetObject(child, OpenMode.ForRead);
+            var text = e as DBText;
+            if (text != null && text.Visible && (!(text is AttributeDefinition) || !((AttributeDefinition)text).Invisible)) values.Add(text.TextString);
+            var block = e as BlockReference;
+            if (block != null) { VisibleText(tr, block.BlockTableRecord, values, seen); foreach (ObjectId a in block.AttributeCollection) { var t = (AttributeReference)tr.GetObject(a, OpenMode.ForRead); if (t.Visible && !t.Invisible) values.Add(t.TextString); } }
         }
     }
     private static int Count(Transaction tr, ObjectId bid, HashSet<ObjectId> seen)

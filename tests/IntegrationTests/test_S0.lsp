@@ -1,17 +1,19 @@
-﻿;;; BHT 0.6.3 - phien S0: nap, phien ban, BHTTEST, Palette va trang thai
+﻿;;; BHT 0.6.5 - phien S0: nap, phien ban, BHTTEST, Palette va trang thai
 (load "C:/Users/Le Bao/BHT_TEST_V044/t_common.lsp")
 (tbegin "S0")
 (setq e (tload))
-(tchk "T00" "nạp BHT-5.0 (đường dẫn có dấu); *bht-version* = 5.0" (and (null e) (= *bht-version* "0.6.3")) (if e e (strcat *bht-version* " / " *bht-build*)))
-(tchk "T01" "thông báo APPLOAD đúng nguyên văn" (= (bht:load-message) "BHT 0.6.3 đã nạp thành công.") (bht:load-message))
+(tchk "T00" "nạp BHT-5.0 (đường dẫn có dấu); *bht-version* = 5.0" (and (null e) (= *bht-version* "0.6.5")) (if e e (strcat *bht-version* " / " *bht-build*)))
+(tchk "T01" "thông báo APPLOAD đúng nguyên văn" (= (bht:load-message) "BHT 0.6.5 đã nạp thành công.") (bht:load-message))
 (setq r (tsafe "T02" "BHTTEST" '(lambda () (bht:selftest))))
 (if r (tchk "T02" "BHTTEST tự kiểm tra hàm (0 FAIL, >= 45)" (and (= (cadr r) 0) (>= (car r) 45)) (strcat (itoa (car r)) " pass, " (itoa (cadr r)) " fail")))
 (tchk "T03" "DCL dự phòng đã bỏ; các hàm tìm kiếm/trạng thái còn hoạt động"
       (and (not (bht:fn-defined-p 'c:BHTDCL)) (not (bht:fn-defined-p 'c:BHTUITEST))
            (not (bht:fn-defined-p 'bht:ui-write-dcl))
            (= (bht:search-fold "ĐI CHẬM") "di cham") (= (length (bht:status-lines)) 4)) nil)
-(setq cmds '(c:BHTSAPNHAN c:BHTNHANTUDONG c:BHTTHUTUVE c:BHTVEMODEL c:BHTKYHIEU c:BHTDOITUONG c:BHTCHENANH))
-(tchk "T04" "lệnh 0.3.3 vẫn được định nghĩa trong 5.0" (vl-every '(lambda (c) (eval c)) cmds) nil)
+(setq cmds '(c:BHTSAPNHAN c:BHTNHANTUDONG c:BHTTHUTUVE c:BHTKYHIEU c:BHTDOITUONG c:BHTCHENANH c:BHTDATTUDO))
+(tchk "T04" "lệnh hiện hành có đủ; các lệnh nâng cấp cũ đã bỏ"
+      (and (vl-every '(lambda (c) (eval c)) cmds) (not (bht:fn-defined-p 'c:BHTVEMODEL))
+           (not (bht:fn-defined-p 'c:BHTNANGCAP)) (not (bht:fn-defined-p 'c:BHTROUTE))) nil)
 (setq bad nil)
 (foreach c '(c:BHTTEST c:BHTKT c:BHTTRANGTHAI c:BHTHELP)
   (if (vl-catch-all-error-p (vl-catch-all-apply c nil)) (setq bad (cons c bad))))
@@ -19,7 +21,7 @@
 ;; --- API cho plugin .NET, Lisp khong phu thuoc palette ---
 (tchk "T07" "19 hàm API đăng ký, gồm đặt biển nhanh" (= *bht-api-registered* 19) *bht-api-registered*)
 (setq r (bht:api-version))
-(tchk "T08" "bht:api-version = (OK 5.0 1 build)" (equal r (list "OK" "0.6.3" "1" *bht-build*)) r)
+(tchk "T08" "bht:api-version = (OK 5.0 1 build)" (equal r (list "OK" "0.6.5" "1" *bht-build*)) r)
 (setq *bht-screen-messages* nil)
 (bht:msg "Thông báo có dấu từ Lisp")
 (setq r (bht:api-messages "DRAIN") r2 (bht:api-messages "PEEK"))

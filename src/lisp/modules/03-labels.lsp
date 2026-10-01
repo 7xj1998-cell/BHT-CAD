@@ -1,4 +1,4 @@
-;;; ----------------------------------------------------------------------
+﻿;;; ----------------------------------------------------------------------
 ;;; Nhan diem RTK (TEXT) - BHTNHANDIEM / BHTANNHAN / BHTSAPNHAN / BHTNHANTUDONG
 ;;;  Moi nhan la 1 TEXT mang XData "BHT_NHAN".
 ;;;   0.3.2: (survey_point_id loai)
@@ -280,28 +280,6 @@
 
 ;; Nang cap XData nhan 0.3.2 -> 0.3.3 (goi TRUOC khi doi cai dat nhan).
 ;; Tra ve (so_tu_dong so_tay).
-(defun bht:lbl-upgrade-legacy (/ st h off groups index p pid kind exist na nt)
-  (setq st (bht:lbl-settings) h (cdr (assoc 'h st)) off (cdr (assoc 'off st)) na 0 nt 0
-        groups (bht:group-pairs (bht:tagged-pairs "TEXT" "BHT_NHAN" 2)) index nil)
-  (foreach g groups
-    (foreach e (cdr g)
-      (if (= (bht:lbl-state e) 'LEGACY)
-        (progn
-          (if (null index) (setq index (bht:pt-all)))
-          (setq pid (car (bht:split (car g) "|")) kind (cadr (bht:split (car g) "|"))
-                p (bht:pt-find pid index) exist nil)
-          (foreach kd *bht-lbl-kinds* (if (assoc (strcat pid "|" (car kd)) groups) (setq exist (cons (car kd) exist))))
-          (if (and p (bht:pt-near (cdr (assoc 10 (entget e))) (bht:lbl-legacy-pos p kind exist h off) *bht-lbl-tol*))
-            (progn (bht:lbl-set-state e "TU_DONG") (setq na (1+ na)))
-            (progn (bht:lbl-set-state e "TAY") (setq nt (1+ nt))))))))
-  (if (> (+ na nt) 0)
-    (bht:log (strcat "Nâng cấp XData nhãn 0.3.2: tự động " (itoa na) ", đã dời tay " (itoa nt))))
-  (list na nt)
-)
-
-;; ---- Dong bo nhan ------------------------------------------------------------
-
-;; Tao/cap nhat nhan cho MOI diem RTK (tuong thich 0.3.2).
 (defun bht:lbl-sync () (bht:lbl-sync-scope nil))
 
 ;; scope: nil = chi bo tri diem moi / doi noi dung; 'ALL = bo tri lai moi diem;
@@ -310,7 +288,6 @@
 (defun bht:lbl-sync-scope (scope / st kinds h off style prio groups index owners created updated same deleted
                                    manual n seen plans items fixed pid p want exist e d k autol manl need
                                    lines w hh tb res pl bx by nl i pt new cost ex)
-  (bht:lbl-upgrade-legacy)
   (setq st (bht:lbl-settings)
         kinds (bht:lbl-kinds-for (cdr (assoc 'mode st)) (cdr (assoc 'id st)))
         h (cdr (assoc 'h st)) off (cdr (assoc 'off st)) prio (cdr (assoc 'prio st))
@@ -559,7 +536,6 @@
 
 (defun c:BHTNHANDIEM (/ *error* st v r cur n)
   (setq *error* bht:on-error)
-  (bht:lbl-upgrade-legacy)
   (setq st (bht:lbl-settings)
         cur (cond ((= (cdr (assoc 'mode st)) "T") "1") ((= (cdr (assoc 'mode st)) "TM") "2") (T "3")))
   (bht:msg (strcat "Nhãn điểm RTK: chế độ " (bht:lbl-mode-name (cdr (assoc 'mode st)))
@@ -601,7 +577,6 @@
 ;; Sap xep lai nhan theo pham vi (khong di chuyen POINT).
 (defun c:BHTSAPNHAN (/ *error*)
   (setq *error* bht:on-error)
-  (bht:lbl-upgrade-legacy)
   (bht:msg "Sắp xếp nhãn điểm RTK tránh chồng lấn (POINT không bao giờ bị di chuyển; nhãn đã dời tay được giữ).")
   (bht:lbl-layout-cmd (bht:ask-label-scope))
   (bht:log-flush)
@@ -611,7 +586,6 @@
 ;; Tra nhan da doi tay ve vi tri tu dong (chon diem hoac nhan).
 (defun c:BHTNHANTUDONG (/ *error* pids r)
   (setq *error* bht:on-error)
-  (bht:lbl-upgrade-legacy)
   (bht:msg "Chọn điểm RTK / nhãn cần trả về vị trí tự động: ")
   (setq pids (bht:ss-label-pids (ssget (list '(-4 . "<OR") '(0 . "POINT") '(0 . "TEXT") '(-4 . "OR>")))))
   (if pids

@@ -1,4 +1,4 @@
-;;; ----------------------------------------------------------------------
+﻿;;; ----------------------------------------------------------------------
 ;;; Kiem tra toan ven (BHTKT)
 ;;; ----------------------------------------------------------------------
 
@@ -29,7 +29,6 @@
   (if ss (while (< i (sslength ss))
            (if (and (bht:xget (ssname ss i) "BHT_RTK") (not (bht:xget (ssname ss i) "BHT_PT"))) (setq legacy (1+ legacy)))
            (setq i (1+ i))))
-  (if (> legacy 0) (bht:ck-add 1 (strcat (itoa legacy) " điểm v0.1 chưa có ID v0.2 (chạy BHTNANGCAP hoặc nhập lại CSV)")))
   (bht:ck-add 0 (strcat "Dataset: " (bht:join (bht:rec-keys "DATASET") ", ")))
   ;; doi tuong
   (setq objs (bht:rec-all "OBJ") owners (bht:pt-owner-map) missing 0 multi 0 pend 0)
@@ -102,7 +101,7 @@
   (if (and (> i 0) (> nsym 0)) (bht:ck-add 1 (strcat (itoa i) " hồ sơ chưa có ký hiệu - chạy BHTKYHIEU")))
   ;; 0.3.3: thuc the BHT nam ngoai Model
   (setq i (length (bht:ents-outside-model)))
-  (if (> i 0) (bht:ck-add 1 (strcat (itoa i) " thực thể BHT nằm trong Layout (paper space) - chạy BHTVEMODEL để chuyển về Model")))
+  (if (> i 0) (bht:ck-add 1 (strcat (itoa i) " thực thể BHT nằm trong Layout (paper space) - kiểm tra vị trí thực thể trong Layout")))
   ;; nhan diem RTK (0.3.2)
   (setq lg (bht:group-pairs (bht:tagged-pairs "TEXT" "BHT_NHAN" 2)) ldup 0 lorph 0 lbad 0 index (bht:pt-all))
   (foreach g lg
@@ -263,52 +262,7 @@
 )
 
 ;;; ----------------------------------------------------------------------
-;;; Nang cap du lieu v0.1 (BHT_ASSET / BHT_PHOTO tren POINT)
 ;;; ----------------------------------------------------------------------
-
-(defun bht:migrate-v01 (/ ss i ent x loc id h assets a res n np)
-  (setq ss (ssget "_X" (list '(0 . "POINT") (cons 8 *bht-pt-layer*) '(-3 ("BHT_RTK")))) i 0 n 0 np 0 assets nil)
-  (if ss
-    (while (< i (sslength ss))
-      (setq ent (ssname ss i))
-      (if (not (bht:xget ent "BHT_PT"))
-        (progn
-          (setq x (bht:xget ent "BHT_RTK") loc (cdr (assoc 10 (entget ent))) h (cdr (assoc 5 (entget ent))))
-          (bht:pt-write-xdata ent (strcat "V01-H" h) "V01" "" (car x) (bht:fnum (cadr loc) 3) (bht:fnum (car loc) 3)
-                              (bht:fnum (caddr loc) 3) (bht:classify (if (cadr x) (cadr x) "")) "BHT 0.1 (không rõ file)"
-                              (if (cadr x) (cadr x) "") (bht:now))
-          (setq np (1+ np))))
-      (if (setq a (bht:xget ent "BHT_ASSET"))
-        (progn
-          (setq id (strcase (car (bht:xget ent "BHT_PT"))))
-          (if (setq x (assoc (strcase (car a)) assets))
-            (setq assets (subst (append x (list (list id (bht:xget ent "BHT_PHOTO")))) x assets))
-            (setq assets (cons (list (strcase (car a)) a (list id (bht:xget ent "BHT_PHOTO"))) assets)))))
-      (setq i (1+ i))))
-  (foreach as assets
-    (if (not (bht:obj-read (car as)))
-      (progn
-        (setq a (cadr as))
-        (setq res (bht:obj-create (if (bht:valid-id (car as)) (car as) (bht:obj-next-id))
-                                  (list (cons "ma_hieu" (if (nth 2 a) (nth 2 a) ""))
-                                        (cons "ghi_chu" (strcat "Nâng cấp từ v0.1: loại=" (if (nth 1 a) (nth 1 a) "")
-                                                                " gói=" (if (nth 3 a) (nth 3 a) "") " đoạn=" (if (nth 4 a) (nth 4 a) ""))))
-                                  (mapcar 'car (cddr as)) T))
-        (if (car res)
-          (progn
-            (setq n (1+ n))
-            (foreach pp (cddr as) (foreach f (cadr pp) (bht:obj-add-file (cadr res) f))))))))
-  (list np n)
-)
-
-(defun c:BHTNANGCAP (/ *error* r)
-  (setq *error* bht:on-error)
-  (setq r (bht:migrate-v01))
-  (bht:msg (strcat "BHT nâng cấp v0.1: gán ID cho " (itoa (car r)) " điểm, tạo " (itoa (cadr r)) " hồ sơ đối tượng. "
-                   "Gói/đoạn v0.1 được giữ trong ghi chú; hãy nạp BHTGOITHAU và chạy BHTPHANDOAN."))
-  (bht:log-flush)
-  (princ)
-)
 
 ;;; ----------------------------------------------------------------------
 ;;; Tu kiem tra ham thuan (khong sua ban ve) - BHTTEST
@@ -451,11 +405,11 @@
       "  BHTANH       Mở ảnh theo mã (T = đặt thư mục ảnh)   BHTTHUMUCANH  Chỉ lại thư mục ảnh khi mất đường dẫn"
       "  BHTDONGBOANH Đồng bộ ký hiệu + nhãn mã ảnh + đường dẫn từ bản ghi (không trùng; ảnh GPS 0,0 không có ký hiệu) (BHTSYNCANH)"
       "  BHTNHANANH   Ẩn / hiện nhãn mã ảnh   BHTCHENANH  Chèn ảnh JPG đã chọn làm raster (+ đường dẫn tùy chọn; không chèn hàng loạt)"
-      "  BHTTUYEN     Khai báo Polyline tuyến tham chiếu (từ chối proxy TDT)   BHTROUTE  Kiểu v0.1 (gốc đầu polyline)"
+      "  BHTTUYEN     Khai báo Polyline tuyến tham chiếu (từ chối proxy TDT)"
       "  BHTMOCKM     Thêm mốc Km đã xác nhận / điểm gãy Km   BHTDSMOC  Xem/xóa mốc"
       "  BHTLYTRINH   Tính lý trình/offset cho đối tượng (không mốc = chưa xác định)"
       "  BHTGOITHAU   Nạp BHT_GOI_THAU.tsv   BHTPHANDOAN  Gán đoạn/gói tự động   BHTGANDOAN  Gán tay"
-      "  BHTBIENTUDO  Chọn hướng, điểm trung gian và vị trí đặt biển tự do"
+      "  BHTDATTUDO   Chọn hướng, điểm trung gian và vị trí đặt ký hiệu tự do"
       "  BHTKYHIEU    Chèn / cập nhật ký hiệu theo object_id (giữ vị trí người dùng đặt; R = trả về tự động)"
       "  BHTBLOCK     Danh mục block chuẩn / nạp DWG tùy chọn / trở lại mặc định"
       "  BHTBBDANHMUC Danh mục biển báo từ ảnh KMZ DT830, đối chiếu QCVN 41:2024"
@@ -464,9 +418,7 @@
       "  BHTKT        Kiểm tra toàn vẹn (BHTCHECK)   BHTINFO  Xem dữ liệu   BHTDIAG  Chẩn đoán đối tượng/proxy"
       "  BHTTRANGTHAI Trạng thái bản vẽ (điểm, nhãn, hồ sơ, ảnh, JPG, ghép, tuyến, lý trình)"
       "  BHTTEST      Tự kiểm tra hàm   BTH/BHT  Mở Palette   BHTHELP  Danh sách này"
-      "  BHTLOAD      Kiểm tra / nạp lại Palette"
-      "  Bảo trì dữ liệu cũ: BHTNANGCAP  Nâng cấp dữ liệu BHT 0.1 (chỉ dùng cho bản vẽ làm bằng BHT 0.1)"
-      "                     BHTVEMODEL  Chuyển thực thể BHT lỡ tạo trong Layout (bản trước 0.3.3) về Model")
+      "  BHTLOAD      Kiểm tra / nạp lại Palette")
     (princ (strcat "\n" l)))
   (princ)
 )

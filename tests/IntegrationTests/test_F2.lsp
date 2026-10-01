@@ -1,12 +1,12 @@
-﻿;;; BHT 0.6.3 - phien F2: sua loi BHTTUYENTDT ("no function definition" do goi ham kiem tra
+﻿;;; BHT 0.6.5 - phien F2: sua loi BHTTUYENTDT ("no function definition" do goi ham kiem tra
 ;;; kieu Common Lisp khong co trong AutoLISP) va tu nap BHT.Bridge.dll. Ban ve moi, khong dung du lieu khao sat.
 ;;; Script sau khi nap: BHTTUYENTDT / 5,0 / TUYENF2 / 100 / 0 / (t-f2-after)
 (load "C:/Users/Le Bao/BHT_TEST_V044/t_common.lsp")
 (vl-load-com)
 (tbegin "F2")
 (setq e (tload))
-(tchk "F00" "nạp BHT-5.0; *bht-version* = 5.0" (and (null e) (= *bht-version* "0.6.3")) (if e e *bht-version*))
-(tchk "F01" "thông báo APPLOAD đúng nguyên văn" (= (bht:load-message) "BHT 0.6.3 đã nạp thành công.") (bht:load-message))
+(tchk "F00" "nạp BHT-5.0; *bht-version* = 5.0" (and (null e) (= *bht-version* "0.6.5")) (if e e *bht-version*))
+(tchk "F01" "thông báo APPLOAD đúng nguyên văn" (= (bht:load-message) "BHT 0.6.5 đã nạp thành công.") (bht:load-message))
 (tchk "F02" "bht:fn-defined-p: nhận SUBR/USUBR, từ chối ký hiệu chưa định nghĩa, biến chuỗi, nil, chuỗi"
       (and (bht:fn-defined-p 'strcat) (bht:fn-defined-p 'bht:trim) (bht:fn-defined-p 'c:BHTTUYENTDT)
            (not (bht:fn-defined-p 'bht-khong-co-ham-nay)) (not (bht:fn-defined-p '*bht-version*))

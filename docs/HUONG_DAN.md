@@ -1,9 +1,9 @@
-# BHT 0.6.3 — Hướng dẫn sử dụng
+﻿# BHT 0.6.5 — Hướng dẫn sử dụng
 
 BHT là bộ lệnh AutoLISP quản lý điểm khảo sát RTK, hồ sơ đối tượng (biển báo, cọc tiêu, cột Km…), ảnh TimeMark (KMZ), tuyến / lý trình và xuất thống kê.
 
 - Lệnh chính: **`BTH`** hoặc **`BHT`** mở một Palette gắn bên trái AutoCAD.
-- Bản 0.6.3 gồm `BHT-0.6.3.lsp`, `BHT.Palette.dll`, `BHT.Bridge.dll` và `BHT.Core.dll`, cùng thư mục `modules` chứa 12 module.
+- Bản 0.6.3 gồm `BHT-0.6.5.lsp`, `BHT.Palette.dll`, `BHT.Bridge.dll` và `BHT.Core.dll`, cùng thư mục `modules` chứa 12 module.
 - Palette .NET là giao diện chính. Từ v0.5.5 đã bỏ bảng DCL dự phòng.
 - Định dạng dữ liệu trong bản vẽ không đổi: bản vẽ từ 0.3.2 đến 0.5.5 mở bằng 0.6.0 mà không cần chuyển đổi.
 - Mục tiêu hỗ trợ AutoCAD 2021–2024 và Civil 3D 2023 trên Windows.
@@ -22,10 +22,10 @@ AutoCAD tự nhận `BHT.bundle`; không cần `APPLOAD` hoặc `NETLOAD`. Nếu
 
 ## 1b. Cách di động bằng APPLOAD
 
-1. Đặt `BHT-0.6.3.lsp` và ba DLL cùng thư mục `modules` trong một thư mục tin cậy đã có trên Support Path.
+1. Đặt `BHT-0.6.5.lsp` và ba DLL cùng thư mục `modules` trong một thư mục tin cậy đã có trên Support Path.
 2. Kiểm tra **LISPSYS = 1**. Nếu phải đổi từ 0 sang 1, khởi động lại AutoCAD.
-3. Gõ `APPLOAD`, chọn duy nhất `BHT-0.6.3.lsp`. Sau APPLOAD, gõ BHTLOAD để nạp giao diện khi cần.
-4. Khi dòng lệnh báo `BHT 0.6.3 đã nạp thành công`, gõ `BTH` hoặc `BHT`.
+3. Gõ `APPLOAD`, chọn duy nhất `BHT-0.6.5.lsp`. Sau APPLOAD, gõ BHTLOAD để nạp giao diện khi cần.
+4. Khi dòng lệnh báo `BHT 0.6.5 đã nạp thành công`, gõ `BTH` hoặc `BHT`.
 
 Nếu Palette không nạp được, gõ `BHTLOAD` để thử lại và đọc lỗi tại dòng lệnh. Kiểm tra ba DLL nằm cạnh file Lisp hoặc cài lại bundle rồi mở lại AutoCAD. Các lệnh nghiệp vụ trực tiếp vẫn dùng được khi Lisp đã nạp.
 
@@ -68,7 +68,6 @@ vẽ (dictionary BHT_V02 / XData) — palette chỉ là giao diện; đóng pale
 | 8 | Tuyến, Km, gói thầu | `BHTTUYENTDT` (tim TDT 9.1), `BHTTUYEN` (Polyline thường), `BHTMOCKM`, `BHTDSMOC`, `BHTLYTRINH`, `BHTGOITHAU`, `BHTPHANDOAN`, `BHTGANDOAN` |
 | 9 | Xuất thống kê | **Xuất báo cáo biển báo Excel** trên Palette, `BHTXUAT` (CSV), `BHTKT`, `BHTTRANGTHAI` |
 | Khác | Chẩn đoán | `BHTDIAG`, `BHTTEST`, `BHTHELP` |
-| Bảo trì dữ liệu cũ | Chỉ dùng cho bản vẽ cũ | `BHTNANGCAP` (dữ liệu BHT 0.1), **`BHTVEMODEL`** (thực thể BHT lỡ tạo trong Layout) |
 
 ## Thông báo lỗi và cảnh báo (từ 0.4.6-fix3)
 
@@ -91,7 +90,7 @@ vẽ (dictionary BHT_V02 / XData) — palette chỉ là giao diện; đóng pale
 - Biển báo tự đặt ra ngoài tim theo phía tuyến, xoay theo hướng tuyến, có leader nối về điểm RTK. Nhãn hiện mã biển và lý trình; ID hồ sơ chỉ nằm trong XData.
 - Nút **Xuất báo cáo biển báo Excel** tạo `.xlsx` Unicode gồm sheet tổng hợp và danh sách chi tiết. Báo cáo có STT, công trình, đoạn/gói, loại và tên biển, phía, lý trình, tình trạng, số trụ/mặt, trạng thái kiểm tra, ghi chú và ID hồ sơ.
 - Báo cáo kiểm tra/trạng thái mở trong hộp thoại lớn; vùng thông báo dưới Palette chỉ hiển thị trạng thái ngắn và không nhận con trỏ nhập.
-- Toàn bộ block dự phòng vẫn nằm trong `BHT-0.6.3.lsp`; không nạp thêm `BHT-BIENBAO.lsp`. `BHTBLOCK` tiếp tục nhận DWG tùy chọn khi cần mẫu riêng.
+- Toàn bộ block dự phòng vẫn nằm trong `BHT-0.6.5.lsp`; không nạp thêm `BHT-BIENBAO.lsp`. `BHTBLOCK` tiếp tục nhận DWG tùy chọn khi cần mẫu riêng.
 
 ### Lấy tim từ TDTSolution 9.1 bằng `BHTTUYENTDT`
 
@@ -241,19 +240,9 @@ Nếu không thấy thay đổi, kiểm tra biến `DRAWORDERCTL`, nên đặt b
 - `BHTNHAPTSV` dành cho `BHT_RTK.tsv`, là định dạng trao đổi / chuẩn hóa.
 - Nếu nhập lại cùng dữ liệu bằng định dạng kia, BHT báo "ĐÃ CÓ trong bản vẽ … KHÔNG cần nhập cùng một bộ dữ liệu bằng cả CSV và TSV" và không tạo điểm trùng.
 
-### `BHTVEMODEL` (bảo trì dữ liệu cũ)
+## 5. Các chức năng trình bày
 
-Các bản trước 0.3.3 có lỗi: nếu chạy BHT khi đang ở tab **Layout**, điểm, nhãn và ký hiệu bị tạo trong paper space. Từ 0.3.3, BHT luôn tạo trong **Model**.
-
-Nếu `BHTKT` báo "… thực thể BHT nằm trong Layout":
-
-1. Gõ `BHTVEMODEL`.
-2. Trả lời `C` để chuyển các thực thể đó về Model. Tọa độ, layer, XData giữ nguyên; hồ sơ, ảnh và nhãn không mất.
-3. Raster ảnh không chuyển được. Gỡ và chèn lại bằng `BHTCHENANH`.
-
-## 5. Các lệnh từ 0.3.2 (vẫn dùng như cũ)
-
-### Nhãn điểm: layer, kiểu chữ, nội dung (như 0.3.2)
+### Nhãn điểm: layer, kiểu chữ, nội dung
 
 - Layer: `BHT_RTK_TEN`, `BHT_RTK_MOTA`, `BHT_RTK_CAO_DO`, `BHT_RTK_ID`. Kiểu chữ: `BHT_ARIAL` (arial.ttf).
 - Nội dung lấy **nguyên văn** từ CSV gốc; cao độ ghi `H = <Z gốc>`, không làm tròn; mô tả rỗng thì không có dòng mô tả.

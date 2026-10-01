@@ -1,4 +1,4 @@
-;;; ----------------------------------------------------------------------
+﻿;;; ----------------------------------------------------------------------
 ;;; 0.3.3: Thu tu hien thi (BHTTHUTUVE)
 ;;;  Tren -> duoi: nhan (RTK, ky hieu, ma anh) > ky hieu / POINT / ky hieu anh /
 ;;;  duong dan > raster anh BHT > (cac thuc the khac) > anh nen IRT.
@@ -149,7 +149,7 @@
   (if (> (cdr (assoc 'xref n)) 0)
     (bht:msg (strcat "  Bản vẽ có " (itoa (cdr (assoc 'xref n))) " Xref: ảnh bên trong Xref KHÔNG được sắp (không sửa Xref).")))
   (if (> (cdr (assoc 'outside n)) 0)
-    (bht:msg (strcat "  " (itoa (cdr (assoc 'outside n))) " thực thể BHT nằm trong Layout - không sắp; chạy BHTVEMODEL để chuyển về Model.")))
+    (bht:msg (strcat "  " (itoa (cdr (assoc 'outside n))) " thực thể BHT nằm trong Layout - không sắp; hãy kiểm tra vị trí thực thể trong Layout.")))
   (if (and (getvar "DRAWORDERCTL") (= (getvar "DRAWORDERCTL") 0))
     (bht:msg "  Lưu ý: DRAWORDERCTL = 0 - AutoCAD tắt thứ tự hiển thị; đặt DRAWORDERCTL = 3 để thấy kết quả."))
 )
@@ -173,7 +173,7 @@
 ;;;  dang o tab Layout. Lenh AutoCAD (-IMAGE, DRAWORDER) tam chuyen sang Model
 ;;;  (TILEMODE) roi tra lai. Ban ve cu (0.3.2 tro ve truoc) neu da chay BHT khi
 ;;;  dang o Layout se co thuc the BHT nam trong Layout: BHTKT canh bao,
-;;;  BHTVEMODEL chuyen ve Model (giu nguyen toa do + XData; can xac nhan).
+;;;  Cac thuc the moi luon duoc tao trong Model.
 ;;; ----------------------------------------------------------------------
 
 (setq *bht-apps* '("BHT_PT" "BHT_RTK" "BHT_NHAN" "BHT_ANHPT" "BHT_ANHTEN" "BHT_ANHRS" "BHT_KH" "BHT_ANHDAN"))
@@ -195,51 +195,5 @@
           (setq out (cons e out)))
         (setq i (1+ i)))))
   out
-)
-
-;; Chuyen 1 thuc the BHT (POINT/TEXT/INSERT/LINE) sang Model: tao ban sao GIONG HET
-;; (toa do, layer, XData) trong Model roi xoa ban cu. Khong lam voi IMAGE, thuc the
-;; co tu dien mo rong / reactor, INSERT co thuoc tinh. Tra ve ename moi hoac nil.
-(defun bht:move-to-model (e / d nd ne)
-  (setq d (entget e '("*")))
-  (cond
-    ((not (member (cdr (assoc 0 d)) '("POINT" "TEXT" "INSERT" "LINE"))) nil)
-    ((or (assoc 102 d) (assoc 360 d)) nil)
-    ((and (= (cdr (assoc 0 d)) "INSERT") (= 1 (logand 1 (bht:int0 (cdr (assoc 66 d)))))) nil)
-    (T
-     (setq nd (vl-remove-if '(lambda (g) (member (car g) '(-1 5 330 410 67 100))) d))
-     (setq nd (append (list (car nd) '(410 . "Model")) (cdr nd)))
-     (if (setq ne (entmakex nd))
-       (progn (entdel e) ne)
-       nil)))
-)
-(defun bht:int0 (v) (if (numberp v) (fix v) 0))
-
-;; Tra ve (da_chuyen bo_qua).
-(defun bht:move-all-to-model (/ moved skipped)
-  (setq moved 0 skipped 0)
-  (foreach e (bht:ents-outside-model)
-    (if (bht:move-to-model e) (setq moved (1+ moved)) (setq skipped (1+ skipped))))
-  (bht:log (strcat "Chuyển thực thể BHT từ Layout về Model: " (itoa moved) ", bỏ qua " (itoa skipped)))
-  (list moved skipped)
-)
-
-(defun c:BHTVEMODEL (/ *error* lst r img)
-  (setq *error* bht:on-error)
-  (setq lst (bht:ents-outside-model) img 0)
-  (foreach e lst (if (= (cdr (assoc 0 (entget e))) "IMAGE") (setq img (1+ img))))
-  (if (null lst)
-    (bht:msg "BHT: mọi thực thể BHT đã nằm trong Model. Không cần làm gì.")
-    (progn
-      (bht:msg (strcat "BHT: có " (itoa (length lst)) " thực thể BHT nằm trong Layout (paper space) - do chạy BHT khi đang ở tab Layout (bản trước 0.3.3)."))
-      (bht:msg "  Chuyển về Model: tọa độ, layer, XData giữ NGUYÊN; handle thực thể sẽ đổi. Hồ sơ/ảnh/nhãn không mất.")
-      (if (> img 0) (bht:msg (strcat "  " (itoa img) " raster ảnh KHÔNG chuyển được - gỡ và chèn lại bằng BHTCHENANH sau khi chuyển.")))
-      (if (= (strcase (bht:ask-string "Chuyển về Model? [C/K]" "K")) "C")
-        (progn
-          (setq r (bht:move-all-to-model))
-          (bht:msg (strcat "BHT: đã chuyển " (itoa (car r)) " thực thể về Model; bỏ qua " (itoa (cadr r)) ".")))
-        (bht:msg "BHT: không chuyển gì."))))
-  (bht:log-flush)
-  (princ)
 )
 

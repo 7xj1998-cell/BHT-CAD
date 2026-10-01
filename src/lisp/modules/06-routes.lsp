@@ -1,4 +1,4 @@
-;;; ----------------------------------------------------------------------
+﻿;;; ----------------------------------------------------------------------
 ;;; Tuyen tham chieu + moc Km - dictionary "ROUTE"
 ;;; Truong V5: route_id handle loai (TIM_DUONG/TIM_RANH/KHAC) max_offset
 ;;;  ngoai_suy_m chieu (legacy station direction), start_dist, direction (1/-1),
@@ -589,31 +589,6 @@
                                         " cọc cảnh báo/trùng. Route revision " (itoa (bht:route-revision (bht:route-read id))) ".")))
                 (bht:msg "BHT: chỉ đọc/kiểm tra cọc, chưa thay đổi Station Control."))))))))
   (bht:log-flush) (princ))
-
-;; Tuong thich v0.1: goc ly trinh tai dau polyline, chieu theo huong ve.
-(defun c:BHTROUTE (/ *error* sel ent base maxoff id res)
-  (setq *error* bht:on-error)
-  (if (setq sel (entsel "\nChọn Polyline tham chiếu: "))
-    (progn
-      (setq ent (car sel))
-      (if (not (car (bht:route-check-ent ent)))
-        (bht:warn (strcat "BHT: " (cadr (bht:route-check-ent ent))))
-        (progn
-          (setq base (bht:parse-km (bht:ask-string "Lý trình tại ĐẦU polyline (vd Km39+000 hoặc 39000)" "")))
-          (setq maxoff (bht:num (bht:ask-string "Khoảng cách tối đa tới tuyến (m)" "100")))
-          (if (and base maxoff)
-            (progn
-              (setq id (strcat "TUYEN" (itoa (1+ (length (bht:route-ids))))))
-              (setq res (bht:route-create id ent "KHAC" maxoff 1.0e9 1
-                          "BHTROUTE (tương thích v0.1): gốc tại đầu polyline, chiều theo hướng vẽ, CHƯA hiệu chỉnh mốc"))
-              (if (car res)
-                (progn
-                  (bht:route-add-mark id 0.0 base base "Gốc nhập tay BHTROUTE" "")
-                  (bht:msg (strcat "BHT: đã tạo tuyến " id " (1 mốc gốc). Nên bổ sung mốc Km bằng BHTMOCKM.")))
-                (bht:err (strcat "BHT: " (cadr res))))))))))
-  (bht:log-flush)
-  (princ)
-)
 
 (defun bht:ask-route (/ ids v sel)
   (setq ids (bht:route-ids))

@@ -16,8 +16,10 @@ namespace BHT.Palette
         private TabPage _tabObjects;
         private ListView _objList;
         private TextBox _oId, _oDesc, _oPoles, _oFaces, _oNote, _oChainage, _oInfo;
-        private ComboBox _oCustomBlock, _oPlacement, _oDirection;
-        private TextBox _oAngle;
+        private ComboBox _oCustomBlock;
+        private int _placementMode = 1, _placementDirection;
+        private string _placementAngle = "0";
+        private readonly List<Control> _signRows = new List<Control>();
         private bool _syncingSignFill;
         private readonly ToolTip _objectTips = new ToolTip { AutoPopDelay = 20000 };
         private ComboBox _oGroup, _oCode, _oCodeType, _oSide, _oFaceCodes, _oCond;
@@ -45,6 +47,7 @@ namespace BHT.Palette
             _oGroup = new NoWheelComboBox { Dock = DockStyle.Fill, DropDownStyle = ComboBoxStyle.DropDownList };
             foreach (var g in Groups.All) _oGroup.Items.Add(g[1] + " - " + g[2]);
             _oGroup.SelectionChangeCommitted += (s, e) => OnGroupChangedByUser();
+            _oGroup.SelectedIndexChanged += (s, e) => { foreach (var control in _signRows) control.Visible = GroupRules.HasSignCode(EditorGroup()); };
             // 5.0: tim khi go (khong dau) tren ma + ten bien; coc tieu / cot Km khong co ma bien -> danh sach rong.
             _oCode = new NoWheelComboBox { Dock = DockStyle.Fill, MaxDropDownItems = 18, DropDownWidth = 430 };
             Func<List<TdtSignEntry>> catalog = () => { try { return TdtSignLibrary.GetCatalog(); } catch { return new List<TdtSignEntry>(); } };
@@ -97,8 +100,19 @@ namespace BHT.Palette
             _objectTips.SetToolTip(_oAllowShared, "Mặc định mỗi điểm RTK chỉ thuộc một hồ sơ. Bật khi cần tạo hồ sơ khác dùng cùng điểm (ví dụ biển báo và cọc tiêu cùng vị trí). BHT vẫn hỏi xác nhận; hồ sơ cũ không bị ghi đè.");
             _oInfo = new TextBox { Multiline = true, ReadOnly = true, ScrollBars = ScrollBars.Vertical, Dock = DockStyle.Fill, Height = 65, Font = new Font("Consolas", 8.5f) };
             Action<string, Control> row = (t, c) => { form.Controls.Add(new Label { Text = t, AutoSize = true, Padding = new Padding(0, 5, 0, 0) }); form.Controls.Add(c); };
+            Action<string> section = title => {
+                var label = new Label { Text = title, AutoSize = true, Font = new Font("Segoe UI", 9f, FontStyle.Bold), Padding = new Padding(0, 10, 0, 4) };
+                form.Controls.Add(label); form.SetColumnSpan(label, 2);
+            };
+            Action<string, Control> signRow = (title, control) => {
+                var label = new Label { Text = title, AutoSize = true, Padding = new Padding(0, 5, 0, 0) };
+                _signRows.Add(label); _signRows.Add(control); form.Controls.Add(label); form.Controls.Add(control);
+            };
             form.Controls.Add(new Label()); form.Controls.Add(_oMode);
-            row("ID", _oId); row("Nhóm", _oGroup);
+            section("1. Hồ sơ");
+            row("ID", _oId); row("Nhóm", _oGroup); row("Mô tả", _oDesc);
+            row("Tình trạng", _oCond); row("Phía đường", _oSide); row("", _oChecked); row("Ghi chú", _oNote);
+            section("2. Ký hiệu trên CAD");
             _oCustomBlock = new NoWheelComboBox { Dock = DockStyle.Fill };
             _oCustomBlock.DropDown += (s, e) => RefreshCustomBlocks();
             var customPanel = Flow(); customPanel.Dock = DockStyle.Fill;
@@ -107,45 +121,30 @@ namespace BHT.Palette
             customPanel.Controls.Add(Btn("Chọn block CAD", (s, e) => PickCustomBlock()));
             customPanel.Controls.Add(Btn("Bỏ gán", (s, e) => _oCustomBlock.Text = ""));
             row("Block tùy chỉnh", customPanel);
-            row("Mã hiệu", _oCode); row("Loại mã", _oCodeType); row("Mô tả", _oDesc);
+            signRow("Mã biển", _oCode); signRow("Loại mã", _oCodeType);
 
-            _oPlacement = new NoWheelComboBox { Dock = DockStyle.Fill, DropDownStyle = ComboBoxStyle.DropDownList };
-            _oPlacement.Items.AddRange(new object[] { "Đường dẫn thẳng", "Gấp khúc tự động", "Chọn điểm trung gian" }); _oPlacement.SelectedIndex = 1;
-            _oDirection = new NoWheelComboBox { Dock = DockStyle.Fill, DropDownStyle = ComboBoxStyle.DropDownList };
-            _oDirection.Items.AddRange(new object[] { "Ngang (0°)", "Theo tuyến", "Chọn hướng trên CAD", "Nhập góc" }); _oDirection.SelectedIndex = 0;
-            _oAngle = new TextBox { Dock = DockStyle.Fill, Text = "0", Enabled = false };
-            _oDirection.SelectedIndexChanged += (s, e) => _oAngle.Enabled = _oPlacement.SelectedIndex != 2 && _oDirection.SelectedIndex == 3;
-            _oPlacement.SelectedIndexChanged += (s, e) => { _oDirection.Enabled = _oPlacement.SelectedIndex != 2; _oAngle.Enabled = _oPlacement.SelectedIndex != 2 && _oDirection.SelectedIndex == 3; };
-            row("Đặt tự do", _oPlacement); row("Hướng biển", _oDirection); row("Góc (độ)", _oAngle);
-            row("Số trụ/chân", _oPoles); row("Số mặt biển", _oFaces); row("Mã các mặt", _oFaceCodes);
+            row("Số trụ/chân", _oPoles); signRow("Số mặt biển", _oFaces); signRow("Các mặt biển", _oFaceCodes);
             var tip = new ToolTip { AutoPopDelay = 15000 };
             tip.SetToolTip(_oCode, "Mã biển chính (quyết định ký hiệu/nhãn). Gõ mã hoặc tên, có dấu hay không dấu: vd 'di cham', '245a'. Cọc tiêu / Cột Km: để trống.");
             tip.SetToolTip(_oFaceCodes, "Mã từng mặt biển trên CÙNG trụ, cách nhau dấu ';' - vd 'W.245a; S.509a'. Gõ để tìm; chọn để thêm. Số mặt biển tự điền theo số mã nếu đang trống.");
             tip.SetToolTip(_oFaces, "Số tấm biển (mặt) gắn trên trụ. Để trống thì tự lấy theo số mã ở 'Mã các mặt'.");
             tip.SetToolTip(_oPoles, "Số trụ/cột/chân đỡ của đối tượng (1 trụ gắn 2 biển: Số trụ = 1, Số mặt = 2).");
-            row("Tình trạng", _oCond); row("Phía đường", _oSide); form.Controls.Add(new Label()); form.Controls.Add(_oChecked);
-            row("Ghi chú", _oNote); row("Điểm RTK", _oPoints); row("Ảnh", photoPanel);
+            section("3. Vị trí và ảnh hiện trường");
+            row("Điểm RTK", _oPoints); row("Ảnh", photoPanel);
             row("Lý trình tay", chainPanel); row("Thông tin", _oInfo);
             form.Controls.Add(new Label()); form.Controls.Add(_oAllowShared);
 
             var f1 = Flow();
-            f1.Controls.Add(Btn("Chọn điểm trên CAD và tạo hồ sơ", (s, e) => PickSurveyPoints(NewObjectFromPoints)));
+            f1.Controls.Add(Btn("Tạo hồ sơ từ điểm", (s, e) => PickSurveyPoints(NewObjectFromPoints)));
             f1.Controls.Add(Btn("Lưu", (s, e) => SaveObject()));
             f1.Controls.Add(Btn("Chèn/Cập nhật ký hiệu", (s, e) => SymbolForCurrent()));
-            var freeActions = new FlowLayoutPanel { AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, WrapContents = false, Margin = new Padding(0) };
-            freeActions.Controls.Add(Btn("Chèn biển tự do", (s, e) => {
-                if (_oIsNew || _oId.Text == "") { Status("Lưu hồ sơ biển báo trước khi chèn tự do."); return; }
-                if (_oPlacement.SelectedIndex == 2)
-                    CallLisp("bht:api-sign-free", new[] { _oId.Text }, "Đặt biển qua điểm trung gian " + _oId.Text, null);
-                else
-                    CallLisp("bht:api-sign-place", new[] { _oId.Text, _oPlacement.SelectedIndex == 0 ? "DIRECT" : "ELBOW",
-                        new[] { "HORIZONTAL", "ROUTE", "PICK", "ANGLE" }[_oDirection.SelectedIndex], _oAngle.Text.Trim() }, "Chọn vị trí biển " + _oId.Text, null);
-            }));
+            var freeActions = Flow(); freeActions.Dock = DockStyle.None;
+            freeActions.Controls.Add(Btn("Đặt tự do…", (s, e) => PlaceCurrentObject()));
             _oSignFill.Text = "Tô màu biển"; _oSignFill.Margin = new Padding(4, 7, 2, 2);
             _objectTips.SetToolTip(_oSignFill, "Áp dụng cho tất cả biển báo BHT đã chèn trong bản vẽ này. Bật: có Hatch; tắt: chỉ đường nét. Không đổi Hatch của công trình khác.");
             _oSignFill.CheckedChanged += (s, e) => { if (!_syncingSignFill) CallLisp("bht:api-sign-fill", new[] { _oSignFill.Checked ? "1" : "0" }, "Tô màu tất cả biển BHT", null); };
             freeActions.Controls.Add(_oSignFill); f1.Controls.Add(freeActions);
-            f1.Controls.Add(Btn("Thư viện block", (s, e) => OpenSignPicker()));
+            f1.Controls.Add(Btn("Thư viện biển", (s, e) => OpenSignPicker()));
             var f2 = Flow(); f2.Dock = DockStyle.Bottom;
             f2.Controls.Add(Btn("Chọn thêm điểm trên CAD", (s, e) => PickSurveyPoints(AddPointIds)));
             f2.Controls.Add(Btn("Gỡ điểm đã chọn", (s, e) => RemoveListPoints()));
@@ -503,35 +502,44 @@ namespace BHT.Palette
 
         private static bool IsCount(string s) { int n; return s == "" || (int.TryParse(s, out n) && n >= 0 && n <= 999); }
 
-        private void SaveObject()
+        private bool SaveObject(bool updateSymbol = true)
         {
-            if (!NeedDoc()) return;
-            if (!IsCount(_oPoles.Text.Trim()) || !IsCount(_oFaces.Text.Trim())) { StatusWarn("Số trụ / số mặt phải là số nguyên ≥ 0 (hoặc để trống)."); return; }
+            if (!NeedDoc()) return false;
+            if (!IsCount(_oPoles.Text.Trim()) || !IsCount(_oFaces.Text.Trim())) { StatusWarn("Số trụ / số mặt phải là số nguyên ≥ 0 (hoặc để trống)."); return false; }
+            int faceCount;
+            var faceCodes = SignSearch.SplitCodes(_oFaceCodes.Text);
+            if (EditorGroup() == "BIEN_BAO" && (faceCodes.Count > 20 || (int.TryParse(_oFaces.Text, out faceCount) && faceCount > 20)))
+            { StatusWarn("Một cụm ký hiệu hỗ trợ tối đa 20 mặt biển."); return false; }
+            if (EditorGroup() == "BIEN_BAO" && faceCodes.Count > 0)
+            {
+                _oCode.Text = faceCodes[0];
+                if (!int.TryParse(_oFaces.Text, out faceCount) || faceCount < faceCodes.Count) _oFaces.Text = faceCodes.Count.ToString();
+            }
             var f = EditorFields();
             if (f.Get(ObjFields.CustomBlock) != "" && !CustomBlockExists(f.Get(ObjFields.CustomBlock)))
-            { StatusWarn("Block tùy chỉnh không tồn tại trong bản vẽ hiện tại."); return; }
-            if (!_oIsNew && !ConfirmNoDuplicate(f, false)) return;
+            { StatusWarn("Block tùy chỉnh không tồn tại trong bản vẽ hiện tại."); return false; }
+            if (!_oIsNew && !ConfirmNoDuplicate(f, false)) return false;
             if (_oIsNew)
             {
                 var ids = EditorPointIds();
-                if (ids.Count == 0) { StatusWarn("Hồ sơ mới cần ít nhất 1 điểm RTK."); return; }
+                if (ids.Count == 0) { StatusWarn("Hồ sơ mới cần ít nhất 1 điểm RTK."); return false; }
                 List<string> hits, same;
                 ObjectLogic.Overlap(ids, _svc.GetObjects(), out hits, out same);
                 bool share = false;
                 if (hits.Count > 0)
                 {
-                    if (!_oAllowShared.Checked) { StatusWarn("Điểm đã thuộc hồ sơ " + string.Join(", ", hits.ToArray()) + " - KHÔNG tạo (đánh dấu 'Cho phép dùng chung' nếu thật sự cần)."); return; }
+                    if (!_oAllowShared.Checked) { StatusWarn("Điểm đã thuộc hồ sơ " + string.Join(", ", hits.ToArray()) + " - KHÔNG tạo (đánh dấu 'Cho phép dùng chung' nếu thật sự cần)."); return false; }
                     if (MessageBox.Show(this, "Tạo hồ sơ MỚI dùng chung điểm với " + string.Join(", ", hits.ToArray()) + "?" +
                         (same.Count > 0 ? "\nCHÚ Ý: bộ điểm trùng khớp hồ sơ " + string.Join(", ", same.ToArray()) + "." : ""),
                         "BHT - xác nhận dùng chung điểm", MessageBoxButtons.YesNo, MessageBoxIcon.Warning, MessageBoxDefaultButton.Button2) != DialogResult.Yes)
-                    { Status("Đã hủy - không tạo hồ sơ."); return; }
+                    { Status("Đã hủy - không tạo hồ sơ."); return false; }
                     share = true;
                 }
-                if (!ConfirmNoDuplicate(f, share)) return;
+                if (!ConfirmNoDuplicate(f, share)) return false;
                 string id = _oId.Text.Trim().ToUpperInvariant();
                 var r = AcadDispatcher.RunWrite(_doc, "Tạo hồ sơ", db => _svc.CreateObject(id, f, ids, share));
                 if (r.Ok) Status("Đã tạo hồ sơ " + r.Message + "."); else StatusError(r.ToString());
-                if (!r.Ok) return;
+                if (!r.Ok) return false;
                 RefreshAll();
                 SelectObjectInList(r.Message);
                 if (_lispOk && MessageBox.Show(this, "Chèn ký hiệu cho " + r.Message + " ngay?", "BHT", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
@@ -542,10 +550,11 @@ namespace BHT.Palette
                 string id = _oId.Text;
                 var r = AcadDispatcher.RunWrite(_doc, "Cập nhật hồ sơ", db => _svc.UpdateObject(id, f));
                 StatusResult(r);
-                if (!r.Ok) return;
+                if (!r.Ok) return false;
                 RefreshAll();
-                if (_lispOk) CallLisp("bht:api-symbol-sync", new[] { id }, "Cập nhật ký hiệu " + id, null); // chi cap nhat / tao theo object_id
+                if (_lispOk && updateSymbol) CallLisp("bht:api-symbol-sync", new[] { id }, "Cập nhật ký hiệu " + id, null); // chi cap nhat / tao theo object_id
             }
+            return true;
         }
 
         /// <summary>
@@ -577,10 +586,21 @@ namespace BHT.Palette
             return false;
         }
 
+        private void PlaceCurrentObject()
+        {
+            if (_oIsNew || _oId.Text == "") { Status("Lưu hồ sơ trước khi đặt ký hiệu tự do."); return; }
+            if (!NeedDoc() || !NeedLisp() || !SaveObject(false)) return;
+            using (var options = new PlacementOptionsForm(Groups.Label(EditorGroup()) + " " + _oId.Text, _placementMode, _placementDirection, _placementAngle))
+            {
+                if (options.ShowDialog(this) != DialogResult.OK) return;
+                _placementMode = options.ModeIndex; _placementDirection = options.DirectionIndex; _placementAngle = options.Degrees;
+                CallLisp("bht:api-sign-place", new[] { _oId.Text, options.Mode, options.Direction, options.Degrees }, "Đặt ký hiệu " + _oId.Text, null);
+            }
+        }
         private void SymbolForCurrent()
         {
             if (_oIsNew || _oId.Text == "") { Status("Lưu hồ sơ trước khi chèn ký hiệu."); return; }
-            CallLisp("bht:api-symbol-sync", new[] { _oId.Text }, "Ký hiệu " + _oId.Text, null);
+            SaveObject();
         }
 
         private void AddSelectedPoints()

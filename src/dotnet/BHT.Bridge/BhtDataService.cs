@@ -178,9 +178,8 @@ namespace BHT.Bridge
                 if (st == "DE_XUAT" || st == "MO_HO") ov.PhotosSuggested++;
             }
             ov.EntitiesOutsideModel = pts.Count(p => p.Space != "Model");
-            if (ov.LegacyV01Points > 0) ov.Warnings.Add(ov.LegacyV01Points + " điểm BHT 0.1 chưa có ID - dùng BHTNANGCAP (mục Bảo trì dữ liệu cũ).");
             if (ov.ObjectsWithoutPoints > 0) ov.Warnings.Add(ov.ObjectsWithoutPoints + " hồ sơ không còn điểm RTK hợp lệ.");
-            if (ov.EntitiesOutsideModel > 0) ov.Warnings.Add(ov.EntitiesOutsideModel + " điểm RTK nằm trong Layout - dùng BHTVEMODEL.");
+            if (ov.EntitiesOutsideModel > 0) ov.Warnings.Add(ov.EntitiesOutsideModel + " điểm RTK nằm trong Layout - kiểm tra vị trí thực thể.");
             if (ov.PhotosGpsValid > ov.PhotoMarkers) ov.Warnings.Add((ov.PhotosGpsValid - ov.PhotoMarkers) + " ảnh GPS hợp lệ chưa có ký hiệu - Đồng bộ ký hiệu ảnh.");
             var dup = pts.GroupBy(p => p.IdUpper).Where(g => g.Count() > 1).Count();
             if (dup > 0) ov.Warnings.Add(dup + " ID điểm bị trùng - chạy BHTKT.");

@@ -5,6 +5,41 @@ namespace BHT.Core
 {
     public static class SignPresentation
     {
+        public static string BaseCode(string code)
+        {
+            return (code ?? "").Split('@')[0].Trim();
+        }
+        public static string MetreDefault(string code)
+        {
+            switch (BaseCode(code).ToUpperInvariant())
+            {
+                case "S.501": return "800";
+                case "S.502": return "200";
+                case "S.509A": return "5";
+                case "P.117": return "4.2";
+                case "P.118": return "2.5";
+                case "P.119": return "10";
+                case "P.120": return "12";
+                default: return "";
+            }
+        }
+        public static string MetreValue(string code)
+        {
+            if (MetreDefault(code) == "" || !(code ?? "").Contains("@")) return "";
+            double value;
+            string text = code.Substring(code.IndexOf('@') + 1).Trim().Replace(',', '.');
+            return double.TryParse(text, NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture, out value) && value > 0 && value <= 100000
+                ? value.ToString("0.###", CultureInfo.InvariantCulture) : "";
+        }
+        public static string ReplaceMetres(string code, string text)
+        {
+            string value = MetreValue(code);
+            if (value == "") return text;
+            // Whole numeric labels or a number with the metre suffix only.
+            // Never rewrite code identifiers, legends, other dimensions or words.
+            var match = Regex.Match(text ?? "", @"^\s*\d+(?:[.,]\d+)?\s*(m)?\s*$", RegexOptions.IgnoreCase);
+            return match.Success ? value + (match.Groups[1].Success ? " m" : "") : text;
+        }
         public static int? Speed(string code, string description)
         {
             var match = Regex.Match(code ?? "", @"^P\.?127(?:[-_ ](\d{1,3}))?$", RegexOptions.IgnoreCase);

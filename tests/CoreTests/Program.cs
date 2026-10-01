@@ -35,6 +35,11 @@ namespace BHT.CoreTests
             Check("SV5", "other sign", SignPresentation.ResolveCode("R.415", "gioihan80") == "R.415");
             Check("SV6", "no supplied speed", SignPresentation.ResolveCode("P.127", "") == "P.127");
             Check("SV7", "reject overlong number", !SignPresentation.Speed("P.127", "gioihan8000").HasValue);
+            Check("MV1", "metres decimal comma", SignPresentation.MetreValue("S.509a@4,5") == "4.5");
+            Check("MV2", "whole distance text", SignPresentation.ReplaceMetres("S.502@150", "200m") == "150 m");
+            Check("MV3", "dimension number", SignPresentation.ReplaceMetres("P.117@3.8", "4.2") == "3.8");
+            Check("MV4", "preserve words and identifiers", SignPresentation.ReplaceMetres("S.509a@4.5", "CHIỀU CAO") == "CHIỀU CAO" && SignPresentation.ReplaceMetres("S.509a@4.5", "S.509a") == "S.509a");
+            Check("MV5", "reject nonpositive and malformed", SignPresentation.MetreValue("S.502@0") == "" && SignPresentation.MetreValue("S.502@-5") == "" && SignPresentation.MetreValue("S.502@abc") == "");
             BhtRecord created;
             string error = ObjectLogic.BuildNew("OBJ-009999", new BhtRecord().Add(ObjFields.Group, "BIEN_BAO").Add(ObjFields.CustomBlock, "BIEN_RIENG"),
                 new List<string> { "P1" }, false, new HashSet<string> { "P1" }, new Dictionary<string, BhtRecord>(), "now", out created);
@@ -258,7 +263,7 @@ namespace BHT.CoreTests
 
         static void Versions()
         {
-            Check("C11a", "hằng phiên bản", BhtVersion.Version == "0.6.3" && BhtVersion.AssemblyVersion == BhtVersion.Version + ".0" && BhtVersion.FileVersion == BhtVersion.AssemblyVersion);
+            Check("C11a", "hằng phiên bản", BhtVersion.Version == "0.6.5" && BhtVersion.AssemblyVersion == BhtVersion.Version + ".0" && BhtVersion.FileVersion == BhtVersion.AssemblyVersion);
             Check("C11b", "Lisp phải cùng phiên bản", BhtVersion.LispCompatible(BhtVersion.Version, "1") && BhtVersion.LispCompatible(" " + BhtVersion.Version + " ", "1")
                 && !BhtVersion.LispCompatible("5.0", "1") && !BhtVersion.LispCompatible("0.4.6-fix3", "1") && !BhtVersion.LispCompatible(BhtVersion.Version, "") && !BhtVersion.LispCompatible(BhtVersion.Version, "0"));
             var asm = typeof(BhtRecord).Assembly.GetName().Version.ToString();

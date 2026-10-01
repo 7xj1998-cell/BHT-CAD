@@ -38,6 +38,9 @@ class PickerProbe
             var groups = toolbar.Controls.OfType<ComboBox>().First();
             int total = grid.Controls.Count;
             int thumbnails = grid.Controls.Cast<Control>().SelectMany(x => x.Controls.OfType<PictureBox>()).Count(x => x.Image != null);
+            int missing = grid.Controls.Cast<Control>().SelectMany(x => x.Controls.OfType<PictureBox>()).Count(x => (string)x.Tag == "UNAVAILABLE");
+            Console.WriteLine("REAL-PREVIEWS=" + (thumbnails - missing) + " MISSING=" + missing);
+            if (missing > 0) throw new Exception("Missing actual sign previews (code cards do not count)");
             Console.WriteLine("CARDS=" + total + " THUMBNAILS=" + thumbnails);
             if (total < (Environment.GetEnvironmentVariable("BHT_SIGN_PROVIDER") == "BUILTIN" ? 16 : 100) || thumbnails < total) throw new Exception("Library cards missing");
             using (var bitmap = new Bitmap(form.Width, form.Height))
@@ -93,6 +96,28 @@ class PickerProbe
             Invoke(form, "AddFace"); ((Button)form.CancelButton).PerformClick();
             if (form.SelectedCode != null || form.SelectedFaces != null || form.DialogResult != DialogResult.Cancel) throw new Exception("Cancel committed staged faces");
             Console.WriteLine("PASS new-record-speed-inference, cancel-does-not-commit");
+        }
+        using (var form = new BHT.Palette.SignPickerForm("S.509a@4.5", "", ""))
+        {
+            ShowHidden(form); var value = Field<TextBox>(form, "metres");
+            if (value.Text != "4.5") throw new Exception("Existing metre value lost");
+            value.Text = "abc"; Invoke(form, "AcceptSign");
+            if (form.DialogResult == DialogResult.OK) throw new Exception("Invalid metres accepted");
+            value.Text = "3,8"; Invoke(form, "AcceptSign");
+            if (form.SelectedCode != "S.509a@3.8") throw new Exception("Edited metres not returned");
+            Console.WriteLine("PASS picker-metres-load-validate-edit");
+        }
+        using (var form = new BHT.Palette.PlacementOptionsForm("Cọc tiêu", 2, 3, "90"))
+        {
+            ShowHidden(form); form.PerformLayout();
+            if (form.Mode != "WAYPOINT" || form.Direction != "ANGLE") throw new Exception("Placement option mapping");
+            var value = Field<TextBox>(form, "angle"); value.Text = "NaN";
+            ((Button)form.AcceptButton).PerformClick();
+            if (form.DialogResult == DialogResult.OK) throw new Exception("Invalid angle accepted");
+            using (var image = new Bitmap(form.Width, form.Height)) { form.DrawToBitmap(image,new Rectangle(0,0,form.Width,form.Height)); image.Save(Path.Combine(AppDomain.CurrentDomain.BaseDirectory,"placement.png")); }
+            value.Text = "-45,5"; ((Button)form.AcceptButton).PerformClick();
+            if (form.DialogResult != DialogResult.OK || form.Degrees != "-45.5") throw new Exception("Valid angle rejected: " + form.DialogResult + "/" + form.Degrees);
+            Console.WriteLine("PASS native-placement-options-waypoints-validation-decimal-angle");
         }
     }
     static void ShowHidden(Form form) { form.ShowInTaskbar = false; form.Opacity = 0; form.Show(); Application.DoEvents(); }

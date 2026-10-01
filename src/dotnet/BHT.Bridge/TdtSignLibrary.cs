@@ -107,7 +107,7 @@ namespace BHT.Bridge
 
         public static TdtSignEntry Find(string code)
         {
-            string key = Normalize(code);
+            string key = Normalize(SignPresentation.BaseCode(code));
             if (key == "") return null;
             var all = GetCatalog();
             var exact = all.FirstOrDefault(x => Normalize(x.Code) == key);
@@ -149,6 +149,8 @@ namespace BHT.Bridge
         {
             var result = new TdtSignImportResult { BlockName = WrapperName(code), FaceScale = 1.0 };
             if (destination == null) { result.Error = "không có bản vẽ đích"; return result; }
+            if ((code ?? "").Contains("@") && SignPresentation.MetreValue(code) == "")
+            { result.Error = "Giá trị mét không hợp lệ hoặc mã biển không hỗ trợ giá trị mét."; return result; }
             if (HasBlock(destination, result.BlockName)) { result.Ok = true; return result; }
 
             var entry = Find(code);
@@ -323,7 +325,7 @@ namespace BHT.Bridge
                 if (bt.Has(wrapperName)) { tr.Commit(); return 1.0; }
 
                 var cloned = (BlockTableRecord)tr.GetObject(clonedId, OpenMode.ForWrite);
-                PrepareFace(tr, clonedId, new HashSet<ObjectId>(), SignPresentation.Speed(code, ""));
+                PrepareFace(tr, clonedId, new HashSet<ObjectId>(), code);
                 Extents3d bounds;
                 using (var probe = new BlockReference(Point3d.Origin, clonedId)) bounds = probe.GeometricExtents;
                 double height = bounds.MaxPoint.Y - bounds.MinPoint.Y;
@@ -372,10 +374,13 @@ namespace BHT.Bridge
         }
 
         // Traverse nested definitions too; preserve hatch-to-hatch order from the source.
-        private static void PrepareFace(Transaction tr, ObjectId blockId, HashSet<ObjectId> seen, int? speed)
+        private static void PrepareFace(Transaction tr, ObjectId blockId, HashSet<ObjectId> seen, string code)
         {
             if (!seen.Add(blockId)) return;
             var block = (BlockTableRecord)tr.GetObject(blockId, OpenMode.ForRead);
+            // TDT stores some dimensions as two texts, e.g. "3." and "5".
+            var metrePrefix = block.Cast<ObjectId>().Select(id => tr.GetObject(id, OpenMode.ForRead) as DBText)
+                .FirstOrDefault(text => text != null && System.Text.RegularExpressions.Regex.IsMatch(text.TextString.Trim(), @"^\d+[.,]$"));
             var draw = (DrawOrderTable)tr.GetObject(block.DrawOrderTableId, OpenMode.ForWrite);
             var hatches = new ObjectIdCollection();
             foreach (ObjectId id in draw.GetFullDrawOrder(0))
@@ -383,20 +388,46 @@ namespace BHT.Bridge
                 var entity = tr.GetObject(id, OpenMode.ForRead) as Entity;
                 if (entity is Hatch) hatches.Add(id);
                 var nested = entity as BlockReference;
-                if (nested != null) PrepareFace(tr, nested.BlockTableRecord, seen, speed);
-                if (!speed.HasValue) continue;
+                if (nested != null) PrepareFace(tr, nested.BlockTableRecord, seen, code);
+                var speed = SignPresentation.Speed(code, "");
+                bool metres = SignPresentation.MetreValue(code) != "";
+                if (!speed.HasValue && !metres) continue;
                 var text = entity as DBText;
                 var mtext = entity as MText;
                 int number;
                 string value = text != null ? text.TextString : (mtext != null ? mtext.Text : "");
                 // Only numeric labels, never code/name/dimensional annotations.
-                if (int.TryParse(value.Trim(), out number) && number >= 5 && number <= 130)
+                if (speed.HasValue && int.TryParse(value.Trim(), out number) && number >= 5 && number <= 130)
                 {
                     entity.UpgradeOpen();
                     if (text != null) text.TextString = speed.Value.ToString(CultureInfo.InvariantCulture);
                     else if (mtext != null) mtext.Contents = speed.Value.ToString(CultureInfo.InvariantCulture);
                 }
-            }
+                if (metres)
+                {
+                    if (text != null && text == metrePrefix)
+                    {
+                        text.UpgradeOpen(); text.Visible = false;
+                        var definition = text as AttributeDefinition;
+                        if (definition != null) definition.Invisible = true;
+                        continue;
+                    }
+                    string changed = SignPresentation.ReplaceMetres(code, value);
+                    if (changed != value)
+                    {
+                        entity.UpgradeOpen();
+                        if (text != null)
+                        {
+                            text.TextString = changed;
+                            if (metrePrefix != null)
+                            {
+                                text.Position = metrePrefix.Position;
+                                if (text.HorizontalMode != TextHorizontalMode.TextLeft) text.AlignmentPoint = metrePrefix.AlignmentPoint;
+                            }
+                        }
+                        else if (mtext != null) mtext.Contents = changed;
+                    }
+                }            }
             if (hatches.Count > 0) draw.MoveToBottom(hatches);
         }
 
@@ -406,6 +437,7 @@ namespace BHT.Bridge
             int number;
             if (speed.HasValue && int.TryParse((defaultValue ?? "").Trim(), out number))
                 return speed.Value.ToString(CultureInfo.InvariantCulture);
+            defaultValue = SignPresentation.ReplaceMetres(code, defaultValue);
             return string.IsNullOrWhiteSpace(defaultValue) ? (string.IsNullOrWhiteSpace(tag) ? "" : tag) : defaultValue;
         }
 
@@ -541,8 +573,9 @@ namespace BHT.Bridge
                 new[] { "I.434a", "Bến xe buýt" }, new[] { "P.115", "Hạn chế trọng tải toàn bộ xe" },
                 new[] { "P.119", "Hạn chế chiều dài xe" }, new[] { "P.124a", "Cấm quay đầu xe" },
                 new[] { "P.125", "Cấm vượt" }, new[] { "P.127", "Tốc độ tối đa cho phép" }
+                , new[] { "S.501", "Phạm vi tác dụng của biển" }, new[] { "S.502", "Khoảng cách tới đối tượng báo hiệu" }, new[] { "S.509a", "Chiều cao an toàn" }
             };
-            return data.Select(x => new TdtSignEntry { Code = x[0], Description = x[1], Group = x[0].StartsWith("W.") ? "Biển nguy hiểm" : x[0].StartsWith("P.") ? "Biển cấm" : x[0].StartsWith("R.") ? "Biển hiệu lệnh" : "Biển chỉ dẫn" }).ToList();
+            return data.Select(x => new TdtSignEntry { Code = x[0], Description = x[1], Group = x[0].StartsWith("S.") ? "Biển phụ" : x[0].StartsWith("W.") ? "Biển nguy hiểm" : x[0].StartsWith("P.") ? "Biển cấm" : x[0].StartsWith("R.") ? "Biển hiệu lệnh" : "Biển chỉ dẫn" }).ToList();
         }
 
         private static string FindRoot()
@@ -619,6 +652,12 @@ namespace BHT.Bridge
             return r.Ok
                 ? Reply("OK", r.BlockName, r.Description, r.SourceBlock, r.FaceScale.ToString("0.######", CultureInfo.InvariantCulture))
                 : Reply("LOI", r.Error);
+        }
+        [LispFunction("BHTMETRETEXT")]
+        public static string MetreText(ResultBuffer args)
+        {
+            var values = args.AsArray();
+            return SignPresentation.ReplaceMetres(Convert.ToString(values[0].Value), Convert.ToString(values[1].Value));
         }
 
         /// <summary>

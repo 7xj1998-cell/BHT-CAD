@@ -60,6 +60,7 @@ $isolation = Join-Path $out 'coreconsole-profile'
 New-Item -ItemType Directory -Force -Path $isolation | Out-Null
 & "$AcadDir\accoreconsole.exe" /isolate BHTSignTests $isolation /p "<<Unnamed Profile>>" /s $scr /l en-US > $log
 $console = [IO.File]::ReadAllText($log).Replace([string][char]0, '')
+if ($console -match '; error:|malformed list|no function definition') { throw 'Lisp execution error in sign tests' }
 $console | Set-Content -LiteralPath (Join-Path $out 'console.txt') -Encoding UTF8
 $results = Get-Content -LiteralPath (Join-Path $BinDir 'probe.txt')
 $results | ForEach-Object { Write-Host $_ }

@@ -73,6 +73,7 @@
   (setq k (bht:bb-code-key code) tdt (bht:tdt-import-block code ""))
   (cond
     (tdt tdt)
+    ((or (vl-string-search "@" code) (member (strcase code) '("S.501" "S.502" "S.509A"))) (bht:bb-metre-native code))
     ((wcmatch k "*W207*") "BHT_KH_BB_W207_V044")
     ((wcmatch k "*W209*") "BHT_KH_BB_W209_V044")
     ((wcmatch k "*W239*") "BHT_KH_BB_W239A_V044")
@@ -95,6 +96,39 @@
     ((wcmatch k "*P127*") "BHT_KH_BB_P127_V044")
     (T "BHT_KH_BIEN_BAO_V044"))
 )
+
+(defun bht:bb-metre-native (code / dot base value name parts e d text x)
+  (setq dot (vl-string-search "@" code) base (strcase (if dot (substr code 1 dot) code)))
+  (if (null dot) (setq code (strcat code "@" (cond ((= base "S.501") "800") ((= base "S.502") "200") (T "5")))))
+  (if (not (bht:fn-defined-p 'BHTMETRETEXT)) (vl-exit-with-error "Nạp BHT.Bridge.dll để nhập giá trị mét."))
+  (setq value (BHTMETRETEXT code "0"))
+  (if (= value "0") (vl-exit-with-error "Giá trị mét không hợp lệ."))
+  (setq name (strcat "BHT_NATIVE_METRE_" (bht:tdt-block-name code)))
+  (cond
+    ((tblsearch "BLOCK" name) name)
+    ((= base "P.119")
+      (setq e (tblobjname "BLOCK" "BHT_KH_BB_P119_V044") parts nil)
+      (while (and (setq e (entnext e)) (/= (cdr (assoc 0 (setq d (entget e)))) "ENDBLK"))
+        (setq d (vl-remove-if '(lambda (g) (member (car g) '(-1 5 330 360))) d))
+        (if (= (cdr (assoc 0 d)) "TEXT") (setq d (bht:dxf-put d 1 (BHTMETRETEXT code (cdr (assoc 1 d))))))
+        (setq parts (append parts (list d))))
+      (bht:block name parts) name)
+    ((member base '("S.501" "S.502" "S.509A"))
+      (setq parts (append (bht:bb-post-g)
+        (list (bht:rect-fill-g -1.3 0.62 1.3 2.42 (if (= base "S.509A") 5 7)))
+        (bht:poly-color-g '((-1.3 0.62 0.0) (1.3 0.62 0.0) (1.3 2.42 0.0) (-1.3 2.42 0.0)) (if (= base "S.509A") 7 250))))
+      (if (= base "S.509A")
+        (setq parts (append parts (list (bht:text-center-color-g "CHIỀU CAO" '(0.0 2.08 0.0) 0.28 7)
+          (bht:text-center-color-g "AN TOÀN" '(0.0 1.61 0.0) 0.28 7)
+          (bht:text-center-color-g (strcat value " m") '(0.0 1.08 0.0) 0.38 7))))
+        (progn
+          (setq parts (append parts (list (bht:text-center-color-g (strcat value " m") '(0.0 1.52 0.0) 0.4 250))))
+          (if (= base "S.501")
+            (foreach x '(-1.03 1.03)
+              (setq parts (append parts (list (bht:rect-fill-g (- x 0.055) 0.86 (+ x 0.055) 1.97 250)
+                (bht:solid-g (list x 2.20 0.0) (list (- x 0.17) 1.95 0.0) (list (+ x 0.17) 1.95 0.0) (list (+ x 0.17) 1.95 0.0) 250))))))))
+      (bht:block name parts) name)
+    (T (vl-exit-with-error "Biển mét này cần block TDT hoặc block tùy chỉnh; không dùng số mặc định thay thế."))))
 
 (defun bht:bb-post-g ()
   (list (bht:line-color-g '(0.0 0.0 0.0) '(0.0 0.62 0.0) 7)
@@ -333,20 +367,20 @@
   (bht:block "BHT_KH_BB_P127_20_V044" (bht:bb-speed-g "20"))
   (bht:block "BHT_KH_BB_P127_40_V044" (bht:bb-speed-g "40"))
 
-  ;; 0.4.3: hinh chieu bang cua coc tieu theo mau thuc dia: than trang,
-  ;; chan phan quang do, dau phan quang xanh. Diem chen = tam chan coc (0,0).
-  (bht:block "BHT_KH_COC_TIEU_V043"
+  ;; Coc tieu: diem chen tai chan vuong trang (0,0); dau do ve phia -X.
+
+  (bht:block "BHT_KH_COC_TIEU"
     (list
-      (bht:solid-g '(0.0 -0.22 0.0) '(0.30 -0.22 0.0) '(0.0 0.22 0.0) '(0.30 0.22 0.0) 1)
-      (bht:line-color-g '(0.0 -0.22 0.0) '(1.72 -0.22 0.0) 7)
-      (bht:line-color-g '(1.72 -0.22 0.0) '(1.72 0.22 0.0) 7)
-      (bht:line-color-g '(1.72 0.22 0.0) '(0.0 0.22 0.0) 7)
-      (bht:line-color-g '(0.0 0.22 0.0) '(0.0 -0.22 0.0) 7)
-      (bht:line-color-g '(1.55 -0.34 0.0) '(2.08 -0.34 0.0) 3)
-      (bht:line-color-g '(2.08 -0.34 0.0) '(2.08 0.34 0.0) 3)
-      (bht:line-color-g '(2.08 0.34 0.0) '(1.55 0.34 0.0) 3)
-      (bht:line-color-g '(1.55 0.34 0.0) '(1.55 -0.34 0.0) 3)
-      (bht:solid-g '(1.70 -0.18 0.0) '(1.96 -0.18 0.0) '(1.70 0.18 0.0) '(1.96 0.18 0.0) 7)))
+      (bht:solid-g '(-1.82 -0.22 0.0) '(-1.52 -0.22 0.0) '(-1.82 0.22 0.0) '(-1.52 0.22 0.0) 1)
+      (bht:line-color-g '(-1.82 -0.22 0.0) '(-0.10 -0.22 0.0) 7)
+      (bht:line-color-g '(-0.10 -0.22 0.0) '(-0.10 0.22 0.0) 7)
+      (bht:line-color-g '(-0.10 0.22 0.0) '(-1.82 0.22 0.0) 7)
+      (bht:line-color-g '(-1.82 0.22 0.0) '(-1.82 -0.22 0.0) 7)
+      (bht:line-color-g '(-0.27 -0.34 0.0) '(0.26 -0.34 0.0) 3)
+      (bht:line-color-g '(0.26 -0.34 0.0) '(0.26 0.34 0.0) 3)
+      (bht:line-color-g '(0.26 0.34 0.0) '(-0.27 0.34 0.0) 3)
+      (bht:line-color-g '(-0.27 0.34 0.0) '(-0.27 -0.34 0.0) 3)
+      (bht:solid-g '(-0.12 -0.18 0.0) '(0.14 -0.18 0.0) '(-0.12 0.18 0.0) '(0.14 0.18 0.0) 7)))
   ;; 0.4.3: cot Km theo mau: nua tron do, than bang trang, chu KM va nep trang.
   ;; Diem chen = tam mat phang phia nua tron (0,0).
   (bht:block "BHT_KH_COT_KM_V043"
@@ -409,7 +443,7 @@
   (list
     (list (+ (car pos) (* sc (- (* center (cos rot)) (* y (sin rot)))))
           (+ (cadr pos) (* sc (+ (* center (sin rot)) (* y (cos rot))))) (caddr pos))
-    (* 0.15 height sc)))
+    (* 0.15 (min height 2.46) sc)))
 (defun bht:sign-layers (/ e d)
   (bht:layer "BHT_KYHIEU" 7)
   (if (and (setq e (tblobjname "LAYER" "BHT_KYHIEU")) (= (cdr (assoc 62 (setq d (entget e)))) 1))
@@ -421,7 +455,7 @@
 
 (defun bht:kh-default-block (group code)
   (cond ((= group "BIEN_BAO") (bht:bb-block-for code))
-        ((= group "COC_TIEU") "BHT_KH_COC_TIEU_V043")
+        ((= group "COC_TIEU") "BHT_KH_COC_TIEU")
         ((= group "COT_KM") "BHT_KH_COT_KM_V043")
         (T (strcat "BHT_KH_" group)))
 )
@@ -494,7 +528,7 @@
   (if (bht:fn-defined-p 'BHTNATIVESIGNCODE)
     (setq result (vl-catch-all-apply 'BHTNATIVESIGNCODE (list (bht:get rec "ma_hieu") (bht:get rec "mo_ta")))))
   (if (= (type result) 'STR) result (bht:get rec "ma_hieu")))
-(defun bht:kh-base-block (rec / blk custom own)
+(defun bht:kh-base-block (rec / blk custom own codes count blocks value result)
   (bht:symbol-blocks)
   (setq own (bht:get rec "custom_block")
         custom (bht:meta (bht:kh-custom-key (bht:get rec "nhom")) ""))
@@ -505,6 +539,24 @@
       (setq blk (if (= (bht:get rec "nhom") "BIEN_BAO")
                     (bht:tdt-import-block (bht:get rec "ma_hieu") (bht:get rec "mo_ta")) nil))
       (if (null blk) (setq blk (bht:kh-default-block (bht:get rec "nhom") (bht:effective-sign-code rec))))
+      (if (= (bht:get rec "nhom") "BIEN_BAO")
+        (progn
+          (setq codes (bht:get-all rec "mat") count (bht:int (bht:get rec "so_mat")))
+          (if (null codes) (setq codes (list (bht:get rec "ma_hieu"))))
+          (if (or (> count 20) (> (length codes) 20)) (vl-exit-with-error "Một trụ hỗ trợ tối đa 20 mặt biển."))
+          (while (and (< (length codes) count) (< (length codes) 20)) (setq codes (append codes (list (car codes)))))
+          (if (and (> (length codes) 1) (not (bht:fn-defined-p 'BHTSIGNASSEMBLY)))
+            (vl-exit-with-error "Nạp BHT.Bridge.dll trước khi chèn cụm nhiều mặt biển."))
+          (if (and (> (length codes) 1) (bht:fn-defined-p 'BHTSIGNASSEMBLY))
+            (progn
+              (setq blocks nil)
+              (foreach value codes
+                (setq result (bht:tdt-import-block value (bht:get rec "mo_ta")))
+                (if (null result) (setq result (bht:kh-default-block "BIEN_BAO" value)))
+                (setq blocks (append blocks (list result))))
+              (setq result (vl-catch-all-apply 'BHTSIGNASSEMBLY (list (bht:join blocks ";"))))
+              (if (and (= (type result) 'STR) (tblsearch "BLOCK" result)) (setq blk result)
+                (vl-exit-with-error "Không tạo được đủ các mặt biển. Kiểm tra thư viện hoặc BHT.Bridge.dll."))))))
       (if (tblsearch "BLOCK" blk) blk "BHT_KH_CHUA_XAC_DINH"))))
 
 (defun bht:kh-block (rec / blk result)
@@ -539,6 +591,8 @@
   ;; Ma luu co the la COC_TIEU_KM48+500; bo tien to noi bo khoi nhan ban ve.
   (if (and (>= (strlen upper) (strlen prefix)) (= (substr upper 1 (strlen prefix)) prefix))
     (setq value (substr value (1+ (strlen prefix))) upper (strcase value)))
+  (if (and (= group "BIEN_BAO") (setq dot (vl-string-search "@" value)))
+    (setq value (strcat (substr value 1 dot) " (" (substr value (+ dot 2)) " m)")))
   (if (= (substr upper 1 (min 2 (strlen upper))) "KM")
     (progn
       (setq value (vl-string-trim " " (substr value 3))
@@ -568,7 +622,7 @@
 ;; Vi tri/goc ky hieu tu dong theo tim: bien bao duoc day ra ngoai phia duong,
 ;; giu diem RTK lam moc that va noi bang duong dan. Cac nhom khac dat dung tam diem.
 (defun bht:kh-route-transform (rec pos sc / rid rrec ent pr cp par der dl off ux uy side gap rot)
-  (if (or (null pos) (not (member (bht:get rec "nhom") '("BIEN_BAO" "COC_TIEU" "COT_KM"))))
+  (if (or (null pos) (null rec))
     (list pos 0.0)
     (progn
       (setq rid (bht:get rec "route_id") rrec (if (/= rid "") (bht:route-read rid) nil)
@@ -627,7 +681,7 @@
 ;; Called after every input succeeds. No drawing changes during interactive picking.
 (defun bht:kh-free-apply (oid target rot via / rec d pair pt)
   (setq rec (bht:obj-read oid))
-  (if (and rec (= (bht:get rec "nhom") "BIEN_BAO") target (numberp rot))
+  (if (and rec target (numberp rot))
     (progn
       (setq rec (bht:kh-free-clear rec))
       (foreach pair (list (cons "kh_mode" "TU_DO") (cons "kh_free_x" (bht:fnum (car target) 8))
@@ -645,52 +699,59 @@
   (setq oid (strcase (bht:trim (bht:str oid))) rec (bht:obj-read oid))
   (cond
     ((null rec) (list 'LOI "Không có hồ sơ này."))
-    ((/= (bht:get rec "nhom") "BIEN_BAO") (list 'LOI "Chèn tự do dành cho hồ sơ Biển báo."))
     ((null (setq source (bht:obj-position rec (bht:pt-all)))) (list 'LOI "Hồ sơ chưa có điểm RTK hợp lệ."))
     (T
       (setq base (trans source 0 1) via nil cursor base done nil)
-      (setq angle0 (getangle base "\nHướng đặt biển (chỉ hướng hoặc nhập góc) <0>: "))
+      (setq angle0 (getangle base "\nHướng ký hiệu (chỉ hướng hoặc nhập góc) <0>: "))
       (if (null angle0) (setq angle0 0.0))
       ;; UCS angle -> WCS block rotation, without ANGBASE/ANGDIR assumptions.
       (setq dir (trans (list (cos angle0) (sin angle0) 0.0) 1 0 T) rotation (atan (cadr dir) (car dir)))
       (while (not done)
         (initget "Dat Xoa")
-        (setq picked (getpoint cursor "\nĐiểm trung gian hoặc [Dat biển/Xoa điểm cuối] <Dat biển>: "))
+        (setq picked (getpoint cursor "\nĐiểm trung gian hoặc [Dat ký hiệu/Xoa điểm cuối] <Dat ký hiệu>: "))
         (cond
           ((or (null picked) (= picked "Dat")) (setq done T))
           ((= picked "Xoa") (if via (setq via (reverse (cdr (reverse via))))) (setq cursor (if via (trans (last via) 0 1) base)))
           ((listp picked) (setq via (append via (list (trans picked 1 0))) cursor picked))))
-      (if (setq target (getpoint cursor "\nChọn vị trí đặt biển (Enter = hủy): "))
+      (if (setq target (getpoint cursor "\nChọn vị trí đặt ký hiệu (Enter = hủy): "))
         (progn (setq target (trans target 1 0)) (bht:kh-free-apply oid target rotation via))
         (list 'HUY)))))
-(defun bht:kh-place-options (oid mode direction degrees / rec source target rot via route picked dir ang)
+(defun bht:kh-place-options (oid mode direction degrees / rec source target rot via route picked dir ang cursor done)
   (setq oid (strcase (bht:trim (bht:str oid))) rec (bht:obj-read oid))
   (cond
     ((null rec) (list 'LOI "Không có hồ sơ này."))
-    ((/= (bht:get rec "nhom") "BIEN_BAO") (list 'LOI "Chèn tự do dành cho Biển báo."))
-    ((not (member mode '("DIRECT" "ELBOW"))) (list 'LOI "Chế độ đặt biển không hợp lệ."))
-    ((not (member direction '("HORIZONTAL" "ROUTE" "PICK" "ANGLE"))) (list 'LOI "Hướng biển không hợp lệ."))
+    ((not (member mode '("DIRECT" "ELBOW" "WAYPOINT"))) (list 'LOI "Chế độ đặt ký hiệu không hợp lệ."))
+    ((not (member direction '("HORIZONTAL" "ROUTE" "PICK" "ANGLE"))) (list 'LOI "Hướng ký hiệu không hợp lệ."))
     ((and (= direction "ANGLE") (null (bht:num degrees))) (list 'LOI "Góc nhập không hợp lệ."))
     ((null (setq source (bht:obj-position rec (bht:pt-all)))) (list 'LOI "Hồ sơ chưa có điểm RTK hợp lệ."))
-    ((null (setq picked (getpoint (trans source 0 1) "\nChọn vị trí biển (Enter = hủy): "))) (list 'HUY))
     (T
-      (setq target (trans picked 1 0) rot 0.0 via nil)
-      (cond
-        ((= direction "ROUTE") (setq route (bht:kh-route-transform rec source (bht:kh-scale)) rot (if route (cadr route) 0.0)))
-        ((= direction "ANGLE") (setq rot (* pi (/ (bht:num degrees) 180.0))))
-        ((= direction "PICK")
-          (setq ang (getangle picked "\nChọn hướng biển (Enter = hủy): "))
-          (if ang (setq dir (trans (list (cos ang) (sin ang) 0.0) 1 0 T) rot (atan (cadr dir) (car dir))))))
-      (if (and (= direction "PICK") (null ang)) (list 'HUY)
+      (setq via nil cursor (trans source 0 1) done nil)
+      (if (= mode "WAYPOINT")
+        (while (not done)
+          (initget "Dat Xoa")
+          (setq picked (getpoint cursor "\nĐiểm trung gian hoặc [Dat/Xoa điểm cuối] <Dat>: "))
+          (cond
+            ((or (null picked) (= picked "Dat")) (setq done T))
+            ((= picked "Xoa") (if via (setq via (reverse (cdr (reverse via))))) (setq cursor (if via (trans (last via) 0 1) (trans source 0 1))))
+            (T (setq via (append via (list (trans picked 1 0))) cursor picked)))))
+      (if (null (setq picked (getpoint cursor "\nChọn vị trí ký hiệu (Enter = hủy): "))) (list 'HUY)
         (progn
-          (if (and (= mode "ELBOW") (not (equal (car source) (car target) 1e-8)) (not (equal (cadr source) (cadr target) 1e-8)))
-            (setq via (list (list (car source) (cadr target) (caddr source)))))
-          (bht:kh-free-apply oid target rot via))))))
-
-(defun c:BHTBIENTUDO (/ *error* oid r)
+          (setq target (trans picked 1 0) rot 0.0 ang nil)
+          (cond
+            ((= direction "ROUTE") (setq route (bht:kh-route-transform rec source (bht:kh-scale)) rot (if route (cadr route) 0.0)))
+            ((= direction "ANGLE") (setq rot (* pi (/ (bht:num degrees) 180.0))))
+            ((= direction "PICK")
+              (setq ang (getangle picked "\nChọn hướng ký hiệu (Enter = hủy): "))
+              (if ang (setq dir (trans (list (cos ang) (sin ang) 0.0) 1 0 T) rot (atan (cadr dir) (car dir))))))
+          (if (and (= direction "PICK") (null ang)) (list 'HUY)
+            (progn
+              (if (and (= mode "ELBOW") (not (equal (car source) (car target) 1e-8)) (not (equal (cadr source) (cadr target) 1e-8)))
+                (setq via (list (list (car source) (cadr target) (caddr source)))))
+              (bht:kh-free-apply oid target rot via))))))))
+(defun c:BHTDATTUDO (/ *error* oid r)
   (setq *error* bht:on-error)
   (bht:ensure-model)
-  (setq oid (bht:ask-string "ID hồ sơ biển báo cần chèn tự do" ""))
+  (setq oid (bht:ask-string "ID hồ sơ cần đặt ký hiệu tự do" ""))
   (if (/= oid "")
     (progn (setq r (bht:kh-place-free oid))
       (cond ((eq (car r) 'LOI) (bht:warn (cadr r))) ((eq (car r) 'HUY) (bht:msg "Đã hủy chèn tự do."))
@@ -849,20 +910,21 @@
                   lpos (polar (car anchor) (+ rot (/ pi 2.0)) (* 2.65 sc)))
             (if (= (bht:get rec "nhom") "BIEN_BAO")
               (setq layout (bht:kh-sign-label-layout blk anchor) lpos (car layout) h (cadr layout) trot rot))
-            (setq
-                  g (cdr (assoc oid txt)))
+            (if (and (= (bht:get rec "nhom") "COC_TIEU") (= blk "BHT_KH_COC_TIEU"))
+              (setq lpos (polar (polar (car anchor) rot (* -1.67 sc)) (+ rot (/ pi 2.0)) (* 0.75 sc)) h (* 0.35 sc)))
+            (setq trot rot g (cdr (assoc oid txt)))
             (foreach e2 (cdr g) (entdel e2) (setq dup (1+ dup)))
             (if (setq e (car g))
               (progn
                 (setq d (entget e)
                       st (bht:kh-txt-state e (if pos (list (+ (car pos) (* 1.5 (bht:kh-scale))) (+ (cadr pos) (* 1.0 (bht:kh-scale)))) nil)))
-                (if (or (eq st 'AUTO) (= (bht:get rec "nhom") "BIEN_BAO"))
+                (if anchor
                   (setq nd (bht:dxf-put (bht:dxf-put (bht:dxf-put (bht:dxf-put (bht:dxf-put d 10 lpos) 1 (bht:cad-text lbl (bht:kh-label-style lbl))) 40 h) 8 "BHT_NHAN") 50 trot)
                         nx (bht:kh-xdata-txt oid "TU_DONG" lpos))
                   (setq manual (1+ manual)
                         nd (bht:dxf-put (bht:dxf-put d 1 (bht:cad-text lbl (bht:kh-label-style lbl))) 40 h)
                         nx (bht:kh-xdata-txt oid "TAY" (cdr (assoc 10 d)))))
-                (if (= (bht:get rec "nhom") "BIEN_BAO")
+                (if anchor
                   (setq nd (bht:dxf-put (bht:dxf-put (bht:dxf-put (bht:dxf-put nd 10 lpos) 11 lpos) 72 1) 73 3)))
                 ;; 5.0: kieu chu nhan (chi nhan BHT_KH do BHT tao; vi tri tay van giu)
                 (setq nd (bht:dxf-put nd 7 (bht:kh-label-style lbl)))
@@ -872,7 +934,7 @@
                 (setq e (bht:text lbl lpos h "BHT_NHAN"))
                 (if e (progn
                   (setq nd (bht:dxf-put (bht:dxf-put (entget e) 50 trot) 7 (bht:kh-label-style lbl)))
-                  (if (= (bht:get rec "nhom") "BIEN_BAO")
+                  (if anchor
                     (setq nd (bht:dxf-put (bht:dxf-put (bht:dxf-put (bht:dxf-put nd 10 lpos) 11 lpos) 72 1) 73 3)))
                   (entmod (append nd
                                              (list (bht:kh-xdata-txt oid "TU_DONG" lpos)))) (entupd e))))))))))

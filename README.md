@@ -1,27 +1,28 @@
-# BHT v0.6.3 — Quản lý hiện trạng tuyến
+﻿# BHT v0.6.5 — Quản lý hiện trạng tuyến
 
 BHT là ứng dụng AutoLISP + .NET cho AutoCAD trên Windows, quản lý điểm RTK, hồ sơ đối tượng, ảnh hiện trường, tuyến/lý trình và báo cáo.
 
 ## Cài đặt
 
-Tải `BHT-0.6.3.zip` trong [Releases](https://github.com/7xj1998-cell/BHT-CAD/releases/tag/v0.6.3), giải nén đầy đủ, đóng AutoCAD và chạy `INSTALL_BHT.cmd`. Mở CAD, gõ `BTH` hoặc `BHT` để hiện Palette. Gói này dùng Lisp và 12 module; bộ cài MSI/VLX thuộc v0.6.4 và không nằm trong bản v0.6.3.
+Giải nén đầy đủ `BHT-0.6.5.zip`, đóng AutoCAD và chạy `INSTALL_BHT.cmd`. Mở CAD, gõ `BTH` hoặc `BHT` để hiện Palette. Đây là đợt chỉnh sửa tiếp từ v0.6.3, dùng Lisp chia module và .NET; không dùng mã v0.6.4 làm nền.
 
 Phông mặc định là `VNRomancUpdate.shx`, dùng Unicode NFC và giữ phân biệt `Ê`/`ê`. Hồ sơ, CSV và báo cáo giữ Unicode. Phông cũ `vnromanc.shx` chỉ dùng TCVN3 tại lớp hiển thị khi chọn kiểu cũ.
 
-## Các thay đổi chính của v0.6.3
+## Các thay đổi chính của v0.6.5
 
-- Palette chỉ hiện khi gọi lệnh; đóng bảng hoặc chuyển bản vẽ ngắt theo dõi dữ liệu/timer.
-- Ô “Tô màu biển” nằm cùng hàng chèn tự do, áp dụng cho mọi biển BHT trong bản vẽ.
-- Nhãn căn giữa bên dưới mặt biển, tự tính kích thước và quay cùng biển khi dùng điểm trung gian.
-- Hướng dẫn hồ sơ mới chuyển vào tooltip; tùy chọn dùng chung điểm RTK được ghi rõ.
-- Thư viện biển có thumbnail, tìm kiếm, biến thể tốc độ và nhiều mặt; hỗ trợ block riêng và biển nội bộ khi máy không có TDT.
+- Cọc tiêu đặt gốc tại chân đuôi, nhãn trên đầu và quay cùng ký hiệu.
+- “Đặt tự do” mở hộp tùy chọn riêng; đường dẫn thẳng, gấp khúc, chọn điểm trung gian; hướng theo tuyến, chọn CAD hoặc nhập góc. Áp dụng mọi nhóm đối tượng.
+- Hồ sơ chia ba phần: thông tin, ký hiệu, vị trí/ảnh. Bỏ các lệnh nâng cấp dữ liệu đời cũ.
+- Một trụ nhiều mặt vẽ đủ các tấm, biển chính trên và biển phụ dưới. Chèn/cập nhật lưu thông số vừa sửa trước khi vẽ.
+- S.501, S.502, S.509a, P.117–P.120 nhận giá trị mét; ví dụ `S.509a@4.5`, `S.502@150`. Sửa tại thư viện biển.
+- Thư viện có ảnh cho 376 mã hợp lệ trong danh mục TDT đã kiểm tra; ảnh bổ sung đóng gói kèm ứng dụng. Không tính khung chữ mã là ảnh.
 
-Xem [hướng dẫn sử dụng](docs/HUONG_DAN.md), [cài đặt](packaging/README_INSTALL.md), [ghi chú v0.6.3](docs/RELEASE_NOTES_0.6.3.md) và [hợp đồng dữ liệu](docs/DATA_CONTRACT.md).
+Xem [hướng dẫn sử dụng](docs/HUONG_DAN.md), [cài đặt](packaging/README_INSTALL.md), [ghi chú v0.6.5](docs/RELEASE_NOTES_0.6.5.md) và [hợp đồng dữ liệu](docs/DATA_CONTRACT.md).
 
 ## Mã nguồn và build
 
-- `src/lisp/BHT-0.6.3.lsp`: loader duy nhất, với 12 module trong `src/lisp/modules`.
-- `src/dotnet`: BHT.Core, BHT.Bridge và BHT.Palette; phiên bản assembly `0.6.3.0`.
+- `src/lisp/BHT-0.6.5.lsp`: loader duy nhất, với 12 module trong `src/lisp/modules`.
+- `src/dotnet`: BHT.Core, BHT.Bridge và BHT.Palette; phiên bản assembly `0.6.5.0`.
 - `scripts`: build, kiểm phiên bản, đóng gói và kiểm thư viện TDT.
 - `tests`: Core, tích hợp CAD và bộ cài; `.github/workflows` chạy Core trên Windows.
 - `packaging`: Application Bundle và trình cài PowerShell.

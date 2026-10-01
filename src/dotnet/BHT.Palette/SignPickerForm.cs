@@ -23,6 +23,8 @@ namespace BHT.Palette
         private readonly ListBox faces = new ListBox { Dock = DockStyle.Fill, IntegralHeight = false };
         private readonly Dictionary<string, TdtSignEntry> entries = new Dictionary<string, TdtSignEntry>(StringComparer.OrdinalIgnoreCase);
         private readonly string initialCode, sourceDescription;
+        private readonly TextBox metres = new TextBox { Width = 100 };
+        private readonly Panel metresPanel = new Panel { Dock = DockStyle.Top, Height = 60 };
         private readonly Panel speedPanel = new Panel { Dock = DockStyle.Top, Height = 60 };
         private readonly Label validation = new Label { Dock = DockStyle.Top, Height = 42, ForeColor = Color.Firebrick };
         public TdtSignEntry SelectedSign { get; private set; }
@@ -68,11 +70,13 @@ namespace BHT.Palette
             speed.Items.AddRange(new object[] { "", "40", "50", "60", "70", "80", "90", "100", "120" });
             speedPanel.Controls.Add(new Label { Text = "Tốc độ P.127 (km/h):", AutoSize = true, Location = new Point(0, 0) });
             speed.Location = new Point(0, 23); speedPanel.Controls.Add(speed);
-            var hint = new Label { Dock = DockStyle.Bottom, Height = 48, Text = "Ảnh minh họa giữ màu gốc. Tùy chọn tô màu áp dụng khi chèn CAD. Mặt đầu tiên là mã biển chính.", ForeColor = Color.DimGray };
+            metresPanel.Controls.Add(new Label { Text = "Giá trị thực tế (m):", AutoSize = true });
+            metres.Location = new Point(0, 23); metresPanel.Controls.Add(metres); metresPanel.Visible = false;
+            var hint = new Label { Dock = DockStyle.Bottom, Height = 65, Text = "Ảnh là mẫu; CAD dùng giá trị thực tế bạn nhập. Tô màu áp dụng khi chèn CAD. Mặt đầu tiên là biển chính, nằm trên cùng.", ForeColor = Color.DimGray };
             sidebar.Controls.Add(faces); sidebar.Controls.Add(actions); sidebar.Controls.Add(hint);
             var fillPanel = new FlowLayoutPanel { Dock = DockStyle.Top, Height = 32 }; fillPanel.Controls.Add(fill);
             // Fill is controlled for the whole drawing in the Palette toolbar.
-            sidebar.Controls.Add(validation); sidebar.Controls.Add(multiPanel); sidebar.Controls.Add(speedPanel); sidebar.Controls.Add(details); sidebar.Controls.Add(preview);
+            sidebar.Controls.Add(validation); sidebar.Controls.Add(multiPanel); sidebar.Controls.Add(metresPanel); sidebar.Controls.Add(speedPanel); sidebar.Controls.Add(details); sidebar.Controls.Add(preview);
             foreach (string code in SignSearch.SplitCodes(faceCodes)) faces.Items.Add(code);
             multi.Checked = faces.Items.Count > 0;
             multi.CheckedChanged += (s, e) => { faces.Enabled = actions.Enabled = multi.Checked; };
@@ -83,32 +87,42 @@ namespace BHT.Palette
             if (TdtSignLibrary.InstalledRoot != "" && Directory.Exists(folder))
                 foreach (string path in Directory.GetFiles(folder, "*.bmp", SearchOption.AllDirectories))
                     paths[SignSearch.CodeKey(Path.GetFileNameWithoutExtension(path))] = path;
+            // Bundled, verified images also work on machines without TDT.
+            var location = new DirectoryInfo(Path.GetDirectoryName(typeof(SignPickerForm).Assembly.Location));
+            for (var directory = location; directory != null; directory = directory.Parent)
+                foreach (string candidate in new[] { Path.Combine(directory.FullName, "Images"), Path.Combine(directory.FullName, "assets", "sign-previews") })
+                    if (Directory.Exists(candidate))
+                        foreach (string path in Directory.GetFiles(candidate, "*.png"))
+                            paths[SignSearch.CodeKey(Path.GetFileNameWithoutExtension(path))] = path;
             grid.SuspendLayout();
             foreach (var sign in TdtSignLibrary.GetCatalog())
             {
+                // These are old XML headings/duplicates, not selectable sign codes.
+                if (sign.Code.StartsWith("Biển số ", StringComparison.OrdinalIgnoreCase)) continue;
                 var card = new Panel { Width = 160, Height = 175, BorderStyle = BorderStyle.FixedSingle, Margin = new Padding(5), Tag = sign };
                 var picture = new PictureBox { Dock = DockStyle.Top, Height = 108, SizeMode = PictureBoxSizeMode.Zoom, BackColor = Color.White };
                 string path;
-                if (paths.TryGetValue(SignSearch.CodeKey(sign.Code), out path))
+                if (paths.TryGetValue(SignSearch.CodeKey(sign.Code), out path) ||
+                    (!string.IsNullOrEmpty(sign.NameFrom) && paths.TryGetValue(SignSearch.CodeKey(sign.NameFrom), out path)))
                 {
                     try { using (var original = Image.FromFile(path)) picture.Image = new Bitmap(original); images.Add(picture.Image); }
                     catch (ArgumentException) { } catch (IOException) { }
                 }
                 if (picture.Image == null)
-                { picture.Image = CodePreview(sign); images.Add(picture.Image); }
+                { picture.Tag = "UNAVAILABLE"; picture.Image = CodePreview(sign); images.Add(picture.Image); }
                 var label = new Label { Dock = DockStyle.Fill, TextAlign = ContentAlignment.TopCenter,
                     Text = sign.Code + "\r\n" + (string.IsNullOrWhiteSpace(sign.Description) ? "Chưa có tên biển" : sign.Description), Padding = new Padding(3) };
                 card.Controls.Add(label); card.Controls.Add(picture);
                 entries[sign.Code] = sign;
                 EventHandler choose = (s, e) => Choose(card);
-                EventHandler confirm = (s, e) => { Choose(card); if (multi.Checked) AddFace(); else if (!IsSpeedSign(sign)) AcceptSign(); else speed.Focus(); };
+                EventHandler confirm = (s, e) => { Choose(card); if (multi.Checked) AddFace(); else if (metresPanel.Visible) { metres.Focus(); metres.SelectAll(); } else if (!IsSpeedSign(sign)) AcceptSign(); else speed.Focus(); };
                 foreach (Control control in new Control[] { card, picture, label }.Concat(picture.Controls.Cast<Control>())) { control.Click += choose; control.DoubleClick += confirm; }
                 cards.Add(card); grid.Controls.Add(card);
             }
             grid.ResumeLayout();
             search.TextChanged += (s, e) => Filter(); groups.SelectedIndexChanged += (s, e) => Filter();
             Filter();
-            string baseCode = SignPresentation.Speed(initialCode, sourceDescription).HasValue ? "P.127" : initialCode;
+            string baseCode = SignPresentation.Speed(initialCode, sourceDescription).HasValue ? "P.127" : SignPresentation.BaseCode(initialCode);
             var initial = cards.FirstOrDefault(x => string.Equals(((TdtSignEntry)x.Tag).Code, baseCode, StringComparison.OrdinalIgnoreCase));
             if (initial != null) { Choose(initial); grid.ScrollControlIntoView(initial); }
         }
@@ -163,9 +177,11 @@ namespace BHT.Palette
             SelectedSign = sign;
             preview.Image = card.Controls.OfType<PictureBox>().First().Image;
             details.Text = sign.Code + " — " + sign.Description + "\r\n" + sign.Group;
-            speed.Enabled = IsSpeedSign(sign); validation.Text = "";
+            speed.Enabled = IsSpeedSign(sign); speedPanel.Visible = speed.Enabled;
+            metresPanel.Visible = SignPresentation.MetreDefault(sign.Code) != ""; validation.Text = "";
             if (changed)
             {
+                metres.Text = SignPresentation.BaseCode(initialCode).Equals(sign.Code, StringComparison.OrdinalIgnoreCase) && SignPresentation.MetreValue(initialCode) != "" ? SignPresentation.MetreValue(initialCode) : SignPresentation.MetreDefault(sign.Code);
                 var value = SignPresentation.Speed(initialCode, sourceDescription) ?? SignPresentation.Speed("P.127", sourceDescription);
                 speed.Text = speed.Enabled && value.HasValue ? value.Value.ToString() : "";
             }
@@ -174,6 +190,13 @@ namespace BHT.Palette
         private string CurrentCode()
         {
             if (SelectedSign == null) return null;
+            if (metresPanel.Visible)
+            {
+                string candidateMetres = SelectedSign.Code + "@" + metres.Text.Trim();
+                string parsed = SignPresentation.MetreValue(candidateMetres);
+                if (parsed == "") { validation.Text = "Nhập giá trị m lớn hơn 0, tối đa 100000."; metres.Focus(); return null; }
+                return SelectedSign.Code + "@" + parsed;
+            }
             if (!IsSpeedSign(SelectedSign) || string.IsNullOrWhiteSpace(speed.Text)) return SelectedSign.Code;
             string candidate = "P.127-" + speed.Text.Trim();
             var value = SignPresentation.Speed(candidate, "");
@@ -200,7 +223,7 @@ namespace BHT.Palette
             {
                 if (faces.Items.Count == 0) { AddFace(); if (faces.Items.Count == 0) return; }
                 SelectedFaces = faces.Items.Cast<string>().ToList(); SelectedCode = SelectedFaces[0];
-                string baseCode = SignPresentation.Speed(SelectedCode, "").HasValue ? "P.127" : SelectedCode;
+                string baseCode = SignPresentation.Speed(SelectedCode, "").HasValue ? "P.127" : SignPresentation.BaseCode(SelectedCode);
                 TdtSignEntry entry; entries.TryGetValue(baseCode, out entry);
                 SelectedSign = entry ?? new TdtSignEntry { Code = SelectedCode };
             }

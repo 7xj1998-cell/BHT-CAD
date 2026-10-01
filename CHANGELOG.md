@@ -1,4 +1,13 @@
-﻿## 0.6.3 (2026-10-01)
+﻿## 0.6.5 (2026-10-02)
+
+- Tiếp tục từ v0.6.3; không lấy v0.6.4 làm nền.
+- Gốc cọc tiêu tại chân đuôi; nhãn trên đầu, hướng theo ký hiệu. Đặt tự do và xoay theo tuyến áp dụng mọi nhóm.
+- Hộp tùy chọn đặt tự do riêng; Palette chia thông tin hồ sơ, ký hiệu CAD, vị trí/ảnh. Bỏ BHTNANGCAP, BHTVEMODEL, BHTROUTE đời cũ.
+- Dựng đủ nhiều mặt trên một trụ, giữ thứ tự và các biến thể số; lặp mã vẫn tạo đủ tấm. Nút chèn/cập nhật lưu thay đổi trước khi dựng ký hiệu.
+- Nhập giá trị mét cho S.501, S.502, S.509a và P.117–P.120; xử lý cả số TDT bị tách thành nhiều TEXT. Không đổi chữ hay mã hiệu khác.
+- 376 mã biển hợp lệ có ảnh thật; bỏ 36 tiêu đề/mục trùng của XML cũ khỏi bảng chọn. Ảnh bổ sung có nguồn QCVN hoặc hình từ block CAD và được đóng gói.
+
+## 0.6.3 (2026-10-01)
 
 - Palette chỉ tạo/hiện khi gọi BTH/BHT; bỏ tự nạp giao diện từ Lisp và lệnh khôi phục Palette cũ. Đóng bảng hoặc chuyển bản vẽ ngắt theo dõi dữ liệu và timer; gọi lệnh để mở lại.
 - “Tô màu biển” nằm cùng hàng “Chèn biển tự do”, lưu theo bản vẽ và cập nhật mọi biển BHT đã chèn. Biển chèn sau theo cùng lựa chọn; không thay Hatch ngoài BHT.
