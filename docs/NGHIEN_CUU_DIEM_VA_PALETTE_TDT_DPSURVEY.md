@@ -63,6 +63,6 @@ cho thấy một kiểu điểm gồm các thuộc tính độc lập:
 - Mở `BTH`; năm tab nằm thành thanh dọc sát mép phải, chữ không bị cắt.
 - Thu hẹp và kéo rộng palette; nội dung không chui dưới thanh tab.
 - Kiểm tra nền tối, chữ nhập màu sáng, nút hành động vàng và trạng thái lỗi/cảnh báo dễ đọc.
-- Ở thẻ RTK, chạy **Dấu X 1u + sắp nhãn** trên bản sao DWG; dấu X vẫn đúng tâm và nhãn
+- Ở thẻ Điểm RTK, chạy **Đặt dấu X (cỡ 1) + sắp lại nhãn** trên bản sao DWG; dấu X vẫn đúng tâm và nhãn
   không che các điểm lân cận.
 - Mở một DWG 0.3.2/0.4.5: nhãn đã dời tay và nhãn legacy giữ nguyên sau **Cập nhật nhãn**.

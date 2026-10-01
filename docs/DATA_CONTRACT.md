@@ -119,3 +119,9 @@ BHT **không đọc/sửa/xóa** ảnh IRT; chỉ đưa xuống dưới cùng b�
 `*\IRT\*, IRT\*, *\IRT.CACHE\*, *\IRT.CACHE, *\IRT_CACHE\*` — IRTv6 lưu tile trong bộ nhớ đệm thư mục `IRT\`),
 hoặc tên file / tên ảnh khớp `irt_mau_file`. **Không bao giờ** coi là IRT: thực thể có XData BHT, layer `BHT*`, file
 nằm trong thư mục ảnh BHT (`thu_muc_anh`). Ảnh trong Xref không bị đụng tới.
+
+## Bố trí biển tự do (tùy chọn từ v0.5.3)
+
+XRecord hồ sơ OBJ có `kh_mode=TU_DO`, `kh_free_x/y/z` (tọa độ WCS), `kh_free_rot` (radian WCS) và nhiều mục `kh_via` (chuỗi x,y,z WCS theo thứ tự đường dẫn). Không thay đổi `pt`, route_id hay dữ liệu khảo sát. Thiếu cấu hình hợp lệ thì dùng bố trí tự động trước đây. INSERT vẫn dùng XData BHT_KH hiện có; đường dẫn LINE hoặc LWPOLYLINE gắn BHT_KH(object_id,DAN). LWPOLYLINE có các đỉnh từ RTK qua kh_via tới block, theo XY ở cao độ RTK. Reset tự động loại bỏ toàn bộ trường kh tự do, không xóa hồ sơ.
+
+`bht:api-sign-free(object_id)` chạy trong command context; cần hồ sơ BIEN_BAO có vị trí RTK hợp lệ. Các bước chọn hoàn tất trước khi ghi dữ liệu.

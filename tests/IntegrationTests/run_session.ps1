@@ -1,8 +1,15 @@
-# BHT 0.4.6 - chay 1 phien AutoCAD Core Console (accoreconsole) voi 1 file kiem thu .lsp
+﻿# BHT 0.5.5 - chay 1 phien AutoCAD Core Console (accoreconsole) voi 1 file kiem thu .lsp
 # -Name  : ten file kiem thu (khong duoi) trong $w ; -Dwg : ban ve mo (BAN SAO), trong = ban ve moi
 # -After : cac dong script them sau khi nap .lsp (lenh .NET, bieu thuc Lisp, SAVEAS ...)
 # -Saved : ban ve da SAVEAS trong -After -> chi QUIT (khong can _Y)
-param([string]$Name, [string]$Dwg = '', [int]$TimeoutSec = 600, [string[]]$After = @(), [switch]$Saved)
+param(
+  [string]$Name,
+  [string]$Dwg = '',
+  [int]$TimeoutSec = 600,
+  [string[]]$After = @(),
+  [switch]$Saved,
+  [string]$Profile = 'AutoCAD'
+)
 $w = 'C:\Users\Le Bao\BHT_TEST_V044'
 $scr = Join-Path $w "run\$Name.scr"
 $lines = @("(load `"C:/Users/Le Bao/BHT_TEST_V044/$Name.lsp`")")
@@ -12,6 +19,7 @@ if (-not $Saved) { $lines += '_Y' }
 Set-Content -LiteralPath $scr -Value ($lines -join "`r`n") -Encoding ASCII
 $al = @()
 if ($Dwg -ne '') { $al += '/i'; $al += "`"$Dwg`"" }
+$al += '/p'; $al += "`"$Profile`""
 $al += '/s'; $al += "`"$scr`""; $al += '/l'; $al += 'en-US'
 $out = Join-Path $w "run\$Name.console.txt"
 $t0 = Get-Date

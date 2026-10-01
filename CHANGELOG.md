@@ -1,4 +1,61 @@
+## 0.5.1 — 2026-10-01
+
+- Đã sửa chữ CAD mặc định sang `vnromanc.shx` và tự chuyển Unicode sang TCVN3 tại lớp hiển thị, gồm nhãn điểm RTK, nhãn đối tượng và chữ BHT tạo trên CAD. Hồ sơ, Palette, XData và báo cáo giữ Unicode.
+- Đã đồng bộ phiên bản `0.5.1` cho Lisp, DLL, bundle, bộ cài và tên gói phát hành.
+- Đã bổ sung công cụ tăng/kiểm tra phiên bản và chặn phát hành cùng số phiên bản khi nội dung thay đổi.
+- Giữ các sửa lỗi biển báo: Hatch, chiều cao chuẩn, tốc độ P.127, block riêng từng hồ sơ, thư viện ảnh và xoay theo tuyến.
+
 # CHANGELOG
+
+## 0.5.5 (2026-10-01)
+
+- Bỏ giao diện DCL dự phòng và hai lệnh BHTDCL/BHTUITEST theo review mới; giữ Palette .NET và 67 lệnh Lisp còn lại.
+- Giữ hàm bỏ dấu tìm kiếm, tình trạng và các hàm trạng thái; sửa BHTTEST để không gọi helper DCL đã xóa.
+- Cập nhật BHTHELP/BHTLOAD, thông báo nạp và hướng dẫn cài/sử dụng; khi Palette lỗi hướng dẫn kiểm tra DLL và thử lại.
+- Thêm runner kiểm tra review dùng profile riêng; cập nhật kỳ vọng kiểm thử theo font Unicode VNRomancUpdate.shx và 17 hàm API hiện có.
+- Build/122 kiểm tra Core, REVIEW/S0/V5 và bộ kiểm thử biển/phông/WinForms đạt. TX chưa chạy do thiếu bản vẽ proxy mẫu. Đồng bộ phiên bản 0.5.5/0.5.5.0.
+
+## 0.5.4 (2026-10-01)
+
+- Xử lý review v0.5.3: rút gọn bảng TCVN/NFC, giữ đủ chữ hoa và đầu vào cũ; sửa ghép dấu trên chữ đã ghép một phần và thứ tự dấu đảo.
+- Dùng helper chung cho ẩn/hiện nhãn, giữ 69 lệnh và alias; làm rõ các section và kết quả đếm hàm trong report.
+- Chuẩn hóa ID khi chèn biển tự do; bổ sung hồi quy ID thiếu, hồ sơ không có RTK và đảo thứ tự điểm trung gian của đường dẫn.
+- 122 kiểm tra Core, kiểm thử AutoCAD/WinForms và chính sách tăng phiên bản đạt; đồng bộ Lisp/DLL/bundle/bộ cài 0.5.4/0.5.4.0.
+
+## 0.5.3 (2026-10-01)
+
+- Thêm “Chèn biển tự do” trên Palette và lệnh BHTBIENTUDO: chọn hướng, thêm/xóa điểm trung gian, rồi chọn vị trí biển. Hủy trước bước cuối không ghi thay đổi.
+- Lưu bố trí tự do theo hồ sơ; đường dẫn gấp khúc giữ qua lần cập nhật, theo điểm cuối khi di chuyển biển. BHTKYHIEU > R bỏ bố trí tự do để trở về tự động theo tuyến.
+- Giữ RTK, liên kết tuyến, ảnh và nội dung biển. Quy đổi hướng từ UCS sang WCS; tiếp tục dùng phông Unicode VNRomancUpdate.shx.
+- Build và kiểm tra Core, AutoCAD, nhập tương tác và thư viện ảnh đạt; đồng bộ phiên bản 0.5.3/0.5.3.0.
+
+## 0.5.2 (2026-10-01)
+
+- Dùng VNRomancUpdate.shx Unicode, sửa Ê/ê và chữ hoa có dấu; giữ tên kiểu cũ, chuyển TEXT TCVN3 của BHT khi cập nhật phông, bảo toàn dữ liệu Unicode/vị trí/góc quay.
+- Thư viện biển thêm ảnh xem trước lớn, tốc độ P.127 gợi ý từ hồ sơ, kiểm tra giá trị và chọn nhiều mặt cùng trụ có thêm/bỏ/sắp thứ tự; hủy không ghi thay đổi.
+- Ghi nghiên cứu menu/tài nguyên TDT 9.1 và giới hạn xác nhận giao diện do lỗi ProjectDH.arx; không sửa tài nguyên TDT gốc.
+- Đồng bộ phiên bản 0.5.2/0.5.2.0, kèm phông mới, chặn phát hành thiếu phông mặc định; kiểm thử Core, AutoCAD và WinForms đạt.
+
+## 0.4.6-fix3 (2026-09-29)
+
+- Thanh thẻ dọc bên phải Palette có tên thẻ (trước đây là các ô xanh trống). Nguyên nhân: 0.4.6/fix2 xoay chữ −90° bằng `TextRenderer` (GDI) — GDI bỏ qua phép xoay của `Graphics` và ô chữ sau khi xoay chỉ dài 34 px, nên chữ bị vẽ lệch/cắt mất. Nay chữ ngang trong ô 86 × 38 px (độ rộng dải thẻ giữ nguyên 86 px), tự xuống 2 dòng khi dài. Tên thẻ: **Tổng quan**, **Điểm RTK**, **Ảnh hiện trường**, **Hồ sơ đối tượng**, **Tuyến & báo cáo**; rê chuột lên thẻ để xem mô tả. Thẻ thường nền `#065F46` chữ `#D1FAE5`; thẻ đang chọn nền `#D1FAE5` chữ `#065F46` và vạch đậm bên trái.
+- Lỗi và cảnh báo cần người dùng xử lý hiện cửa sổ thông báo (tiêu đề `BHT`, biểu tượng lỗi/cảnh báo) và vẫn in ra dòng lệnh: lỗi `BHT lỗi: …` của các lệnh BHT, “chưa có tuyến. Dùng BHTTUYEN trước.”, tim TDT dạng proxy, không nạp được `BHT.Bridge.dll`, không mở được file, không ghi được file (đang mở trong Excel), dữ liệu nhập không hợp lệ… Hủy lệnh (Esc, `*Cancel*`) và thông tin thường chỉ in dòng lệnh. Tắt cửa sổ bằng `(setq *bht-popup* nil)`. Không hiện cửa sổ khi chạy script `.scr` hoặc trong AutoCAD Core Console (kiểm thử tự động không bị treo).
+- Palette: lỗi phía Palette (lỗi đọc/ghi bản vẽ, gọi Lisp thất bại, Lisp không cùng phiên bản, xuất Excel lỗi, dữ liệu nhập sai…) hiện MessageBox `BHT`. Khi lệnh gửi từ Palette báo lỗi, vùng trạng thái hiện “Lệnh … THẤT BẠI.” kèm nội dung lỗi trên nền đỏ nhạt (trước đây hiện “đã kết thúc. 1 dòng kết quả.” như thành công); lệnh có cảnh báo hiện nền vàng nhạt.
+- Thông báo khi tim TDT còn là proxy giải thích rõ: phiên AutoCAD này chưa nạp TDTSolution 9.1 nên không nhận ra tim tuyến; lưu và đóng AutoCAD, mở lại bằng biểu tượng/profile TDTSolution 9.1 (cắm khóa USB TDT nếu phần mềm yêu cầu), mở bản vẽ rồi chạy lại bước 1. BHT không sửa tim TDT gốc.
+- Đồng bộ phiên bản: `BHT-0.4.6-fix3.lsp`, `*bht-version*` = `0.4.6-fix3`, DLL `0.4.6.3`, `PackageContents.xml` `AppVersion` `0.4.6.3` (giữ ProductCode/UpgradeCode), bộ cài fix1 (CMD ASCII + PS1 UTF-8 BOM) với phiên bản `0.4.6-fix3`.
+- Dữ liệu bản vẽ, POINT RTK, thuật toán nhãn và lý trình, bố cục Palette và bảng màu fix2 giữ nguyên.
+
+## 0.4.6-fix2 (2026-09-29)
+
+- Sửa lỗi bước “1. Lấy hoặc cập nhật tim từ TDT 9.1” (`BHTTUYENTDT`) báo `BHT lỗi: no function definition: FBOUNDP`: `fboundp` không phải hàm AutoLISP. Thay bằng `bht:fn-defined-p` (kiểm tra `type` là `SUBR`/`USUBR`/`EXRXSUBR`). Đã rà toàn bộ Lisp và C#: không còn hàm ngoài AutoLISP nào khác.
+- `BHTTUYENTDT` tự `NETLOAD` `BHT.Bridge.dll` nằm cạnh file Lisp khi hàm `BHTTDT91ROUTE` chưa được đăng ký, rồi mới báo lỗi; báo rõ khi ID tuyến hoặc khoảng cách tối đa không hợp lệ (trước đây lệnh kết thúc im lặng).
+- Sửa lỗi `bad function: BHTTDTBLOCK` khi tạo ký hiệu biển báo lúc `BHT.Bridge` chưa đăng ký hàm Lisp (lỗi này thoát khỏi `vl-catch-all-apply` và làm dừng lệnh/phiên kiểm thử S0 từ 0.4.6): nay kiểm tra hàm trước, dùng block nội bộ như thiết kế.
+- `BHT.Bridge`: khi tim TDT 9.1 được Explode thành nhiều đoạn Line/Arc nối tiếp, BHT nối các đoạn chung đầu mút thành một Polyline tham chiếu trên layer `BHT_TUYEN_TDT` (trước đây chỉ lấy đoạn dài nhất). Tim TDT gốc vẫn chỉ mở `ForRead`, không sửa.
+- Palette đổi sang bảng màu xanh lá: nền `#047857`; nút, tiêu đề, thẻ và dòng đang chọn nền `#065F46` chữ `#D1FAE5`; ô nhập, danh sách, vùng thông tin và trạng thái nền `#D1FAE5` chữ `#065F46`. Thanh thẻ dọc bên phải không còn ô đen và mục chọn xanh dương. Bố cục giữ nguyên.
+- Đổi tên nút thẻ RTK “Dấu X 1u + sắp nhãn” thành “Đặt dấu X (cỡ 1) + sắp lại nhãn” cho đúng chức năng (đặt POINT dạng dấu X kích thước 1 đơn vị bản vẽ và sắp lại toàn bộ nhãn). Chức năng không đổi.
+- Tiêu đề Palette luôn hiện phiên bản đang chạy (`BHT 0.4.6-fix2 — QUẢN LÝ HIỆN TRẠNG TUYẾN`); không còn hiện “BHT 0.4.4” do AutoCAD khôi phục tên cũ lưu trong profile.
+- Đồng bộ phiên bản: `BHT-0.4.6-fix2.lsp`, `*bht-version*` = `0.4.6-fix2`, DLL `0.4.6.2`, `PackageContents.xml` `AppVersion` `0.4.6.2` (giữ ProductCode/UpgradeCode), bộ cài fix1 (CMD ASCII + PS1 UTF-8 BOM) với phiên bản `0.4.6-fix2`.
+- Dữ liệu bản vẽ, POINT RTK, thuật toán nhãn và lý trình giữ nguyên như 0.4.6.
 
 ## 0.4.6 (2026-09-29)
 

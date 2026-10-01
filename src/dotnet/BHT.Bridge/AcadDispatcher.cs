@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Threading.Tasks;
 using Autodesk.AutoCAD.ApplicationServices;
 using Autodesk.AutoCAD.DatabaseServices;
@@ -120,13 +120,21 @@ namespace BHT.Bridge
             return tcs.Task;
         }
 
+        /// <summary>
+        /// 0.4.6-fix3: true trong luc Palette dang goi 1 ham bht:api-* (acedInvoke). Khi do BHTPOPUP
+        /// (cua so loi tu Lisp) tra "SKIP" vi Palette tu bao loi bang MessageBox - tranh 2 cua so cho 1 loi.
+        /// </summary>
+        public static bool InLispApi { get; private set; }
+
         /// <summary>Goi ham Lisp bht:api-* qua ngu canh lenh.</summary>
         public static void RunLisp(string function, string[] args, Action<LispReply> done)
         {
             LispReply reply = null;
             RunInCommandContext("Lisp " + function, () =>
             {
-                reply = new LispApi().Call(function, args);
+                InLispApi = true;
+                try { reply = new LispApi().Call(function, args); }
+                finally { InLispApi = false; }
                 return reply.Ok ? OpResult.Success(function) : OpResult.Fail(reply.Error);
             }, r =>
             {

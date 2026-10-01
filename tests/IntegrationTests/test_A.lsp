@@ -1,4 +1,4 @@
-;;; BHT 0.3.3 - phien A: ban ve moi (BAN SAO sample-route.dwg). Nhan tu dong / tay,
+﻿;;; BHT 0.3.3 - phien A: ban ve moi (BAN SAO sample-route.dwg). Nhan tu dong / tay,
 ;;; ho so doi tuong, ky hieu theo ID, thu tu hien thi, anh, nhap trung dinh dang.
 (load "C:/Users/Le Bao/BHT_TEST_V044/t_common.lsp")
 (tbegin "A")
@@ -7,7 +7,7 @@
 (setq *PH* "C:/Users/Le Bao/BHT_TEST_V032/anh/kmz_out/BHT_PHOTO.tsv")
 (setq *MOVED* (strcat *T-DIR* "anh_da_doi/kmz_out"))
 (setq e (tload))
-(tchk "T00" "nạp BHT-0.4.6" (and (null e) (= *bht-version* "0.4.6")) (if e e *bht-version*))
+(tchk "T00" "nạp BHT-5.0" (and (null e) (= *bht-version* "0.5.5")) (if e e *bht-version*))
 (setq *bht-no-launch* T)
 
 ;; ---------- thuc the NGOAI BHT ----------
@@ -193,7 +193,7 @@
     (if (= (cdr (assoc 0 d)) "ENDBLK") (setq done T) (setq out (cons d out))))
   (reverse out))
 (setq bc (t-block-data "BHT_KH_COC_TIEU_V043") bk (t-block-data "BHT_KH_COT_KM_V043"))
-(tchk "K02b" "block mặc định 0.4.6 của Cọc tiêu và Cột Km đã được tạo"
+(tchk "K02b" "block mặc định của Cọc tiêu và Cột Km đã được tạo"
       (and (>= (length bc) 10) (>= (length bk) 14)
            (vl-some '(lambda (d) (and (= (cdr (assoc 0 d)) "SOLID") (= (cdr (assoc 62 d)) 1))) bc)
            (vl-some '(lambda (d) (= (cdr (assoc 62 d)) 3)) bc)

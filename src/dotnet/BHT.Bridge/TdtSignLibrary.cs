@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
@@ -22,15 +22,18 @@ namespace BHT.Bridge
         public string SourceDrawing { get; set; }
         public string Shape { get; set; }
         public bool HasVector { get; set; }
+        /// <summary>5.0: ten lay tu muc khac cung ma trong Bienbao.xml (vd "R.E,9a"); rong = ten goc cua muc.</summary>
+        public string NameFrom { get; set; }
 
         public TdtSignEntry()
         {
-            Code = ""; Description = ""; Group = ""; SourceDrawing = ""; Shape = "";
+            Code = ""; Description = ""; Group = ""; SourceDrawing = ""; Shape = ""; NameFrom = "";
         }
 
         public override string ToString()
         {
-            return string.IsNullOrWhiteSpace(Description) ? Code : Code + " — " + Description;
+            if (string.IsNullOrWhiteSpace(Description)) return Code + " — (chưa có tên trong thư viện TDT)";
+            return Code + " — " + Description + (string.IsNullOrEmpty(NameFrom) ? "" : " (tên theo " + NameFrom + ")");
         }
     }
 
@@ -42,14 +45,14 @@ namespace BHT.Bridge
         public string SourceBlock = "";
         public string Description = "";
         public string SourceDrawing = "";
-        public double FaceScale = 0.2;
+        public double FaceScale = 1.0;
     }
 
     /// <summary>
     /// Doc thu vien bien bao TDT da cai tren may. BHT chi tao cache trong LocalAppData
     /// va clone block duoc chon vao DWG; khong sua thu muc cai dat TDT.
-    /// Block nguon TDT co mat bien tieu chuan cao 7 don vi, goc chen o day mat bien.
-    /// BHT dat mat bien cao 1.4 unit (scale 0.2) tren cot cao 0.6 unit.
+    /// Mat bien duoc chuan hoa theo extents ve chieu cao 1.8 don vi CAD.
+    /// Hatch giu thu tu tuong doi trong nguon va nam duoi cac net/text.
     /// </summary>
     public static class TdtSignLibrary
     {
@@ -66,7 +69,7 @@ namespace BHT.Bridge
             "Bien phu.dwg"
         };
 
-        public const double DefaultFaceScale = 0.2;
+        public const double StandardFaceHeight = 1.8;
         public const double DefaultPostHeight = 0.6;
 
         public static string InstalledRoot
@@ -82,6 +85,22 @@ namespace BHT.Bridge
                 _catalog = LoadCatalog(InstalledRoot);
                 return new List<TdtSignEntry>(_catalog);
             }
+        }
+
+        /// <summary>5.0: tim khi go - khong dau, khong phan biet hoa, tren ma + ten (BHT.Core.SignSearch).</summary>
+        public static List<TdtSignEntry> Search(string query, int max)
+        {
+            var items = GetCatalog().Select(x => new SignItem(x.Code, x.Description) { Tag = x }).ToList();
+            return SignSearch.Filter(items, query, max).Select(x => (TdtSignEntry)x.Tag).ToList();
+        }
+
+        /// <summary>Thong ke ten: tong, co ten goc, ten bo sung theo ma cung thu vien, con thieu.</summary>
+        public static int[] NameCoverage()
+        {
+            var all = GetCatalog();
+            int alias = all.Count(x => !string.IsNullOrEmpty(x.NameFrom));
+            int missing = all.Count(x => string.IsNullOrWhiteSpace(x.Description));
+            return new[] { all.Count, all.Count - alias - missing, alias, missing };
         }
 
         public static TdtSignEntry Find(string code)
@@ -106,7 +125,7 @@ namespace BHT.Bridge
 
         public static string WrapperName(string code)
         {
-            var sb = new StringBuilder("BHT_TDT_");
+            var sb = new StringBuilder("BHT_TDT_V51_");
             bool underscore = false;
             foreach (char c0 in (code ?? "").Trim().ToUpperInvariant())
             {
@@ -126,7 +145,7 @@ namespace BHT.Bridge
 
         public static TdtSignImportResult EnsureBlock(Database destination, string code)
         {
-            var result = new TdtSignImportResult { BlockName = WrapperName(code), FaceScale = DefaultFaceScale };
+            var result = new TdtSignImportResult { BlockName = WrapperName(code), FaceScale = 1.0 };
             if (destination == null) { result.Error = "không có bản vẽ đích"; return result; }
             if (HasBlock(destination, result.BlockName)) { result.Ok = true; return result; }
 
@@ -174,7 +193,7 @@ namespace BHT.Bridge
                             result.Error = "AutoCAD không clone được block TDT " + sourceName;
                             return result;
                         }
-                        CreateWrapper(destination, mapped.Value, result.BlockName, code, sourceName);
+                        result.FaceScale = CreateWrapper(destination, mapped.Value, result.BlockName, code, sourceName);
                         tr.Commit();
                     }
                 }
@@ -199,14 +218,21 @@ namespace BHT.Bridge
             }
         }
 
-        private static void CreateWrapper(Database db, ObjectId clonedId, string wrapperName, string code, string sourceName)
+        private static double CreateWrapper(Database db, ObjectId clonedId, string wrapperName, string code, string sourceName)
         {
             using (var tr = db.TransactionManager.StartTransaction())
             {
                 var bt = (BlockTable)tr.GetObject(db.BlockTableId, OpenMode.ForRead);
-                if (bt.Has(wrapperName)) { tr.Commit(); return; }
+                if (bt.Has(wrapperName)) { tr.Commit(); return 1.0; }
 
                 var cloned = (BlockTableRecord)tr.GetObject(clonedId, OpenMode.ForWrite);
+                PrepareFace(tr, clonedId, new HashSet<ObjectId>(), SignPresentation.Speed(code, ""));
+                Extents3d bounds;
+                using (var probe = new BlockReference(Point3d.Origin, clonedId)) bounds = probe.GeometricExtents;
+                double height = bounds.MaxPoint.Y - bounds.MinPoint.Y;
+                if (double.IsNaN(height) || double.IsInfinity(height) || height <= 1e-8)
+                    throw new InvalidOperationException("mặt biển không có kích thước bao hợp lệ");
+                double scale = StandardFaceHeight / height;
                 string sourceAlias = "BHT_TDT_SRC_" + SafeToken(sourceName);
                 int suffix = 1;
                 string candidate = sourceAlias;
@@ -225,9 +251,11 @@ namespace BHT.Bridge
                 foot.ColorIndex = 7;
                 wrapper.AppendEntity(foot); tr.AddNewlyCreatedDBObject(foot, true);
 
-                var face = new BlockReference(new Point3d(0.0, DefaultPostHeight, 0.0), clonedId)
+                var face = new BlockReference(new Point3d(
+                    -(bounds.MinPoint.X + bounds.MaxPoint.X) * 0.5 * scale,
+                    DefaultPostHeight - bounds.MinPoint.Y * scale, -bounds.MinPoint.Z * scale), clonedId)
                 {
-                    ScaleFactors = new Scale3d(DefaultFaceScale)
+                    ScaleFactors = new Scale3d(scale)
                 };
                 wrapper.AppendEntity(face); tr.AddNewlyCreatedDBObject(face, true);
 
@@ -242,16 +270,45 @@ namespace BHT.Bridge
                     tr.AddNewlyCreatedDBObject(attr, true);
                 }
                 tr.Commit();
+                return scale;
             }
+        }
+
+        // Traverse nested definitions too; preserve hatch-to-hatch order from the source.
+        private static void PrepareFace(Transaction tr, ObjectId blockId, HashSet<ObjectId> seen, int? speed)
+        {
+            if (!seen.Add(blockId)) return;
+            var block = (BlockTableRecord)tr.GetObject(blockId, OpenMode.ForRead);
+            var draw = (DrawOrderTable)tr.GetObject(block.DrawOrderTableId, OpenMode.ForWrite);
+            var hatches = new ObjectIdCollection();
+            foreach (ObjectId id in draw.GetFullDrawOrder(0))
+            {
+                var entity = tr.GetObject(id, OpenMode.ForRead) as Entity;
+                if (entity is Hatch) hatches.Add(id);
+                var nested = entity as BlockReference;
+                if (nested != null) PrepareFace(tr, nested.BlockTableRecord, seen, speed);
+                if (!speed.HasValue) continue;
+                var text = entity as DBText;
+                var mtext = entity as MText;
+                int number;
+                string value = text != null ? text.TextString : (mtext != null ? mtext.Text : "");
+                // Only numeric labels, never code/name/dimensional annotations.
+                if (int.TryParse(value.Trim(), out number) && number >= 5 && number <= 130)
+                {
+                    entity.UpgradeOpen();
+                    if (text != null) text.TextString = speed.Value.ToString(CultureInfo.InvariantCulture);
+                    else if (mtext != null) mtext.Contents = speed.Value.ToString(CultureInfo.InvariantCulture);
+                }
+            }
+            if (hatches.Count > 0) draw.MoveToBottom(hatches);
         }
 
         private static string AttributeValue(string code, string defaultValue, string tag)
         {
-            string source = code ?? "";
-            var digits = new string(source.Where(c => char.IsDigit(c)).ToArray());
-            string norm = Normalize(source);
-            if (norm.StartsWith("P127", StringComparison.Ordinal) && digits.Length > 3)
-                return digits.Substring(3);
+            var speed = SignPresentation.Speed(code, "");
+            int number;
+            if (speed.HasValue && int.TryParse((defaultValue ?? "").Trim(), out number))
+                return speed.Value.ToString(CultureInfo.InvariantCulture);
             return string.IsNullOrWhiteSpace(defaultValue) ? (string.IsNullOrWhiteSpace(tag) ? "" : tag) : defaultValue;
         }
 
@@ -358,6 +415,16 @@ namespace BHT.Bridge
                 }
             }
             catch { return BuiltInFallback(); }
+            // 5.0: muc nhom "theo thong le quoc te" ("Biển số E,9a") khong co ten -> lay ten cua muc
+            // cung ma trong chinh Bienbao.xml (vd "R.E,9a"). Khong tu dat ten; muc khong doi chieu duoc de trong.
+            try
+            {
+                var items = list.Select(x => new SignItem(x.Code, x.Description) { Tag = x }).ToList();
+                Dictionary<SignItem, string> aliasOf;
+                SignSearch.FillMissingNames(items, out aliasOf);
+                foreach (var kv in aliasOf) { var e = (TdtSignEntry)kv.Key.Tag; e.Description = kv.Key.Name; e.NameFrom = kv.Value; }
+            }
+            catch { }
             return list.OrderBy(x => SignSortKey(x.Code), StringComparer.OrdinalIgnoreCase).ToList();
         }
 
@@ -403,6 +470,8 @@ namespace BHT.Bridge
         private static string SignSortKey(string code)
         {
             string c = (code ?? "").ToUpperInvariant();
+            // 5.0: nhom quoc te "Biển số ..." xep sau cac ma QCVN (truoc day dung dau danh sach)
+            if (TextSearch.Fold(c).StartsWith("bien so", StringComparison.Ordinal)) c = "~" + c;
             return c.PadRight(24, ' ');
         }
     }
@@ -412,15 +481,41 @@ namespace BHT.Bridge
         [LispFunction("BHTTDTBLOCK")]
         public static ResultBuffer ImportSign(ResultBuffer args)
         {
-            string code = "";
+            string code = "", description = ""; int index = 0;
             if (args != null)
-                foreach (TypedValue value in args) { code = Convert.ToString(value.Value, CultureInfo.InvariantCulture); break; }
+                foreach (TypedValue value in args)
+                {
+                    if (index++ == 0) code = Convert.ToString(value.Value, CultureInfo.InvariantCulture);
+                    else description = Convert.ToString(value.Value, CultureInfo.InvariantCulture);
+                }
+            code = SignPresentation.ResolveCode(code, description);
             var doc = AcApp.DocumentManager.MdiActiveDocument;
             if (doc == null) return Reply("LOI", "không có bản vẽ đang mở");
             var r = TdtSignLibrary.EnsureBlock(doc.Database, code);
             return r.Ok
                 ? Reply("OK", r.BlockName, r.Description, r.SourceBlock, r.FaceScale.ToString("0.######", CultureInfo.InvariantCulture))
                 : Reply("LOI", r.Error);
+        }
+
+        /// <summary>
+        /// 5.0: (BHTSIGNSEARCH "di cham" [max]) -> ("OK" "W.245a|Đi chậm" ...). Tim khong dau tren ma + ten
+        /// cua danh muc bien TDT (dung cho BHTBLOCK / BHTBBDANHMUC). Khong co TDT -> danh muc noi bo.
+        /// </summary>
+        [LispFunction("BHTSIGNSEARCH")]
+        public static ResultBuffer SearchSigns(ResultBuffer args)
+        {
+            string q = ""; int max = 30, i = 0;
+            if (args != null)
+                foreach (TypedValue value in args)
+                {
+                    if (i == 0) q = Convert.ToString(value.Value, CultureInfo.InvariantCulture);
+                    else if (i == 1) { try { max = Convert.ToInt32(value.Value, CultureInfo.InvariantCulture); } catch { } }
+                    i++;
+                }
+            var l = new List<string> { "OK" };
+            try { foreach (var e in TdtSignLibrary.Search(q, max)) l.Add(e.Code + "|" + e.Description); }
+            catch (System.Exception ex) { return Reply("LOI", ex.Message); }
+            return Reply(l.ToArray());
         }
 
         private static ResultBuffer Reply(params string[] values)

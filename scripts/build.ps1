@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
   Build BHT .NET (BHT.Core, BHT.CoreTests, BHT.Bridge, BHT.Palette) - .NET Framework 4.8, x64.
 .DESCRIPTION
@@ -22,6 +22,7 @@ param(
 )
 $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent $PSScriptRoot
+& (Join-Path $PSScriptRoot 'check-version.ps1')
 if ($AcadDir -eq '') { if ($env:ACAD_INSTALL_DIR) { $AcadDir = $env:ACAD_INSTALL_DIR } else { $AcadDir = 'D:\AutoCAD 2024' } }
 if ($OutDir -eq '') { $OutDir = Join-Path $root 'build\bin' }
 New-Item -ItemType Directory -Force -Path $OutDir | Out-Null

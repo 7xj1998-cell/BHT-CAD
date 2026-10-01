@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
@@ -13,6 +13,37 @@ namespace BHT.CoreTests
     /// </summary>
     public static class Program
     {
+        static void TcvnT()
+        {
+            Check("TC1", "mixed Vietnamese", Tcvn3.Encode("Cọc tiêu") == "C\u00e4c ti\u00aau");
+            Check("TC2", "survey description", Tcvn3.Encode("Đường giới hạn 80") == "\u00a7\u00ad\u00eang gi\u00edi h\u00b9n 80");
+            Check("TC3", "NFD equivalent", Tcvn3.Encode("Cọc tiêu".Normalize(System.Text.NormalizationForm.FormD)) == Tcvn3.Encode("Cọc tiêu"));
+            Check("TC4", "ASCII unchanged", Tcvn3.Encode("P.127-80 Km1+200.00") == "P.127-80 Km1+200.00");
+            Check("TC5", "all Vietnamese accents", Tcvn3.Encode("àáảãạ ăâđêôơư") == "\u00b5\u00b8\u00b6\u00b7\u00b9 \u00a8\u00a9\u00ae\u00aa\u00ab\u00ac\u00ad");
+            Check("TC6", "null safe", Tcvn3.Encode(null) == "");
+            var record = new BhtRecord().Add(ObjFields.Desc, "Cọc tiêu");
+            Tcvn3.Encode(record.Get(ObjFields.Desc));
+            Check("TC7", "records remain Unicode", record.Get(ObjFields.Desc) == "Cọc tiêu");
+        }
+
+        static void SignVariantsT()
+        {
+            Check("SV1", "explicit speed wins", SignPresentation.ResolveCode("P.127-60", "gioihan80") == "P.127-60");
+            Check("SV2", "survey speed", SignPresentation.ResolveCode("P.127", "bbtron1m25 gioihan80") == "P.127-80");
+            Check("SV3", "Vietnamese accents", SignPresentation.ResolveCode("P.127", "Giới hạn tốc độ: 100 km/h") == "P.127-100");
+            Check("SV4", "do not parse dimensions", !SignPresentation.Speed("P.127", "bbtron1m25").HasValue);
+            Check("SV5", "other sign", SignPresentation.ResolveCode("R.415", "gioihan80") == "R.415");
+            Check("SV6", "no supplied speed", SignPresentation.ResolveCode("P.127", "") == "P.127");
+            Check("SV7", "reject overlong number", !SignPresentation.Speed("P.127", "gioihan8000").HasValue);
+            BhtRecord created;
+            string error = ObjectLogic.BuildNew("OBJ-009999", new BhtRecord().Add(ObjFields.Group, "BIEN_BAO").Add(ObjFields.CustomBlock, "BIEN_RIENG"),
+                new List<string> { "P1" }, false, new HashSet<string> { "P1" }, new Dictionary<string, BhtRecord>(), "now", out created);
+            Check("SV9", "new object keeps custom block", error == null && created.Get(ObjFields.CustomBlock) == "BIEN_RIENG");
+            var old = new BhtRecord().Add(ObjFields.CustomBlock, "BIEN_RIENG").Add(ObjFields.Photo, "PHOTO1");
+            var edited = ObjectLogic.ApplyEdit(old, new BhtRecord().Add(ObjFields.CustomBlock, ""), "now");
+            Check("SV8", "clear custom without losing photo", edited.Get(ObjFields.CustomBlock) == "" && edited.Get(ObjFields.Photo) == "PHOTO1");
+        }
+
         static int pass, fail;
         static readonly List<string> log = new List<string>();
 
@@ -48,6 +79,13 @@ namespace BHT.CoreTests
             Safe("C14", "groups", GroupsT);
             Safe("C15", "manual chainage", ChainageT);
             Safe("C16", "xlsx sign report", SignReportT);
+            Safe("C17", "sign search", SignSearchT);
+            Safe("C18", "duplicate check", DuplicateT);
+            Safe("C19", "condition list", ConditionT);
+            Safe("C20", "fonts / text style", FontT);
+            Safe("C21", "Route Model V5 A-O", RouteModelT);
+            Safe("C22", "sign variants", SignVariantsT);
+            Safe("C23", "TCVN3 display", TcvnT);
             string summary = "TONG BHT.CoreTests: " + pass + " PASS, " + fail + " FAIL";
             log.Add(summary); Console.WriteLine(summary);
             if (args.Length > 0) File.WriteAllLines(Path.Combine(args[0], "coretests_result.txt"), log.ToArray(), new System.Text.UTF8Encoding(false));
@@ -210,10 +248,11 @@ namespace BHT.CoreTests
 
         static void Versions()
         {
-            Check("C11a", "hằng phiên bản", BhtVersion.Version == "0.4.6" && BhtVersion.AssemblyVersion.StartsWith("0.4.6.") && BhtVersion.FileVersion.StartsWith("0.4.6."));
-            Check("C11b", "Lisp phải cùng phiên bản", BhtVersion.LispCompatible("0.4.6", "1") && !BhtVersion.LispCompatible("0.4.5", "1") && !BhtVersion.LispCompatible("0.4.6", "") && !BhtVersion.LispCompatible("0.10.0", "2"));
+            Check("C11a", "hằng phiên bản", BhtVersion.Version == "0.5.5" && BhtVersion.AssemblyVersion == BhtVersion.Version + ".0" && BhtVersion.FileVersion == BhtVersion.AssemblyVersion);
+            Check("C11b", "Lisp phải cùng phiên bản", BhtVersion.LispCompatible(BhtVersion.Version, "1") && BhtVersion.LispCompatible(" " + BhtVersion.Version + " ", "1")
+                && !BhtVersion.LispCompatible("5.0", "1") && !BhtVersion.LispCompatible("0.4.6-fix3", "1") && !BhtVersion.LispCompatible(BhtVersion.Version, "") && !BhtVersion.LispCompatible(BhtVersion.Version, "0"));
             var asm = typeof(BhtRecord).Assembly.GetName().Version.ToString();
-            Check("C11c", "AssemblyVersion BHT.Core = 0.4.6.x", asm.StartsWith("0.4.6."), asm);
+            Check("C11c", "AssemblyVersion khớp BhtVersion", asm == BhtVersion.AssemblyVersion, asm);
         }
 
         static void PointX()
@@ -253,6 +292,111 @@ namespace BHT.CoreTests
                 && Chainage.Format(999.999) == "Km1+000.00" && Chainage.Format(-1) == "");
         }
 
+        // ================================================================ 5.0
+        static void SignSearchT()
+        {
+            Check("C17a", "bỏ dấu cả đ/Đ, chữ thường", TextSearch.Fold("Đi CHẬM") == "di cham" && TextSearch.Fold("đường Đèo") == "duong deo");
+            var items = new List<SignItem>
+            {
+                new SignItem("W.245a", "Đi chậm"), new SignItem("W.201a", "Chỗ ngoặt nguy hiểm vòng bên trái"),
+                new SignItem("P.127", "Tốc độ tối đa cho phép"), new SignItem("W.245b", "Đi chậm"),
+                new SignItem("R.E,9a", "Cấm đỗ xe trong khu vực"), new SignItem("Biển số E,9a", ""),
+                new SignItem("I.434a", "Bến xe buýt"), new SignItem("Biển số F,9", "")
+            };
+            var a = SignSearch.Filter(items, "di cham", 0).Select(x => x.Code).ToList();
+            var b = SignSearch.Filter(items, "ĐI CHẬM", 0).Select(x => x.Code).ToList();
+            Check("C17b", "'di cham' = 'ĐI CHẬM' (không dấu, không phân biệt hoa) khớp W.245a/W.245b",
+                a.SequenceEqual(new[] { "W.245a", "W.245b" }) && b.SequenceEqual(a), string.Join(",", a.ToArray()));
+            var c = SignSearch.Filter(items, "w245a", 0).Select(x => x.Code).ToList();
+            var d = SignSearch.Filter(items, "245", 0).Select(x => x.Code).ToList();
+            Check("C17c", "mã bỏ dấu chấm 'w245a' khớp đúng; '245' khớp chuỗi con mã", c.Count >= 1 && c[0] == "W.245a" && d.Contains("W.245a") && d.Contains("W.245b") && !d.Contains("P.127"),
+                string.Join(",", c.ToArray()) + " / " + string.Join(",", d.ToArray()));
+            var e = SignSearch.Filter(items, "toc do", 0).Select(x => x.Code).ToList();
+            var f = SignSearch.Filter(items, "xe buyt", 0).Select(x => x.Code).ToList();
+            var g = SignSearch.Filter(items, "cham nguy", 0);
+            Check("C17d", "khớp theo tên nhiều từ, mọi từ phải có", e.SequenceEqual(new[] { "P.127" }) && f.SequenceEqual(new[] { "I.434a" }) && g.Count == 0);
+            Check("C17e", "truy vấn rỗng = tất cả, giữ thứ tự; giới hạn max", SignSearch.Filter(items, "", 0).Count == items.Count && SignSearch.Filter(items, " ", 3).Count == 3);
+            Check("C17f", "mã khớp chính xác xếp trước khớp tên", SignSearch.Score("P.127", "P.127", "x") == 0 && SignSearch.Score("toc", "P.127", "Tốc độ") > 0 && SignSearch.Score("zzz", "P.127", "Tốc độ") < 0);
+            // bo sung ten theo ma cung thu vien (khong tu dat ten)
+            var copy = items.Select(x => new SignItem(x.Code, x.Name)).ToList();
+            Dictionary<SignItem, string> aliasOf;
+            int n = SignSearch.FillMissingNames(copy, out aliasOf);
+            var e9 = copy.First(x => x.Code == "Biển số E,9a"); var f9 = copy.First(x => x.Code == "Biển số F,9");
+            Check("C17g", "tên thiếu lấy từ mã cùng thư viện (Biển số E,9a <- R.E,9a); không có nguồn -> để trống",
+                n == 1 && e9.Name == "Cấm đỗ xe trong khu vực" && aliasOf[e9] == "R.E,9a" && f9.Name == "", n + " " + e9.Name);
+            Check("C17h", "AliasKey", SignSearch.AliasKey("Biển số E,9a") == "E,9A" && SignSearch.AliasKey("R.E,9a") == "E,9A" && SignSearch.AliasKey("I.435") == "435" && SignSearch.AliasKey("Biển số 435") == "435");
+            Check("C17i", "tìm 'cam do' khớp tên đã bổ sung", SignSearch.Filter(copy, "cam do xe", 0).Select(x => x.Code).Contains("Biển số E,9a"));
+            var rank = SignSearch.Filter(new List<SignItem> { new SignItem("R.E,10a", "Hết cấm đỗ xe trong khu vực"), new SignItem("R.E,9a", "Cấm đỗ xe trong khu vực") }, "cam do xe trong khu vuc", 0);
+            Check("C17n", "tên trùng khớp hoàn toàn xếp trước tên chỉ chứa cụm từ", rank.Count == 2 && rank[0].Code == "R.E,9a", rank.Count > 0 ? rank[0].Code : "");
+            // nhieu ma (Ma cac mat) + so mat tu dong
+            Check("C17j", "tách Mã các mặt theo ';' (giữ ',' của mã E,9a)", SignSearch.SplitCodes("W.245a; E,9a ;; S.509a").SequenceEqual(new[] { "W.245a", "E,9a", "S.509a" }));
+            string head;
+            Check("C17k", "từ đang gõ sau ';' và thay bằng mã chọn", SignSearch.LastToken("W.245a; di ch", out head) == "di ch" && head == "W.245a;"
+                && SignSearch.ReplaceLastToken("W.245a; di ch", "W.245b") == "W.245a; W.245b; " && SignSearch.ReplaceLastToken("", "P.127") == "P.127; ");
+            Check("C17l", "Số mặt tự động = số mã (ô trống / đang là giá trị tự động); nhập tay thì giữ",
+                SignSearch.AutoFaceCount("", null, "W.245a; S.509a") == "2" && SignSearch.AutoFaceCount("2", "2", "W.245a; S.509a; P.127") == "3"
+                && SignSearch.AutoFaceCount("5", "2", "W.245a") == "5" && SignSearch.AutoFaceCount("", null, "") == "");
+            Check("C17m", "Cọc tiêu / Cột Km không có mã biển", !GroupRules.HasSignCode("COC_TIEU") && !GroupRules.HasSignCode("3") && GroupRules.HasSignCode("BIEN_BAO") && GroupRules.HasSignCode("CHUA_XAC_DINH"));
+        }
+
+        static SurveyPoint Pt(string id, double x, double y) { return new SurveyPoint { Id = id, Name = id, X = x, Y = y }; }
+
+        static void DuplicateT()
+        {
+            var idx = new Dictionary<string, SurveyPoint>(StringComparer.OrdinalIgnoreCase)
+            {
+                { "P1", Pt("P1", 100, 100) }, { "P2", Pt("P2", 100.3, 100) }, { "P3", Pt("P3", 101, 100) },
+                { "P4", Pt("P4", 200, 200) }, { "P5", Pt("P5", 100.2, 100.1) }
+            };
+            var objs = new Dictionary<string, BhtRecord>(StringComparer.OrdinalIgnoreCase)
+            {
+                { "OBJ-000001", new BhtRecord().Add("nhom", "COC_TIEU").Add("pt", "P1") },
+                { "OBJ-000002", new BhtRecord().Add("nhom", "BIEN_BAO").Add("pt", "P5") },
+                { "OBJ-000003", new BhtRecord().Add("nhom", "COT_KM").Add("pt", "P4").Add("ly_trinh_km", "Km12+345.00") },
+                { "OBJ-000004", new BhtRecord().Add("nhom", "COC_TIEU").Add("pt", "P3") }
+            };
+            double before1 = idx["P1"].X, before2 = idx["P2"].Y;
+            var h1 = DuplicateCheck.Find("", "COC_TIEU", new[] { "P2" }, "", objs, idx, 0.5);
+            Check("C18a", "cọc tiêu cách 0.30 m cọc tiêu khác -> trùng (không so với biển báo)", h1.Count == 1 && h1[0].Id == "OBJ-000001" && h1[0].Reason.Contains("0.30"),
+                string.Join(" | ", h1.Select(x => x.ToString()).ToArray()));
+            var h2 = DuplicateCheck.Find("", "COC_TIEU", new[] { "P1" }, "", objs, idx, 0.5);
+            Check("C18b", "cùng điểm RTK -> trùng, nêu ID điểm", h2.Count == 1 && h2[0].Id == "OBJ-000001" && h2[0].Reason.Contains("cùng điểm RTK P1"));
+            Check("C18c", "đã xác nhận dùng chung điểm -> không hỏi lại lý do này", DuplicateCheck.Find("", "COC_TIEU", new[] { "P1" }, "", objs, idx, 0.5, true).Count == 0);
+            Check("C18d", "ngoài ngưỡng / chính nó -> không trùng", DuplicateCheck.Find("", "COC_TIEU", new[] { "P4" }, "", objs, idx, 0.5).Count == 0
+                && DuplicateCheck.Find("OBJ-000001", "COC_TIEU", new[] { "P1" }, "", objs, idx, 0.5).Count == 0);
+            Check("C18e", "ngưỡng cấu hình được (1.5 m bắt được cọc cách 1.0 m)", DuplicateCheck.Find("", "COC_TIEU", new[] { "P3" }, "", objs, idx, 1.5).Any(x => x.Id == "OBJ-000001")
+                && DuplicateCheck.ParseTolerance("1,5") == 1.5 && DuplicateCheck.ParseTolerance("abc") == 0.5 && DuplicateCheck.ParseTolerance("-1") == 0.5 && DuplicateCheck.ParseTolerance("") == 0.5);
+            var h3 = DuplicateCheck.Find("NEW", "COT_KM", new[] { "P3" }, "12+345", objs, idx, 0.5);
+            Check("C18f", "cột Km trùng giá trị Km (khác vị trí)", h3.Count == 1 && h3[0].Id == "OBJ-000003" && h3[0].Reason.Contains("trùng Km"));
+            Check("C18g", "nhóm khác (biển báo) không kiểm tra", DuplicateCheck.Find("", "BIEN_BAO", new[] { "P1" }, "", objs, idx, 0.5).Count == 0 && !DuplicateCheck.Applies("BIEN_BAO") && DuplicateCheck.Applies("2"));
+            Check("C18h", "không di chuyển / sửa điểm RTK", idx["P1"].X == before1 && idx["P2"].Y == before2 && idx.Count == 5);
+        }
+
+        static void ConditionT()
+        {
+            Check("C19a", "danh sách Tình trạng", ConditionOptions.All.SequenceEqual(new[] { "Tốt", "Bình thường", "Hư hỏng" }));
+            Check("C19b", "giá trị cũ tự do hiển thị nguyên văn; khớp không dấu -> mục chuẩn",
+                ConditionOptions.Display("tốt, nghiêng nhẹ") == "tốt, nghiêng nhẹ" && ConditionOptions.Display("hu hong") == "Hư hỏng"
+                && ConditionOptions.Display("") == "" && ConditionOptions.Display(null) == "" && ConditionOptions.IsStandard("Bình thường") && !ConditionOptions.IsStandard("gãy"));
+        }
+
+        static void FontT()
+        {
+            Check("C20a", "kiểu chữ nhãn biển BHT_BIENBAO = VNRomancUpdate.shx", BhtFonts.SignLabelStyle == "BHT_BIENBAO" && BhtFonts.SignLabelFont == "VNRomancUpdate.shx");
+            Check("C20b", "nhãn ASCII/có dấu dùng Unicode SHX; thiếu phông dùng Arial",
+                BhtFonts.LabelStyleFor("W.245a", true) == "BHT_BIENBAO" && BhtFonts.LabelStyleFor("P.127  Km1+200.00", true) == "BHT_BIENBAO"
+                && BhtFonts.LabelStyleFor("Cọc tiêu", true) == "BHT_BIENBAO" && BhtFonts.LabelStyleFor("W.245a", false) == "BHT_ARIAL");
+            Check("C20c", "thư mục Fonts của bundle từ thư mục DLL", string.Equals(BhtFonts.BundleFontsDir(@"C:\A\BHT.bundle\Contents\Windows"), @"C:\A\BHT.bundle\Contents\Fonts", StringComparison.OrdinalIgnoreCase),
+                BhtFonts.BundleFontsDir(@"C:\A\BHT.bundle\Contents\Windows"));
+            bool ch1, ch2, ch3;
+            string p1 = BhtFonts.AppendPath(@"C:\X;D:\AutoCAD 2024\Fonts", @"C:\A\Fonts", out ch1);
+            string p2 = BhtFonts.AppendPath(p1, @"c:\a\fonts\", out ch2);
+            string p3 = BhtFonts.AppendPath("", @"C:\A\Fonts", out ch3);
+            Check("C20d", "thêm Support Path chỉ khi chưa có (không phân biệt hoa, bỏ '\\' cuối)",
+                ch1 && p1 == @"C:\X;D:\AutoCAD 2024\Fonts;C:\A\Fonts" && !ch2 && p2 == p1 && ch3 && p3 == @"C:\A\Fonts", p1);
+            Check("C20e", "phông TrueType TDT cần cài", BhtFonts.TdtTrueType.SequenceEqual(new[] { "giaothong1.ttf", "giaothong2.ttf" }));
+        }
+
         static void SignReportT()
         {
             string path = Path.Combine(Path.GetTempPath(), "BHT-sign-report-" + Guid.NewGuid().ToString("N") + ".xlsx");
@@ -261,7 +405,9 @@ namespace BHT.CoreTests
                 var rows = new List<SignReportRow>
                 {
                     new SignReportRow { Number = 1, Project = "Tuyến thử", SignGroup = "Biển báo nguy hiểm", Code = "W.225",
-                        Description = "Trẻ em", Side = "Phải", Chainage = "Km48+500", Condition = "Hư hỏng nhẹ", Checked = "Đã kiểm tra", ObjectId = "OBJ-000001" }
+                        Description = "Trẻ em", Side = "Phải", Chainage = "Km48+500", Route = "TUYEN1", Offset = "2.350",
+                        StationSource = "TDT_STAKES", StationStatus = "VALID", RouteRevision = "3",
+                        Condition = "Hư hỏng nhẹ", Checked = "Đã kiểm tra", ObjectId = "OBJ-000001" }
                 };
                 SignReportWorkbook.Write(path, "Công trình tiếng Việt", rows);
                 bool parts, unicode, xmlOk = true;
@@ -274,7 +420,8 @@ namespace BHT.CoreTests
                     var detail = zip.GetEntry("xl/worksheets/sheet2.xml");
                     string text;
                     using (var reader = new StreamReader(detail.Open(), System.Text.Encoding.UTF8)) text = reader.ReadToEnd();
-                    unicode = text.Contains("Công trình tiếng Việt") && text.Contains("Trẻ em") && text.Contains("Km48+500");
+                    unicode = text.Contains("Công trình tiếng Việt") && text.Contains("Trẻ em") && text.Contains("Km48+500")
+                        && text.Contains("Nguồn lý trình") && text.Contains("TDT_STAKES") && text.Contains("Route revision");
                     foreach (var entry in zip.Entries.Where(x => x.FullName.EndsWith(".xml", StringComparison.Ordinal)))
                     {
                         try { using (var stream = entry.Open()) System.Xml.Linq.XDocument.Load(stream); }
@@ -287,5 +434,61 @@ namespace BHT.CoreTests
             }
             finally { if (File.Exists(path)) File.Delete(path); }
         }
+
+        static void RouteModelT()
+        {
+            var open = new List<RoutePoint> { new RoutePoint(0, 0), new RoutePoint(100, 0) };
+            var square = new List<RoutePoint> { new RoutePoint(0, 0), new RoutePoint(10, 0), new RoutePoint(10, 10), new RoutePoint(0, 10) };
+
+            var a = RouteModelLogic.Project(open, false, 0, 1, 25, 3);
+            Check("C21A", "A. Polyline mở", a.Valid && Near(a.RouteDistance, 25) && Near(a.Offset, 3), a.Status);
+
+            var b = RouteModelLogic.Project(square, true, 0, 1, 0, 5);
+            Check("C21B", "B. Polyline kín", b.Valid && Near(RouteModelLogic.Length(square, true), 40) && Near(b.RawDistance, 35), b.RawDistance.ToString());
+
+            var c = RouteModelLogic.Project(open, false, 0, 1, 0, 0);
+            Check("C21C", "C. StartPoint tại vertex", c.Valid && Near(c.RouteDistance, 0));
+
+            var d = RouteModelLogic.Project(open, false, 25, 1, 50, 0);
+            Check("C21D", "D. StartPoint giữa segment", d.Valid && Near(d.RouteDistance, 25));
+
+            var e = RouteModelLogic.Project(open, false, 20, 1, 70, 0);
+            Check("C21E", "E. Chiều forward", e.Valid && Near(e.RouteDistance, 50));
+
+            var f = RouteModelLogic.Project(open, false, 80, -1, 30, 0);
+            Check("C21F", "F. Chiều reverse", f.Valid && Near(f.RouteDistance, 50));
+
+            var g = RouteModelLogic.Project(square, true, 10, 1, 0, 0);
+            Check("C21G", "G. Closed polyline wrap trước điểm đầu", g.Valid && Near(g.RouteDistance, 30), g.RouteDistance.ToString());
+
+            var regular = new List<RouteControlPoint> { new RouteControlPoint(0, 39000), new RouteControlPoint(20, 39020), new RouteControlPoint(40, 39040) };
+            Check("C21H", "H. Cọc đều 20 m", RouteModelLogic.DiagnoseControls(regular, 20, 0.1, 0.5).Count == 0);
+
+            var bad = new List<RouteControlPoint> { new RouteControlPoint(0, 39000), new RouteControlPoint(20, 39020), new RouteControlPoint(40, 39300) };
+            var badIssues = RouteModelLogic.DiagnoseControls(bad, 20, 0.1, 0.5);
+            Check("C21I", "I. Phát hiện một station sai", badIssues.Any(x => x.Code == "STATION_JUMP"), string.Join(",", badIssues.Select(x => x.Code).ToArray()));
+
+            var breaks = new List<RouteControlPoint> { new RouteControlPoint(0, 39000), new RouteControlPoint(1000, 40000, 40020), new RouteControlPoint(1100, 40120) };
+            var j0 = RouteModelLogic.Station(breaks, 1000, 0); var j1 = RouteModelLogic.Station(breaks, 1050, 0);
+            Check("C21J", "J. Station break không nội suy xuyên gãy", j0.Station.HasValue && Near(j0.Station.Value, 40000) && j1.Station.HasValue && Near(j1.Station.Value, 40070));
+
+            string hash1 = RouteModelLogic.GeometryHash(open, false);
+            string hash2 = RouteModelLogic.GeometryHash(new List<RoutePoint> { new RoutePoint(0, 0), new RoutePoint(101, 0) }, false);
+            Check("C21K", "K. Cập nhật Polyline nguồn tăng revision", hash1 != hash2 && RouteModelLogic.NextRevision(3, hash1, hash2) == 4);
+
+            Check("C21L", "L. Đổi chiều tuyến tăng revision", RouteModelLogic.NextRevision(1, "start=0;dir=1", "start=0;dir=-1") == 2);
+
+            var ml = RouteModelLogic.Project(open, false, 0, 1, 50, 5);
+            var mr = RouteModelLogic.Project(open, false, 100, -1, 50, 5);
+            Check("C21M", "M. Left/right theo chiều tăng lý trình", ml.Side == "LEFT" && mr.Side == "RIGHT", ml.Side + "/" + mr.Side);
+
+            var n = RouteModelLogic.Project(open, false, 0, 1, 60, -12.5);
+            Check("C21N", "N. Offset", Near(n.Offset, 12.5) && n.Side == "RIGHT", n.Offset.ToString());
+
+            Check("C21O", "O. Route cũ tự migrate mặc định an toàn", RouteModelLogic.LegacyDirection("") == 1 && RouteModelLogic.LegacyRevision("") == 1
+                && RouteModelLogic.LegacyDirection("-1") == -1 && RouteModelLogic.LegacyRevision("4") == 4);
+        }
+
+        static bool Near(double a, double b) { return Math.Abs(a - b) < 1e-8; }
     }
 }

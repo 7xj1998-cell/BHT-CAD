@@ -7,6 +7,7 @@ using AcApp = Autodesk.AutoCAD.ApplicationServices.Application;
 
 [assembly: ExtensionApplication(typeof(BHT.Palette.BhtPlugin))]
 [assembly: CommandClass(typeof(BHT.Palette.PaletteCommands))]
+[assembly: CommandClass(typeof(BHT.Palette.BhtPopupLispFunctions))]
 
 namespace BHT.Palette
 {
@@ -15,12 +16,39 @@ namespace BHT.Palette
     {
         public void Initialize()
         {
+            // AcCoreConsole khong co UI. Thoat truoc moi truy cap AcMgd/Preferences/WinForms
+            // de viec NETLOAD chi dang ky lenh va ham Lisp phuc vu kiem thu.
+            if (PaletteCommands.IsCoreConsole()) return;
             try
             {
                 var doc = AcApp.DocumentManager.MdiActiveDocument;
                 if (doc != null) doc.Editor.WriteMessage("\nBHT " + BHT.Core.BhtVersion.Version + " đã sẵn sàng. Gõ BTH hoặc BHT để mở Palette.");
             }
             catch { }
+            EnsureFontSupportPath();
+        }
+
+        /// <summary>
+        /// 5.0: them BHT.bundle\Contents\Fonts (ban sao giaothong1/2.ttf, VNRomancUpdate.shx) vao Support File
+        /// Search Path cua AutoCAD - CHI khi thu muc ton tai va chua co trong duong dan. Khong dung trong Core Console.
+        /// </summary>
+        internal static string EnsureFontSupportPath()
+        {
+            try
+            {
+                if (PaletteCommands.IsCoreConsole()) return "SKIP";
+                string dir = BHT.Core.BhtFonts.BundleFontsDir(System.IO.Path.GetDirectoryName(typeof(BhtPlugin).Assembly.Location));
+                if (!System.IO.Directory.Exists(dir)) return "NO_DIR";
+                object prefs = AcApp.Preferences;
+                var flags = System.Reflection.BindingFlags.GetProperty;
+                object files = prefs.GetType().InvokeMember("Files", flags, null, prefs, null);
+                string sp = Convert.ToString(files.GetType().InvokeMember("SupportPath", flags, null, files, null));
+                bool changed;
+                string np = BHT.Core.BhtFonts.AppendPath(sp, dir, out changed);
+                if (changed) files.GetType().InvokeMember("SupportPath", System.Reflection.BindingFlags.SetProperty, null, files, new object[] { np });
+                return changed ? "ADDED" : "PRESENT";
+            }
+            catch { return "ERROR"; }
         }
 
         public void Terminate() { PaletteHost.Shutdown(); }
@@ -101,6 +129,11 @@ namespace BHT.Palette
             _ps.Name = Title;
             _ps.Text = Title;
             _ps.Visible = true;
+            // 0.4.6-fix2: AutoCAD khoi phuc ten PaletteSet da luu trong Profile.aws theo GUID
+            // (vd "BHT 0.4.4 — ...") khi palette hien lan dau, de len ten dat truoc do.
+            // Dat lai ten SAU khi Visible = true va them mot lan khi AutoCAD ranh.
+            ApplyTitle();
+            ScheduleTitleRefresh();
             if (!_initialLayoutApplied)
             {
                 // Moi phien AutoCAD bat dau voi bo cuc de doc: dock trai, rong 430 px.
@@ -114,7 +147,37 @@ namespace BHT.Palette
 
         private static void OnLoad(object sender, PalettePersistEventArgs e)
         {
-            // AutoCAD da doc cau hinh cu. Show() se chuan hoa bo cuc mot lan cho phien nay.
+            // AutoCAD da doc cau hinh cu (co the mang ten phien ban cu). Show() se chuan hoa
+            // bo cuc mot lan cho phien nay va dat lai tieu de theo phien ban dang chay.
+            ScheduleTitleRefresh();
+        }
+
+        private static void ApplyTitle()
+        {
+            try
+            {
+                if (_ps == null) return;
+                string title = Title;
+                if (!string.Equals(_ps.Name, title, StringComparison.Ordinal)) _ps.Name = title;
+                if (!string.Equals(_ps.Text, title, StringComparison.Ordinal)) _ps.Text = title;
+            }
+            catch { }
+        }
+
+        private static bool _titleRefreshPending;
+
+        private static void ScheduleTitleRefresh()
+        {
+            if (_titleRefreshPending) return;
+            _titleRefreshPending = true;
+            AcApp.Idle += OnIdleRefreshTitle;
+        }
+
+        private static void OnIdleRefreshTitle(object sender, EventArgs e)
+        {
+            AcApp.Idle -= OnIdleRefreshTitle;
+            _titleRefreshPending = false;
+            ApplyTitle();
         }
 
         private static void OnSave(object sender, PalettePersistEventArgs e)

@@ -1,4 +1,4 @@
-;;; BHT 0.3.3 - phien L: mo BAN SAO ban ve da lam bang BHT 0.3.2 (test_A_saveas.dwg cua 0.3.2:
+﻿;;; BHT 0.3.3 - phien L: mo BAN SAO ban ve da lam bang BHT 0.3.2 (test_A_saveas.dwg cua 0.3.2:
 ;;; 531 diem, nhan TEN/MOTA/CAODO/ID, 203 ky hieu anh, 205 anh, 1 raster, ho so OBJ-000001, ky hieu)
 (load "C:/Users/Le Bao/BHT_TEST_V044/t_common.lsp")
 (tbegin "L")
@@ -9,7 +9,7 @@
   out)
 ;; truoc khi nap 0.3.3: chi doc
 (setq e (tload))
-(tchk "L00" "nạp BHT-0.4.6 trên bản vẽ 0.3.2" (and (null e) (= *bht-version* "0.4.6")) e)
+(tchk "L00" "nạp BHT-5.0 trên bản vẽ 0.3.2" (and (null e) (= *bht-version* "0.5.5")) e)
 (setq *bht-no-launch* T)
 (setq REC0 (t-dump-recs) PTS0 (t-pt-coords) POS0 (t-lbl-positions)
       C0 (list (length (bht:pt-all)) (t-lbl-count "TEN") (t-lbl-count "MOTA") (t-lbl-count "CAODO") (t-lbl-count "ID")

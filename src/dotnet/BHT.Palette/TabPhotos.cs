@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
@@ -24,7 +24,7 @@ namespace BHT.Palette
 
         private TabPage BuildPhotosTab()
         {
-            var tp = new TabPage("Ảnh");
+            var tp = new TabPage("Ảnh hiện\u00A0trường") { ToolTipText = "Ảnh hiện trường (KMZ / TimeMark): xem ảnh, gắn / bỏ gắn ảnh với hồ sơ, đồng bộ ký hiệu ảnh" };
             _tabPhotos = tp;
             var layout = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 7, Padding = new Padding(3) };
             layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
@@ -269,7 +269,7 @@ namespace BHT.Palette
             if (MessageBox.Show(this, "Xác nhận ảnh " + pid + " là ảnh của hồ sơ " + oid + "?\n(Đề xuất theo khoảng cách chỉ là gợi ý; chỉ gắn khi bạn đã nhìn ảnh và chắc chắn.)",
                                 "BHT - xác nhận gắn ảnh", MessageBoxButtons.YesNo, MessageBoxIcon.Question, MessageBoxDefaultButton.Button2) != DialogResult.Yes) return;
             var r = AcadDispatcher.RunWrite(_doc, "Gắn ảnh", db => _svc.LinkPhoto(pid, oid, "THU_CONG"));
-            Status(r.ToString());
+            StatusResult(r);
             RefreshAll();
         }
 
@@ -282,7 +282,7 @@ namespace BHT.Palette
             if (oid == null && linked.Count == 1) oid = linked[0];
             if (oid == null || !linked.Contains(oid)) { Status("Chọn hồ sơ đang gắn với ảnh (" + string.Join(", ", linked.ToArray()) + ")."); return; }
             if (MessageBox.Show(this, "Bỏ gắn ảnh " + pid + " khỏi hồ sơ " + oid + "?", "BHT", MessageBoxButtons.YesNo, MessageBoxIcon.Question, MessageBoxDefaultButton.Button2) != DialogResult.Yes) return;
-            Status(AcadDispatcher.RunWrite(_doc, "Bỏ gắn ảnh", db => _svc.UnlinkPhoto(pid, oid)).ToString());
+            StatusResult(AcadDispatcher.RunWrite(_doc, "Bỏ gắn ảnh", db => _svc.UnlinkPhoto(pid, oid)));
             RefreshAll();
         }
 
@@ -300,7 +300,7 @@ namespace BHT.Palette
             var pid = CurrentPhotoId(); if (pid == null || _svc == null) return;
             var p = _svc.ResolvePhotoPath(pid);
             if (p == null) { Status("Không tìm thấy JPG của " + pid + "."); return; }
-            try { System.Diagnostics.Process.Start(p); } catch (Exception ex) { Status("Không mở được: " + ex.Message); }
+            try { System.Diagnostics.Process.Start(p); } catch (Exception ex) { StatusError("Không mở được: " + ex.Message); }
         }
     }
 }

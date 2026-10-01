@@ -29,3 +29,7 @@ tests/IntegrationTests/run/
 BHT_LOG*
 # Goi phat hanh (nam o release/ ngoai repo)
 *.zip
+# 5.0: ban sao phong chu (TDT / AutoCAD) chi dung cuc bo, KHONG dua vao repo
+fonts_local/
+*.ttf
+*.shx

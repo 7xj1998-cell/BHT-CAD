@@ -1,39 +1,45 @@
-# BHT 0.4.6 — Hướng dẫn sử dụng
+# BHT 0.5.5 — Hướng dẫn sử dụng
 
 BHT là bộ lệnh AutoLISP quản lý điểm khảo sát RTK, hồ sơ đối tượng (biển báo, cọc tiêu, cột Km…), ảnh TimeMark (KMZ), tuyến / lý trình và xuất thống kê.
 
 - Lệnh chính: **`BTH`** hoặc **`BHT`** mở một Palette gắn bên trái AutoCAD.
-- Bản 0.4.6 gồm `BHT-0.4.6.lsp`, `BHT.Palette.dll`, `BHT.Bridge.dll` và `BHT.Core.dll`.
-- `BHTDCL` mở bảng DCL dự phòng khi Palette không nạp được. DCL dùng UTF-8 BOM để hiển thị đúng tiếng Việt.
-- Định dạng dữ liệu trong bản vẽ không đổi: bản vẽ từ 0.3.2 đến 0.4.5 mở bằng 0.4.6 mà không cần chuyển đổi.
+- Bản 0.5.5 gồm `BHT-0.5.5.lsp`, `BHT.Palette.dll`, `BHT.Bridge.dll` và `BHT.Core.dll`.
+- Palette .NET là giao diện chính. Từ v0.5.5 đã bỏ bảng DCL dự phòng.
+- Định dạng dữ liệu trong bản vẽ không đổi: bản vẽ từ 0.3.2 đến 0.5.4 mở bằng 0.5.5 mà không cần chuyển đổi.
 - Mục tiêu hỗ trợ AutoCAD 2021–2024 và Civil 3D 2023 trên Windows.
+
+## Phông chữ mặc định
+
+Chữ CAD mặc định dùng `VNRomancUpdate.shx` với bảng mã **Unicode**. Phông được kiểm tra trên máy là SHX Unicode, có glyph riêng cho `Ê`, `ê`, `Ế`, `Ệ`; không chuyển TCVN3 cho phông này. Khi gõ trực tiếp vào TEXT có kiểu `BHT_TCVN`/`BHT_BIENBAO`, chọn Unicode trong bộ gõ. Tên kiểu `BHT_TCVN` được giữ để tương thích bản vẽ cũ. Kiểu tùy chỉnh dùng `vnromanc.shx` vẫn dùng TCVN3; Palette, CSV/Excel và hồ sơ luôn giữ Unicode. Xem `RELEASE_NOTES_0.5.2.md` để cập nhật nhãn cũ.
 
 ## 1. Cài đặt khuyến nghị
 
 1. Đóng AutoCAD.
-2. Giải nén gói `BHT-0.4.6.zip` và chạy `INSTALL_BHT.cmd`.
+2. Giải nén gói `BHT-0.5.5.zip` và chạy `INSTALL_BHT.cmd`.
 3. Mở AutoCAD, gõ `BTH` hoặc `BHT`.
 
 AutoCAD tự nhận `BHT.bundle`; không cần `APPLOAD` hoặc `NETLOAD`. Nếu từng cài bản cũ bằng Startup Suite, hãy gỡ file Lisp cũ để tránh hai phiên bản cùng nạp.
 
 ## 1b. Cách di động bằng APPLOAD
 
-1. Đặt `BHT-0.4.6.lsp` và ba DLL trong cùng một thư mục tin cậy.
+1. Đặt `BHT-0.5.5.lsp` và ba DLL trong cùng một thư mục tin cậy.
 2. Kiểm tra **LISPSYS = 1**. Nếu phải đổi từ 0 sang 1, khởi động lại AutoCAD.
-3. Gõ `APPLOAD`, chọn duy nhất `BHT-0.4.6.lsp`. Lisp tự nạp DLL cạnh nó.
+3. Gõ `APPLOAD`, chọn duy nhất `BHT-0.5.5.lsp`. Lisp tự nạp DLL cạnh nó.
 4. Khi dòng lệnh báo `BHT 0.4.6 đã nạp thành công`, gõ `BTH` hoặc `BHT`.
 
-Nếu Palette không nạp được, gõ `BHTLOAD` để thử lại và đọc lỗi tại dòng lệnh. Bạn vẫn có thể dùng `BHTDCL` trong lúc xử lý DLL.
+Nếu Palette không nạp được, gõ `BHTLOAD` để thử lại và đọc lỗi tại dòng lệnh. Kiểm tra ba DLL nằm cạnh file Lisp hoặc cài lại bundle rồi mở lại AutoCAD. Các lệnh nghiệp vụ trực tiếp vẫn dùng được khi Lisp đã nạp.
 
 **SECURELOAD / TRUSTEDPATHS:** nếu AutoCAD hỏi có nạp mã từ thư mục này hay không, chọn nạp hoặc thêm thư mục BHT vào Options → Files → Trusted Locations. Không cần đặt `SECURELOAD = 0`.
 
 ### Các thẻ của palette
+Năm thẻ nằm dọc ở cạnh phải Palette, mỗi thẻ ghi tên ngang (từ 0.4.6-fix3), rê chuột lên thẻ để xem mô tả ngắn.
+
 * **A Tổng quan** — số điểm RTK (dữ liệu đo) và số hồ sơ đối tượng (đơn vị quản lý) tách riêng; ảnh (đã ghép / chưa ghép,
   có / không GPS), tuyến, đoạn, cảnh báo kiểm tra.
-* **B Điểm khảo sát** — danh sách tìm theo tên / ID / mô tả / loại (gõ không dấu cũng được). Chọn dòng → phóng tới điểm
+* **B Điểm RTK** — danh sách tìm theo tên / ID / mô tả / loại (gõ không dấu cũng được). Chọn dòng → phóng tới điểm
   trong bản vẽ. Chọn POINT trong bản vẽ → thẻ hiện tên, mô tả gốc, X/Y/Z, ID, nhóm gợi ý, hồ sơ liên kết, ảnh liên quan.
   Nút: phóng tới, xem ảnh, tạo hồ sơ, cập nhật nhãn.
-* **C Ảnh TimeMark** — xem JPG ngay trong palette, trước/sau, trạng thái GPS, trạng thái ghép. Bố cục luôn dành chỗ riêng
+* **C Ảnh hiện trường** (ảnh TimeMark / KMZ) — xem JPG ngay trong palette, trước/sau, trạng thái GPS, trạng thái ghép. Bố cục luôn dành chỗ riêng
   cho danh sách, ảnh xem trước và thông tin; khi chưa có dữ liệu, dùng **Nhập KMZ** hoặc **Chỉ thư mục ảnh** ngay trên thẻ.
   Chọn ký hiệu ảnh trong bản vẽ → nhảy tới ảnh đó. Danh sách điểm RTK gần vị trí chụp kèm khoảng cách (chỉ để tham khảo). **Ghép ảnh vào hồ sơ chỉ
   khi bạn bấm xác nhận**; BHT không tự ghép theo khoảng cách, GPS ảnh không thay tọa độ RTK.
@@ -64,6 +70,15 @@ vẽ (dictionary BHT_V02 / XData) — palette chỉ là giao diện; đóng pale
 | Khác | Chẩn đoán | `BHTDIAG`, `BHTTEST`, `BHTHELP` |
 | Bảo trì dữ liệu cũ | Chỉ dùng cho bản vẽ cũ | `BHTNANGCAP` (dữ liệu BHT 0.1), **`BHTVEMODEL`** (thực thể BHT lỡ tạo trong Layout) |
 
+## Thông báo lỗi và cảnh báo (từ 0.4.6-fix3)
+
+- Lỗi / cảnh báo cần bạn xử lý hiện cửa sổ **BHT** (biểu tượng lỗi hoặc cảnh báo) và vẫn in ở dòng lệnh, ví dụ `BHT lỗi: …`,
+  “chưa có tuyến. Dùng BHTTUYEN trước.”, tim TDT dạng proxy, không mở/không ghi được file.
+- Nhấn Esc (hủy lệnh) chỉ in “lệnh bị hủy” ở dòng lệnh, không hiện cửa sổ. Thông tin thường cũng chỉ in dòng lệnh.
+- Muốn tắt cửa sổ trong phiên làm việc: gõ `(setq *bht-popup* nil)`; bật lại: `(setq *bht-popup* T)`.
+- Khi chạy script `.scr` hoặc AutoCAD Core Console, BHT không hiện cửa sổ để công việc tự động không bị dừng.
+- Lệnh gửi từ Palette mà báo lỗi: vùng trạng thái hiện “Lệnh … THẤT BẠI.” trên nền đỏ nhạt.
+
 ## 3. Thay đổi trong 0.4.6
 
 - Palette dùng nền tối, chữ thao tác vàng và thanh chọn năm thẻ dọc ở cạnh phải.
@@ -76,7 +91,7 @@ vẽ (dictionary BHT_V02 / XData) — palette chỉ là giao diện; đóng pale
 - Biển báo tự đặt ra ngoài tim theo phía tuyến, xoay theo hướng tuyến, có leader nối về điểm RTK. Nhãn hiện mã biển và lý trình; ID hồ sơ chỉ nằm trong XData.
 - Nút **Xuất báo cáo biển báo Excel** tạo `.xlsx` Unicode gồm sheet tổng hợp và danh sách chi tiết. Báo cáo có STT, công trình, đoạn/gói, loại và tên biển, phía, lý trình, tình trạng, số trụ/mặt, trạng thái kiểm tra, ghi chú và ID hồ sơ.
 - Báo cáo kiểm tra/trạng thái mở trong hộp thoại lớn; vùng thông báo dưới Palette chỉ hiển thị trạng thái ngắn và không nhận con trỏ nhập.
-- Toàn bộ block dự phòng vẫn nằm trong `BHT-0.4.6.lsp`; không nạp thêm `BHT-BIENBAO.lsp`. `BHTBLOCK` tiếp tục nhận DWG tùy chọn khi cần mẫu riêng.
+- Toàn bộ block dự phòng vẫn nằm trong `BHT-0.5.5.lsp`; không nạp thêm `BHT-BIENBAO.lsp`. `BHTBLOCK` tiếp tục nhận DWG tùy chọn khi cần mẫu riêng.
 
 ### Lấy tim từ TDTSolution 9.1 bằng `BHTTUYENTDT`
 
@@ -85,7 +100,7 @@ vẽ (dictionary BHT_V02 / XData) — palette chỉ là giao diện; đóng pale
 3. `Tdt91Interop` mở đối tượng nguồn ở chế độ `ForRead`, gọi `Entity.Explode` và tạo một Polyline riêng trên layer `BHT_TUYEN_TDT`.
 4. BHT lưu handle/class nguồn để lần chạy sau cập nhật đúng Polyline tham chiếu. Tính lý trình và phía đường diễn ra trên Polyline BHT này.
 
-`BHTTUYENTDT` từ chối tim đang là proxy. Không dùng `BHTTUYENTDT` trong AutoCAD chưa nạp TDT, và không dùng `vlax-curve-*` trực tiếp trên `TDTDBALIGNMENT`. Nếu TDT chưa sẵn sàng, dùng `BHTTUYEN` với một Polyline tham chiếu đã được kiểm tra.
+`BHTTUYENTDT` từ chối tim đang là proxy (từ 0.4.6-fix3 thông báo nêu rõ: phiên AutoCAD chưa nạp TDTSolution 9.1 — lưu, đóng AutoCAD, mở lại bằng biểu tượng/profile TDTSolution 9.1, cắm khóa USB TDT nếu cần, rồi chạy lại). Không dùng `BHTTUYENTDT` trong AutoCAD chưa nạp TDT, và không dùng `vlax-curve-*` trực tiếp trên `TDTDBALIGNMENT`. Nếu TDT chưa sẵn sàng, dùng `BHTTUYEN` với một Polyline tham chiếu đã được kiểm tra.
 
 ### Các chức năng kế thừa từ 0.4.3
 
@@ -104,7 +119,7 @@ vẽ (dictionary BHT_V02 / XData) — palette chỉ là giao diện; đóng pale
 - Tên, mô tả và cao độ được xem là một cụm: BHT chọn vị trí cho cả cụm và giữ các dòng thẳng hàng. Khoảng dòng mặc định 1,5 lần chiều cao chữ.
 
 - Khi nạp BHT, POINT hiển thị mặc định bằng dấu X (`PDMODE=3`) kích thước tuyệt đối 1 đơn vị bản vẽ (`PDSIZE=1`). Tâm dấu X chính là tọa độ POINT; BHT không dời điểm.
-- `BHTKIEUDIEM` cho nhập kích thước dấu X và chọn sắp lại toàn bộ nhãn. Nút **Dấu X 1u + sắp nhãn** trong thẻ RTK áp dụng nhanh kích thước 1.
+- `BHTKIEUDIEM` cho nhập kích thước dấu X và chọn sắp lại toàn bộ nhãn. Nút **Đặt dấu X (cỡ 1) + sắp lại nhãn** trong thẻ Điểm RTK áp dụng nhanh kích thước 1 đơn vị bản vẽ và sắp lại toàn bộ nhãn (tên cũ: “Dấu X 1u + sắp nhãn”).
 - BHT thử 64 vị trí quanh mỗi điểm (8 hướng × 8 khoảng cách), tránh dấu X, nhãn điểm, ký hiệu đối tượng, ký hiệu ảnh và chữ khác của BHT.
 
 ### Ảnh và lý trình trong Palette
@@ -327,3 +342,5 @@ Các lệnh và bí danh cũ vẫn dùng được.
 - Ảnh GPS 0,0 (`BOT19-P-000204`, `-000205` trong KMZ mẫu) được giữ nhưng không có ký hiệu. Ghép thủ công bằng `BHTGANANH` hoặc `BHTXEMANH` > `G`.
 - Kết quả kiểm thử của bản này nằm ở `TEST_REPORT_0.4.6.md`.
 - Các giới hạn đã biết nằm ở `KNOWN_ISSUES_0.4.6.md`; checklist Palette/DCL nằm ở `CHECKLIST_NGHIEM_THU_0.4.6.md`.
+
+Chèn biển tự do: lưu hồ sơ Biển báo có điểm RTK, bấm **Chèn biển tự do** (hoặc `BHTBIENTUDO`), chọn hướng → điểm trung gian (`Xoa` để bỏ điểm cuối; `Dat`/Enter để kết thúc) → vị trí đặt biển. BHT lưu đường dẫn gấp khúc và hướng; cập nhật ký hiệu vẫn giữ bố trí này. `BHTKYHIEU` > `R` trả về tự động theo tuyến. Xem `docs/RELEASE_NOTES_0.5.3.md`.

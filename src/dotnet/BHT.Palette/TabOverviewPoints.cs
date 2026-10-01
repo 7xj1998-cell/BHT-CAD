@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
@@ -16,7 +16,7 @@ namespace BHT.Palette
 
         private TabPage BuildOverviewTab()
         {
-            var tp = new TabPage("Tổng quan");
+            var tp = new TabPage("Tổng quan") { ToolTipText = "Tổng quan bản vẽ: nhập CSV RTK / KMZ, tiếp tục công việc, kiểm tra dữ liệu, thống kê ảnh" };
             _ovText = new TextBox { Multiline = true, ReadOnly = true, ScrollBars = ScrollBars.Vertical, Dock = DockStyle.Fill, Font = new Font("Consolas", 9f) };
             var f = Flow();
             f.Controls.Add(Btn("Làm mới", (s, e) => { if (NeedDoc()) { RefreshAll(); ProbeLisp(); } }));
@@ -87,7 +87,7 @@ namespace BHT.Palette
 
         private TabPage BuildPointsTab()
         {
-            var tp = new TabPage("RTK");
+            var tp = new TabPage("Điểm RTK") { ToolTipText = "Danh sách điểm RTK: tìm, thu phóng, xem thông tin, cập nhật nhãn, tạo hồ sơ từ điểm" };
             _tabPoints = tp;
             var top = new TableLayoutPanel { Dock = DockStyle.Top, Height = 28, ColumnCount = 3 };
             top.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 60));
@@ -126,7 +126,7 @@ namespace BHT.Palette
                 if (ids.Count == 0) { Status("Chọn điểm trong danh sách."); return; }
                 CallLisp("bht:api-label-sync", new[] { string.Join(",", ids.ToArray()) }, "Cập nhật nhãn " + ids.Count + " điểm", null);
             }));
-            f.Controls.Add(Btn("Dấu X 1u + sắp nhãn", (s, e) =>
+            f.Controls.Add(Btn("Đặt dấu X (cỡ 1) + sắp lại nhãn", (s, e) =>
                 CallLisp("bht:api-point-style", new[] { "1" }, "Cập nhật dấu X và sắp nhãn", null)));
             tp.Controls.Add(_ptList);
             tp.Controls.Add(top);
@@ -232,7 +232,7 @@ namespace BHT.Palette
                     finally { _suppressSel = false; }
                 }
             }
-            catch (Exception ex) { Status("Chọn điểm trên CAD: " + ex.Message); }
+            catch (Exception ex) { StatusError("Chọn điểm trên CAD: " + ex.Message); }
         }
 
         private void PointInfoFromLisp()

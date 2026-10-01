@@ -1,4 +1,4 @@
-# Cài BHT 0.4.6
+# Cài BHT 0.5.5
 
 ## Cách khuyến nghị: Application Bundle
 
@@ -12,6 +12,10 @@ AutoCAD tự nhận `BHT.bundle`; không chạy `NETLOAD`. Palette mở bên tr�
 
 Trước khi cài, đóng tất cả cửa sổ AutoCAD. DLL .NET đang dùng không thể được thay thế trong phiên AutoCAD hiện tại.
 
-Nếu không muốn cài bundle, giữ `BHT-0.4.6.lsp` và ba DLL trong cùng một thư mục. Trong AutoCAD, `APPLOAD` duy nhất file Lisp. Lisp tự nạp DLL; sau đó gõ `BTH` hoặc `BHT`.
+Nếu không muốn cài bundle, giữ `BHT-0.5.5.lsp` và ba DLL trong cùng một thư mục. Trong AutoCAD, `APPLOAD` duy nhất file Lisp. Lisp tự nạp DLL; sau đó gõ `BTH` hoặc `BHT`.
 
-`BHTDCL` chỉ là giao diện dự phòng. Không dùng lệnh này trong quy trình thông thường.
+Từ v0.5.5 đã bỏ DCL dự phòng. Nếu Palette không mở, gõ `BHTLOAD`, kiểm tra DLL hoặc cài lại bundle và mở lại AutoCAD.
+
+## Phông chữ CAD
+
+Chữ CAD mặc định dùng `VNRomancUpdate.shx` với bảng mã **Unicode**. Phông được kiểm tra trên máy là SHX Unicode, có glyph riêng cho `Ê`, `ê`, `Ế`, `Ệ`; không chuyển TCVN3 cho phông này. Khi gõ trực tiếp vào TEXT có kiểu `BHT_TCVN`/`BHT_BIENBAO`, chọn Unicode trong bộ gõ. Tên kiểu `BHT_TCVN` được giữ để tương thích bản vẽ cũ. Kiểu tùy chỉnh dùng `vnromanc.shx` vẫn dùng TCVN3; Palette, CSV/Excel và hồ sơ luôn giữ Unicode.

@@ -3,7 +3,7 @@
 (load "C:/Users/Le Bao/BHT_TEST_V044/t_common.lsp")
 (tbegin "R")
 (setq e (tload))
-(tchk "A01" "nạp BHT 0.4.6 từ đường dẫn có dấu" (and (null e) (= *bht-version* "0.4.6")) (if e e *bht-version*))
+(tchk "A01" "nạp BHT 0.5.5 từ đường dẫn có dấu" (and (null e) (= *bht-version* "0.5.5")) (if e e *bht-version*))
 ;; A02
 (setq r (tsafe "A02" "selftest" '(lambda () (bht:selftest))))
 (if r (tchk "A02" "BHTTEST hàm thuần" (= (cadr r) 0) (strcat (itoa (car r)) " pass, " (itoa (cadr r)) " fail")))
@@ -203,8 +203,8 @@
 (foreach l (caddr k1) (tlog (strcat "   KT: " l)))
 ;; A23 lenh
 (setq bad nil)
-(foreach c '(c:BHTDCL c:BHTTEST c:BHTKT c:BHTLYTRINH)
+(foreach c '(c:BHTTRANGTHAI c:BHTTEST c:BHTKT c:BHTLYTRINH)
   (if (vl-catch-all-error-p (vl-catch-all-apply c nil)) (setq bad (cons c bad))))
-(tchk "A23" "chạy lệnh không tương tác BHTDCL/BHTTEST/BHTKT/BHTLYTRINH" (null bad) (vl-princ-to-string bad))
+(tchk "A23" "chạy lệnh không tương tác BHTTRANGTHAI/BHTTEST/BHTKT/BHTLYTRINH" (null bad) (vl-princ-to-string bad))
 (tend "R")
 (princ)

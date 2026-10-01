@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
@@ -19,6 +19,11 @@ namespace BHT.Core
         public string Description = "";
         public string Side = "";
         public string Chainage = "";
+        public string Route = "";
+        public string Offset = "";
+        public string StationSource = "";
+        public string StationStatus = "";
+        public string RouteRevision = "";
         public string Condition = "";
         public string PoleCount = "";
         public string FaceCount = "";
@@ -155,8 +160,8 @@ namespace BHT.Core
 
         private static string DetailSheet(string project, IList<SignReportRow> rows)
         {
-            double[] widths = { 7, 24, 18, 15, 18, 13, 38, 13, 16, 20, 10, 10, 16, 34, 16 };
-            string[] headers = { "STT", "Công trình", "Đoạn tuyến", "Gói", "Loại biển", "Mã hiệu", "Tên biển", "Phía", "Lý trình", "Tình trạng", "Số trụ", "Số mặt", "Kiểm tra", "Ghi chú", "ID hồ sơ" };
+            double[] widths = { 7, 24, 18, 15, 18, 13, 38, 13, 16, 15, 12, 18, 18, 12, 20, 10, 10, 16, 34, 16 };
+            string[] headers = { "STT", "Công trình", "Đoạn tuyến", "Gói", "Loại biển", "Mã hiệu", "Tên biển", "Phía", "Lý trình", "Tuyến", "Offset (m)", "Nguồn lý trình", "Trạng thái lý trình", "Route revision", "Tình trạng", "Số trụ", "Số mặt", "Kiểm tra", "Ghi chú", "ID hồ sơ" };
             var sb = SheetStart(widths, 4);
             Row(sb, 1, new[] { TextCell("A1", "DANH SÁCH BIỂN BÁO HIỆN TRẠNG", 1) });
             Row(sb, 2, new[] { TextCell("A2", "Công trình: " + Safe(project) + " — Tổng số: " + rows.Count, 0) });
@@ -165,14 +170,15 @@ namespace BHT.Core
             foreach (var item in rows)
             {
                 string[] values = { item.Number.ToString(CultureInfo.InvariantCulture), item.Project, item.Segment, item.Package, item.SignGroup, item.Code,
-                    item.Description, item.Side, item.Chainage, item.Condition, item.PoleCount, item.FaceCount, item.Checked, item.Note, item.ObjectId };
+                    item.Description, item.Side, item.Chainage, item.Route, item.Offset, item.StationSource, item.StationStatus, item.RouteRevision,
+                    item.Condition, item.PoleCount, item.FaceCount, item.Checked, item.Note, item.ObjectId };
                 var cells = new List<string>();
                 for (int c = 0; c < values.Length; c++) cells.Add(TextCell(Column(c + 1) + r, values[c], 3));
                 Row(sb, r, cells);
                 r++;
             }
             int last = Math.Max(4, r - 1);
-            sb.Append("</sheetData><autoFilter ref=\"A4:O").Append(last).Append("\"/><mergeCells count=\"2\"><mergeCell ref=\"A1:O1\"/><mergeCell ref=\"A2:O2\"/></mergeCells></worksheet>");
+            sb.Append("</sheetData><autoFilter ref=\"A4:T").Append(last).Append("\"/><mergeCells count=\"2\"><mergeCell ref=\"A1:T1\"/><mergeCell ref=\"A2:T2\"/></mergeCells></worksheet>");
             return sb.ToString();
         }
 

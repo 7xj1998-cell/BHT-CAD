@@ -124,6 +124,7 @@ namespace BHT.Core
                 .Add(ObjFields.Segment, "").Add(ObjFields.Package, "").Add(ObjFields.SegMethod, "CHUA_PHAN_DOAN")
                 .Add(ObjFields.KmState, "CHUA_TINH")
                 .Add(ObjFields.CreatedAt, now);
+            if (fields.Has(ObjFields.CustomBlock)) rec.Set(ObjFields.CustomBlock, fields.Get(ObjFields.CustomBlock));
             rec.SetAll(ObjFields.Face, fields.GetAll(ObjFields.Face));
             rec.SetAll(ObjFields.Point, pids.Select(p => p.ToUpperInvariant()));
             rec.Set(ObjFields.ModifiedAt, now); // bht:obj-write luon dong dau sua_luc
@@ -382,6 +383,323 @@ namespace BHT.Core
         public static List<SurveyPoint> Filter(IEnumerable<SurveyPoint> pts, string query, string classFilter)
         {
             return pts.Where(p => Match(p, query) && (string.IsNullOrEmpty(classFilter) || p.Class == classFilter)).ToList();
+        }
+    }
+
+    // ================================================================ 5.0: tim bien bao, trung coc, tinh trang, phong chu
+    /// <summary>Mot muc danh muc bien (ma + ten) de tim kiem thuan (khong AutoCAD).</summary>
+    public sealed class SignItem
+    {
+        public string Code = "";
+        public string Name = "";
+        public object Tag;
+        public SignItem() { }
+        public SignItem(string code, string name) { Code = code ?? ""; Name = name ?? ""; }
+    }
+
+    /// <summary>
+    /// Tim bien khi go (search-as-you-type): khong dau (ca đ -> d), khong phan biet hoa thuong,
+    /// khop chuoi con / dau tu tren MA va TEN. Moi tu trong truy van phai khop.
+    /// </summary>
+    public static class SignSearch
+    {
+        /// <summary>Chi giu chu va so da bo dau (vd "W.245a" -> "w245a", "Biển số E,9a" -> "biensoe9a").</summary>
+        public static string CodeKey(string s)
+        {
+            var sb = new StringBuilder();
+            foreach (char c in TextSearch.Fold(s)) if (char.IsLetterOrDigit(c)) sb.Append(c);
+            return sb.ToString();
+        }
+
+        /// <summary>Tach tu (khong dau) theo ky tu khong phai chu/so.</summary>
+        public static List<string> Words(string s)
+        {
+            var l = new List<string>(); var sb = new StringBuilder();
+            foreach (char c in TextSearch.Fold(s))
+            {
+                if (char.IsLetterOrDigit(c)) sb.Append(c);
+                else if (sb.Length > 0) { l.Add(sb.ToString()); sb.Length = 0; }
+            }
+            if (sb.Length > 0) l.Add(sb.ToString());
+            return l;
+        }
+
+        /// <summary>Diem khop (nho = tot hon); -1 = khong khop. Truy van rong = khop moi muc (diem 100).</summary>
+        public static int Score(string query, string code, string name)
+        {
+            var q = Words(query);
+            if (q.Count == 0) return 100;
+            string ck = CodeKey(code), qk = string.Join("", q.ToArray());
+            string hayCode = TextSearch.Fold(code), hayName = TextSearch.Fold(name);
+            var nameWords = Words(name); var codeWords = Words(code);
+            if (ck != "" && ck == qk) return 0;
+            // ma bo tien to "Bien so " cua nhom quoc te (vd "E,9a")
+            string ckShort = ck.StartsWith("bienso", StringComparison.Ordinal) ? ck.Substring(6) : ck;
+            if (ckShort != "" && ckShort == qk) return 0;
+            if (qk.Length >= 2 && (ck.StartsWith(qk, StringComparison.Ordinal) || ckShort.StartsWith(qk, StringComparison.Ordinal))) return 1;
+            string phrase = string.Join(" ", q.ToArray());
+            if (string.Join(" ", nameWords.ToArray()) == phrase) return 1; // ten trung khop hoan toan
+            bool allWordStart = true;
+            foreach (var w in q)
+            {
+                bool inCode = hayCode.IndexOf(w, StringComparison.Ordinal) >= 0 || ck.IndexOf(w, StringComparison.Ordinal) >= 0;
+                bool inName = hayName.IndexOf(w, StringComparison.Ordinal) >= 0;
+                if (!inCode && !inName) return (qk.Length >= 2 && ck.IndexOf(qk, StringComparison.Ordinal) >= 0) ? 5 : -1;
+                if (!nameWords.Any(x => x.StartsWith(w, StringComparison.Ordinal)) && !codeWords.Any(x => x.StartsWith(w, StringComparison.Ordinal))) allWordStart = false;
+            }
+            string nameJoined = string.Join(" ", nameWords.ToArray());
+            if (allWordStart && nameJoined.StartsWith(phrase, StringComparison.Ordinal)) return 2;
+            if (allWordStart && nameJoined.IndexOf(phrase, StringComparison.Ordinal) >= 0) return 3;
+            return allWordStart ? 4 : 5;
+        }
+
+        /// <summary>Loc + xep hang; giu thu tu goc khi cung diem. max &lt;= 0 = khong gioi han.</summary>
+        public static List<SignItem> Filter(IEnumerable<SignItem> items, string query, int max)
+        {
+            var l = new List<KeyValuePair<int, KeyValuePair<int, SignItem>>>();
+            int i = 0;
+            foreach (var it in items ?? new SignItem[0])
+            {
+                int s = Score(query, it.Code, it.Name);
+                if (s >= 0) l.Add(new KeyValuePair<int, KeyValuePair<int, SignItem>>(s, new KeyValuePair<int, SignItem>(i, it)));
+                i++;
+            }
+            var r = l.OrderBy(x => x.Key).ThenBy(x => x.Value.Key).Select(x => x.Value.Value);
+            return (max > 0 ? r.Take(max) : r).ToList();
+        }
+
+        /// <summary>"Biển số E,9a" / "R.E,9a" -> "E,9A" (phan ma sau tien to); dung doi chieu ten trong CUNG thu vien TDT.</summary>
+        public static string AliasKey(string code)
+        {
+            string s = (code ?? "").Trim();
+            string f = TextSearch.Fold(s);
+            if (f.StartsWith("bien so ", StringComparison.Ordinal))
+            {
+                var parts = s.Split(new[] { ' ' }, 3, StringSplitOptions.RemoveEmptyEntries);
+                return parts.Length == 3 ? parts[2].Trim().ToUpperInvariant() : s.ToUpperInvariant();
+            }
+            int dot = s.IndexOf('.');
+            if (dot > 0 && dot <= 2 && s.Substring(0, dot).All(char.IsLetter)) return s.Substring(dot + 1).Trim().ToUpperInvariant();
+            return s.ToUpperInvariant();
+        }
+
+        /// <summary>
+        /// Muc KHONG co ten: lay ten tu muc KHAC trong cung danh muc co cung phan ma (vd "Biển số E,9a" &lt;- "R.E,9a")
+        /// khi chi co DUY NHAT mot ten. Khong tu dat ten. Tra ve so muc da bo sung; aliasOf[i] = ma nguon.
+        /// </summary>
+        public static int FillMissingNames(IList<SignItem> items, out Dictionary<SignItem, string> aliasOf)
+        {
+            aliasOf = new Dictionary<SignItem, string>();
+            var named = new Dictionary<string, List<SignItem>>(StringComparer.Ordinal);
+            foreach (var it in items)
+            {
+                if (string.IsNullOrWhiteSpace(it.Name)) continue;
+                string k = AliasKey(it.Code);
+                if (k == it.Code.Trim().ToUpperInvariant()) continue; // chi muc co tien to (R./S./I./W./P.)
+                List<SignItem> l; if (!named.TryGetValue(k, out l)) named[k] = l = new List<SignItem>();
+                l.Add(it);
+            }
+            int n = 0;
+            foreach (var it in items)
+            {
+                if (!string.IsNullOrWhiteSpace(it.Name)) continue;
+                List<SignItem> l;
+                if (!named.TryGetValue(AliasKey(it.Code), out l)) continue;
+                var names = l.Select(x => x.Name.Trim()).Distinct().ToList();
+                if (names.Count != 1) continue;
+                it.Name = names[0]; aliasOf[it] = l[0].Code; n++;
+            }
+            return n;
+        }
+
+        /// <summary>Tach "Mã các mặt": phan cach bang ';' (ma TDT co dau ',' nhu "E,9a" nen KHONG tach theo ',').</summary>
+        public static List<string> SplitCodes(string s)
+        {
+            return (s ?? "").Split(new[] { ';', '\n', '\r' }).Select(x => x.Trim()).Where(x => x != "").ToList();
+        }
+
+        /// <summary>Phan dang go (sau ';' cuoi) va phan da xong truoc no.</summary>
+        public static string LastToken(string s, out string head)
+        {
+            s = s ?? ""; int i = s.LastIndexOf(';');
+            head = i < 0 ? "" : s.Substring(0, i + 1);
+            return (i < 0 ? s : s.Substring(i + 1)).Trim();
+        }
+
+        /// <summary>Thay tu dang go bang ma da chon: "W.245a; S.5" + "S.509a" -> "W.245a; S.509a; ".</summary>
+        public static string ReplaceLastToken(string s, string code)
+        {
+            string head; LastToken(s, out head);
+            var done = SplitCodes(head); done.Add(code);
+            return string.Join("; ", done.ToArray()) + "; ";
+        }
+
+        /// <summary>So mat tu dong: o trong (hoac dang la gia tri tu dong truoc do) -> so ma; nguoi dung da nhap tay -> giu.</summary>
+        public static string AutoFaceCount(string current, string lastAuto, string faceCodes)
+        {
+            int n = SplitCodes(faceCodes).Count;
+            string cur = (current ?? "").Trim();
+            if (cur == "" || (lastAuto != null && cur == lastAuto)) return n > 0 ? n.ToString(CultureInfo.InvariantCulture) : "";
+            return cur;
+        }
+    }
+
+    /// <summary>Nhom khong co ma bien (coc tieu, cot Km): Ma hieu de trong, khong bat buoc, khong tu dien.</summary>
+    public static class GroupRules
+    {
+        public static bool HasSignCode(string group)
+        {
+            string g = Groups.Code(group) ?? (group ?? "").Trim().ToUpperInvariant();
+            return g != "COC_TIEU" && g != "COT_KM";
+        }
+    }
+
+    /// <summary>Tinh trang doi tuong: danh sach chon (van hien gia tri tu do cu nguyen van).</summary>
+    public static class ConditionOptions
+    {
+        public static readonly string[] All = { "Tốt", "Bình thường", "Hư hỏng" };
+
+        /// <summary>Gia tri hien trong o chon: rong -> rong; khop khong dau voi muc chuan -> muc chuan; khac -> giu nguyen.</summary>
+        public static string Display(string stored)
+        {
+            string s = (stored ?? "").Trim();
+            foreach (var o in All) if (TextSearch.Fold(o) == TextSearch.Fold(s)) return o;
+            return stored ?? "";
+        }
+
+        public static bool IsStandard(string s) { return All.Contains((s ?? "").Trim()); }
+    }
+
+    public sealed class DuplicateHit
+    {
+        public string Id = "";
+        public string Reason = "";
+        public double Distance = -1;
+        public override string ToString() { return Id + " (" + Reason + ")"; }
+    }
+
+    /// <summary>
+    /// Kiem tra trung khi luu Coc tieu / Cot Km (CHI doc, khong bao gio dich / sua diem RTK):
+    ///  - cung nhom; dung chung it nhat 1 diem RTK voi ho so khac;
+    ///  - hoac vi tri (trung binh diem RTK) cach nhau &lt;= nguong (mac dinh 0.5 m, meta "trung_kc_m");
+    ///  - Cot Km: them trung gia tri Km (ly_trinh_km, sai lech &lt;= 0.005 m).
+    /// </summary>
+    public static class DuplicateCheck
+    {
+        public const double DefaultTolerance = 0.5;
+        public const string MetaKey = "trung_kc_m";
+
+        public static bool Applies(string group)
+        {
+            string g = Groups.Code(group) ?? "";
+            return g == "COC_TIEU" || g == "COT_KM";
+        }
+
+        public static double ParseTolerance(string s)
+        {
+            double d;
+            if (double.TryParse((s ?? "").Trim().Replace(',', '.'), NumberStyles.Float, CultureInfo.InvariantCulture, out d) && d > 0 && d <= 100) return d;
+            return DefaultTolerance;
+        }
+
+        public static bool Position(IEnumerable<string> pids, IDictionary<string, SurveyPoint> index, out double x, out double y)
+        {
+            x = 0; y = 0; int n = 0;
+            foreach (var p in pids ?? new string[0])
+            {
+                SurveyPoint sp;
+                if (index != null && index.TryGetValue((p ?? "").ToUpperInvariant(), out sp)) { x += sp.X; y += sp.Y; n++; }
+            }
+            if (n == 0) return false;
+            x /= n; y /= n; return true;
+        }
+
+        public static List<DuplicateHit> Find(string selfId, string group, IList<string> pids, string chainageKm,
+            IDictionary<string, BhtRecord> objects, IDictionary<string, SurveyPoint> index, double tolerance)
+        {
+            return Find(selfId, group, pids, chainageKm, objects, index, tolerance, false);
+        }
+
+        /// <summary>ignoreSharedPoints: nguoi dung DA xac nhan dung chung diem (hop thoai dung chung) -> khong hoi lai ly do nay.</summary>
+        public static List<DuplicateHit> Find(string selfId, string group, IList<string> pids, string chainageKm,
+            IDictionary<string, BhtRecord> objects, IDictionary<string, SurveyPoint> index, double tolerance, bool ignoreSharedPoints)
+        {
+            var hits = new List<DuplicateHit>();
+            string g = Groups.Code(group) ?? "";
+            if (!Applies(g) || objects == null) return hits;
+            string self = (selfId ?? "").Trim().ToUpperInvariant();
+            var mine = new HashSet<string>((pids ?? new string[0]).Select(p => (p ?? "").Trim().ToUpperInvariant()).Where(p => p != ""));
+            double x, y; bool hasPos = Position(mine, index, out x, out y);
+            double km = 0;
+            bool hasKm = g == "COT_KM" && (chainageKm ?? "").Trim() != "" && Chainage.TryParse(chainageKm, out km);
+            foreach (var kv in objects.OrderBy(k => k.Key, StringComparer.OrdinalIgnoreCase))
+            {
+                if (string.Equals(kv.Key, self, StringComparison.OrdinalIgnoreCase)) continue;
+                var r = kv.Value;
+                if ((Groups.Code(r.Get(ObjFields.Group)) ?? "") != g) continue;
+                var theirs = r.GetAll(ObjFields.Point).Select(p => p.Trim().ToUpperInvariant()).ToList();
+                var reasons = new List<string>();
+                var shared = theirs.Where(mine.Contains).Distinct().ToList();
+                if (shared.Count > 0 && !ignoreSharedPoints) reasons.Add("cùng điểm RTK " + string.Join(", ", shared.ToArray()));
+                double d = -1, ox, oy;
+                if (hasPos && Position(theirs, index, out ox, out oy))
+                {
+                    d = Geo.Dist2D(x, y, ox, oy);
+                    if (shared.Count == 0 && d <= tolerance) reasons.Add("cách " + LispFormat.Fnum(d, 2) + " m (≤ " + LispFormat.Fnum(tolerance, 2) + " m)");
+                }
+                double okm;
+                string their = r.Get(ObjFields.ChainageKm);
+                if (hasKm && their.Trim() != "" && Chainage.TryParse(their, out okm) && Math.Abs(okm - km) <= 0.005)
+                    reasons.Add("trùng Km " + Chainage.Format(okm));
+                if (reasons.Count > 0) hits.Add(new DuplicateHit { Id = kv.Key.ToUpperInvariant(), Reason = string.Join("; ", reasons.ToArray()), Distance = d });
+            }
+            return hits;
+        }
+    }
+
+    /// <summary>Phong chu: kieu chu nhan bien BHT_BIENBAO (VNRomancUpdate.shx) va thu muc Fonts cua bundle.</summary>
+    public static class BhtFonts
+    {
+        public const string SignLabelStyle = "BHT_BIENBAO";
+        public const string SignLabelFont = "VNRomancUpdate.shx";
+        /// <summary>Phong TrueType cua thu vien bien TDT 9.1 (kieu chu GiaoThong1/GiaoThong2 trong DWG bien).</summary>
+        public static readonly string[] TdtTrueType = { "giaothong1.ttf", "giaothong2.ttf" };
+        public static readonly string[] BundledShx = { "VNRomancUpdate.shx", "vnromanc.shx" };
+
+        /// <summary>Thu muc Fonts cua bundle tu thu muc chua DLL (...\BHT.bundle\Contents\Win64 hoac ...\Contents).</summary>
+        public static string BundleFontsDir(string dllDir)
+        {
+            if (string.IsNullOrEmpty(dllDir)) return "";
+            var d = new DirectoryInfo(dllDir.TrimEnd('\\', '/'));
+            for (int i = 0; i < 3 && d != null; i++, d = d.Parent)
+                if (string.Equals(d.Name, "Contents", StringComparison.OrdinalIgnoreCase)) return Path.Combine(d.FullName, "Fonts");
+            return Path.Combine(dllDir, "Fonts");
+        }
+
+        /// <summary>Them thu muc vao chuoi duong dan ho tro (';') neu CHUA co (so sanh khong phan biet hoa, bo '\' cuoi).</summary>
+        public static string AppendPath(string supportPath, string dir, out bool changed)
+        {
+            changed = false;
+            string sp = supportPath ?? "";
+            if (string.IsNullOrWhiteSpace(dir)) return sp;
+            string norm = dir.Trim().TrimEnd('\\', '/');
+            foreach (var p in sp.Split(';'))
+                if (string.Equals(p.Trim().TrimEnd('\\', '/'), norm, StringComparison.OrdinalIgnoreCase)) return sp;
+            changed = true;
+            return sp.Trim().TrimEnd(';') == "" ? norm : sp.TrimEnd(';') + ";" + norm;
+        }
+
+        /// <summary>Nhan chi co ky tu ASCII in duoc (kiem tra chuoi ASCII).</summary>
+        public static bool AsciiOnly(string s)
+        {
+            foreach (char c in s ?? "") if (c < 32 || c > 126) return false;
+            return true;
+        }
+
+        /// <summary>Kieu chu nhan CAD: VNRomancUpdate.shx + Unicode; thieu SHX thi dung Arial Unicode.</summary>
+        public static string LabelStyleFor(string label, bool shxAvailable)
+        {
+            return shxAvailable ? SignLabelStyle : "BHT_ARIAL";
         }
     }
 }

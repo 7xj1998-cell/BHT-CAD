@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
@@ -30,7 +30,7 @@ namespace BHT.Palette
         private bool _lispOk;
         private string _lispMsg = "chưa kiểm tra";
 
-        private readonly TabControl _tabs = new TabControl();
+        private readonly TabControl _tabs = new PaletteTheme.ThemedTabControl();
         private readonly Label _status = new Label();
         private readonly Label _docLabel = new Label();
 
@@ -78,7 +78,7 @@ namespace BHT.Palette
                 RefreshAll();
                 ProbeLisp();
             }
-            catch (Exception ex) { Status("Lỗi gắn bản vẽ: " + ex.Message); }
+            catch (Exception ex) { StatusError("Lỗi gắn bản vẽ: " + ex.Message); }
         }
 
         public void Unbind()
@@ -135,7 +135,7 @@ namespace BHT.Palette
                 RefreshObjects();
                 if (reportStatus) Status("Đã đọc dữ liệu từ bản vẽ.");
             }
-            catch (Exception ex) { Status("Lỗi đọc dữ liệu: " + ex.Message); }
+            catch (Exception ex) { StatusError("Lỗi đọc dữ liệu: " + ex.Message); }
         }
 
         private void ProbeLisp()
@@ -156,7 +156,7 @@ namespace BHT.Palette
                 _lispMsg = _lispOk
                     ? "BHT Lisp " + loaded + " đã nạp"
                     : "Plugin " + BhtVersion.Version + " / Lisp " + loaded + " không cùng phiên bản. Đóng tất cả AutoCAD rồi cài lại BHT " + BhtVersion.Version + ".";
-                Status(_lispMsg);
+                if (_lispOk) Status(_lispMsg); else StatusError(_lispMsg);
                 RefreshOverview();
             }));
         }
@@ -168,6 +168,33 @@ namespace BHT.Palette
             _status.Text = s ?? "";
             _status.BackColor = PaletteTheme.StatusBack(s);
             _status.ForeColor = PaletteTheme.StatusFore(s);
+        }
+
+        // 0.4.6-fix3: loi / canh bao can nguoi dung xu ly -> to mau vung trang thai VA hien MessageBox "BHT".
+        // Thong tin thuong van dung Status(); huy lenh khong hien cua so.
+        protected void StatusError(string s) { StatusError(s, true); }
+        protected void StatusError(string s, bool popup)
+        {
+            _status.Text = s ?? "";
+            _status.BackColor = PaletteTheme.ErrorBackColor;
+            _status.ForeColor = PaletteTheme.ErrorForeColor;
+            if (popup) BhtPopup.Show(s, true);
+        }
+
+        protected void StatusWarn(string s) { StatusWarn(s, true); }
+        protected void StatusWarn(string s, bool popup)
+        {
+            _status.Text = s ?? "";
+            _status.BackColor = PaletteTheme.WarnBackColor;
+            _status.ForeColor = PaletteTheme.WarnForeColor;
+            if (popup) BhtPopup.Show(s, false);
+        }
+
+        /// <summary>Ket qua thao tac ghi: loi -> StatusError (co cua so), thanh cong -> Status.</summary>
+        protected void StatusResult(OpResult r)
+        {
+            if (r == null) return;
+            if (r.Ok) Status(r.ToString()); else StatusError(r.ToString());
         }
 
         protected void ShowReportDialog(string title, string content)
@@ -186,7 +213,8 @@ namespace BHT.Palette
                     DetectUrls = false,
                     WordWrap = false,
                     Font = new Font("Consolas", 10f),
-                    BackColor = Color.White,
+                    BackColor = PaletteTheme.GreenLight,
+                    ForeColor = PaletteTheme.GreenDark,
                     Text = content ?? ""
                 };
                 var buttons = new FlowLayoutPanel
@@ -200,7 +228,7 @@ namespace BHT.Palette
                 var copy = Btn("Sao chép", (s, e) =>
                 {
                     try { Clipboard.SetText(body.Text ?? ""); Status("Đã sao chép nội dung báo cáo."); }
-                    catch (Exception ex) { Status("Không sao chép được: " + ex.Message); }
+                    catch (Exception ex) { StatusError("Không sao chép được: " + ex.Message); }
                 });
                 close.Width = 90; copy.Width = 100;
                 buttons.Controls.Add(close); buttons.Controls.Add(copy);
@@ -218,7 +246,7 @@ namespace BHT.Palette
             {
                 if (IsHandleCreated) BeginInvoke(a); else a();
             }
-            catch (Exception ex) { Status("Lỗi: " + ex.Message); }
+            catch (Exception ex) { StatusError("Lỗi: " + ex.Message); }
         }
 
         private bool NeedDoc()
@@ -230,7 +258,7 @@ namespace BHT.Palette
 
         private bool NeedLisp()
         {
-            if (!_lispOk) { Status("Lõi Lisp BHT " + BhtVersion.Version + " chưa sẵn sàng. " + _lispMsg); ProbeLisp(); return false; }
+            if (!_lispOk) { StatusWarn("Lõi Lisp BHT " + BhtVersion.Version + " chưa sẵn sàng. " + _lispMsg); ProbeLisp(); return false; }
             return true;
         }
 
@@ -254,7 +282,7 @@ namespace BHT.Palette
             AcadDispatcher.RunLisp(fn, args, r => UI(() =>
             {
                 if (r.Ok) Status(label + ": xong. " + string.Join("; ", r.Values.Take(8).ToArray()));
-                else Status(label + ": LỖI - " + r.Error);
+                else StatusError(label + ": LỖI - " + r.Error);
                 if (after != null) after(r);
                 RefreshAll(false);
             }));
@@ -266,7 +294,7 @@ namespace BHT.Palette
             Action send = () =>
             {
                 var r = AcadDispatcher.SendCommand(_doc, cmd, _watcher);
-                Status(r.Ok ? "Đang chạy " + cmd + "… Kết quả sẽ hiện tại đây." : r.ToString());
+                if (r.Ok) Status("Đang chạy " + cmd + "… Kết quả sẽ hiện tại đây."); else StatusWarn(r.ToString());
             };
             // Bo cac dong thong bao con lai tu lenh truoc, roi moi gui lenh moi.
             AcadDispatcher.RunLisp("bht:api-messages", new[] { "DRAIN" }, r => UI(send));
@@ -282,17 +310,39 @@ namespace BHT.Palette
                     Status("Lệnh " + cmd + (state == "KET_THUC" ? " đã kết thúc." : state == "HUY" ? " đã bị hủy." : " bị lỗi."));
                     return;
                 }
+                // 0.4.6-fix3: doc loi / canh bao (bht:err / bht:warn) TRUOC khi DRAIN thong bao (DRAIN xoa ca hai).
+                AcadDispatcher.RunLisp("bht:api-problems", new[] { "DRAIN" }, pr =>
                 AcadDispatcher.RunLisp("bht:api-messages", new[] { "DRAIN" }, r => UI(() =>
                 {
                     RefreshAll(false);
+                    string firstError = null, firstWarn = null;
+                    if (pr.Ok)
+                        foreach (string p in pr.Values)
+                        {
+                            string v = p ?? "";
+                            if (firstError == null && v.StartsWith("ERROR|", StringComparison.Ordinal)) firstError = v.Substring(6);
+                            else if (firstWarn == null && v.StartsWith("WARN|", StringComparison.Ordinal)) firstWarn = v.Substring(5);
+                        }
                     string head = "Lệnh " + cmd + (state == "KET_THUC" ? " đã kết thúc." : state == "HUY" ? " đã bị hủy." : " bị lỗi.");
                     string detail = r.Ok && r.Values.Count > 0 ? string.Join("\r\n", r.Values.ToArray()) : "";
                     string upper = (cmd ?? "").ToUpperInvariant();
                     bool report = upper.Contains("BHTKT") || upper.Contains("BHTTRANGTHAI")
                         || upper.Contains("BHTXUAT") || detail.Length > 220 || r.Values.Count > 3;
-                    Status(detail == "" ? head : head + " " + r.Values.Count + " dòng kết quả.");
+                    // Lisp da hien cua so cho loi nay (bht:err) -> Palette chi to mau, khong hien cua so thu hai.
+                    if (state != "HUY" && firstError != null)
+                    {
+                        head = "Lệnh " + cmd + " THẤT BẠI.";
+                        StatusError(head + " " + firstError, false);
+                    }
+                    else if (state == "LOI") StatusError(head + (detail == "" ? "" : " " + r.Values.Count + " dòng kết quả."), false);
+                    else if (state != "HUY" && firstWarn != null)
+                    {
+                        head = "Lệnh " + cmd + " kết thúc kèm cảnh báo.";
+                        StatusWarn(head + " " + firstWarn, false);
+                    }
+                    else Status(detail == "" ? head : head + " " + r.Values.Count + " dòng kết quả.");
                     if (report && detail != "") ShowReportDialog(head, detail);
-                }));
+                })));
             });
         }
 
@@ -361,7 +411,7 @@ namespace BHT.Palette
                 }
                 try { Autodesk.AutoCAD.Internal.Utils.SetFocusToDwgView(); } catch { }
             }
-            catch (Exception ex) { Status("Thu phóng: " + ex.Message); }
+            catch (Exception ex) { StatusError("Thu phóng: " + ex.Message); }
         }
 
         /// <summary>ID diem RTK dang duoc chon trong CAD (POINT BHT_PT hoac nhan BHT_NHAN).</summary>

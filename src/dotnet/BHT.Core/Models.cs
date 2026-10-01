@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Text;
@@ -47,15 +47,16 @@ namespace BHT.Core
     public static class ObjFields
     {
         public const string Id = "object_id", Group = "nhom", Code = "ma_hieu", CodeType = "loai_ma", Desc = "mo_ta",
-            PoleCount = "so_tru", FaceCount = "so_mat", Face = "mat", Condition = "tinh_trang", CheckState = "trang_thai_kt",
+            CustomBlock = "custom_block", PoleCount = "so_tru", FaceCount = "so_mat", Face = "mat", Condition = "tinh_trang", CheckState = "trang_thai_kt",
             Note = "ghi_chu", RoadSide = "phia_duong", Point = "pt", Photo = "anh", PhotoFile = "anh_file",
             RouteId = "route_id", ChainageM = "ly_trinh_m", ChainageKm = "ly_trinh_km", OffsetM = "offset_m",
-            RouteSide = "phia_tuyen", KmState = "trang_thai_km", KmSource = "nguon_km", Segment = "doan", Package = "goi",
+            RouteSide = "phia_tuyen", KmState = "trang_thai_km", KmSource = "nguon_km",
+            StationRouteRevision = "station_route_revision", StationStatus = "station_status", Segment = "doan", Package = "goi",
             SegMethod = "gan_doan_pp", SegCandidates = "doan_ung_vien", CreatedAt = "tao_luc", ModifiedAt = "sua_luc";
 
         /// <summary>Cac truong nguoi dung duoc sua tu palette (giong bht:ask-fields).</summary>
-        public static readonly string[] Editable = { Group, Code, CodeType, Desc, PoleCount, FaceCount, Condition, CheckState, Note, RoadSide,
-            RouteId, ChainageM, ChainageKm, OffsetM, RouteSide, KmState, KmSource };
+        public static readonly string[] Editable = { CustomBlock, Group, Code, CodeType, Desc, PoleCount, FaceCount, Condition, CheckState, Note, RoadSide,
+            RouteId, ChainageM, ChainageKm, OffsetM, RouteSide, KmState, KmSource, StationRouteRevision, StationStatus };
     }
 
     public static class PhotoFields
@@ -140,9 +141,9 @@ namespace BHT.Core
 
     public static class BhtVersion
     {
-        public const string Version = "0.4.6";
-        public const string AssemblyVersion = "0.4.6.0";
-        public const string FileVersion = "0.4.6.0";
+        public const string Version = "0.5.5";
+        public const string AssemblyVersion = "0.5.5.0";
+        public const string FileVersion = "0.5.5.0";
         public const string LispApiLevel = "1";
         public const string DictName = "BHT_V02";
 
@@ -155,7 +156,9 @@ namespace BHT.Core
             // Palette va Lisp phai cung phien ban. AutoCAD khong the go DLL .NET
             // da nap trong mot phien lam viec, nen cho phep "moi hon" se che mat
             // tinh trang DLL cu dang chay cung Lisp moi.
-            return Compare(lispVersion, Version) == 0;
+            // So khop NGUYEN VAN (vd "0.4.6-fix3"): Compare() bo phan khong phai so nen
+            // "0.4.6-fix3" se bi coi nhu "0.4.0" va khong phan biet duoc voi 0.4.6.
+            return string.Equals((lispVersion ?? "").Trim(), Version, StringComparison.OrdinalIgnoreCase);
         }
 
         /// <summary>So sanh "a.b.c" theo so; phan khong phai so = 0.</summary>
