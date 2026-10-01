@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Thuan .NET: KHONG tham chieu AutoCAD. Build + test duoc tren CI (windows-latest). -->
+  <PropertyGroup>
+    <OutputType>Library</OutputType>
+    <RootNamespace>BHT.Core</RootNamespace>
+    <AssemblyName>BHT.Core</AssemblyName>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="System.IO.Compression" />
+  </ItemGroup>
+</Project>

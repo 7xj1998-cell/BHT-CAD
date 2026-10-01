@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Palette WinForms trong PaletteSet + lenh chinh BTH/BHT. Tham chieu them AcMgd (giao dien AutoCAD). -->
+  <PropertyGroup>
+    <OutputType>Library</OutputType>
+    <RootNamespace>BHT.Palette</RootNamespace>
+    <AssemblyName>BHT.Palette</AssemblyName>
+    <UseWindowsForms>true</UseWindowsForms>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\BHT.Core\BHT.Core.csproj" />
+    <ProjectReference Include="..\BHT.Bridge\BHT.Bridge.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <Reference Include="System.Windows.Forms" />
+    <Reference Include="System.Drawing" />
+    <!-- AcMgd/AcCoreMgd lo ra kieu WPF (IWin32Window...) nen can tham chieu WPF khi bien dich -->
+    <Reference Include="PresentationCore" />
+    <Reference Include="PresentationFramework" />
+    <Reference Include="WindowsBase" />
+    <Reference Include="System.Xaml" />
+    <Reference Include="AcDbMgd"><HintPath>$(AcadDir)\acdbmgd.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="AcCoreMgd"><HintPath>$(AcadDir)\accoremgd.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="AcMgd"><HintPath>$(AcadDir)\acmgd.dll</HintPath><Private>false</Private></Reference>
+  </ItemGroup>
+</Project>

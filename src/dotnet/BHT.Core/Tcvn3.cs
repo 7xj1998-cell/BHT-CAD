@@ -1,0 +1,167 @@
+using System;
+using System.Collections.Generic;
+using System.Text;
+namespace BHT.Core
+{
+    /// <summary>TCVN3 glyph codes for vnromanc.shx. Encode display text only; records stay Unicode.</summary>
+    public static class Tcvn3
+    {
+        private static readonly Dictionary<char, char> Map = new Dictionary<char, char>
+        {
+            { '\u00e0', '\u00b5' },
+            { '\u00e1', '\u00b8' },
+            { '\u1ea3', '\u00b6' },
+            { '\u00e3', '\u00b7' },
+            { '\u1ea1', '\u00b9' },
+            { '\u0103', '\u00a8' },
+            { '\u1eb1', '\u00bb' },
+            { '\u1eaf', '\u00be' },
+            { '\u1eb3', '\u00bc' },
+            { '\u1eb5', '\u00bd' },
+            { '\u1eb7', '\u00c6' },
+            { '\u00e2', '\u00a9' },
+            { '\u1ea7', '\u00c7' },
+            { '\u1ea5', '\u00ca' },
+            { '\u1ea9', '\u00c8' },
+            { '\u1eab', '\u00c9' },
+            { '\u1ead', '\u00cb' },
+            { '\u0111', '\u00ae' },
+            { '\u00e8', '\u00cc' },
+            { '\u00e9', '\u00d0' },
+            { '\u1ebb', '\u00ce' },
+            { '\u1ebd', '\u00cf' },
+            { '\u1eb9', '\u00d1' },
+            { '\u00ea', '\u00aa' },
+            { '\u1ec1', '\u00d2' },
+            { '\u1ebf', '\u00d5' },
+            { '\u1ec3', '\u00d3' },
+            { '\u1ec5', '\u00d4' },
+            { '\u1ec7', '\u00d6' },
+            { '\u00ec', '\u00d7' },
+            { '\u00ed', '\u00dd' },
+            { '\u1ec9', '\u00d8' },
+            { '\u0129', '\u00dc' },
+            { '\u1ecb', '\u00de' },
+            { '\u00f2', '\u00df' },
+            { '\u00f3', '\u00e3' },
+            { '\u1ecf', '\u00e1' },
+            { '\u00f5', '\u00e2' },
+            { '\u1ecd', '\u00e4' },
+            { '\u00f4', '\u00ab' },
+            { '\u1ed3', '\u00e5' },
+            { '\u1ed1', '\u00e8' },
+            { '\u1ed5', '\u00e6' },
+            { '\u1ed7', '\u00e7' },
+            { '\u1ed9', '\u00e9' },
+            { '\u01a1', '\u00ac' },
+            { '\u1edd', '\u00ea' },
+            { '\u1edb', '\u00ed' },
+            { '\u1edf', '\u00eb' },
+            { '\u1ee1', '\u00ec' },
+            { '\u1ee3', '\u00ee' },
+            { '\u00f9', '\u00ef' },
+            { '\u00fa', '\u00f3' },
+            { '\u1ee7', '\u00f1' },
+            { '\u0169', '\u00f2' },
+            { '\u1ee5', '\u00f4' },
+            { '\u01b0', '\u00ad' },
+            { '\u1eeb', '\u00f5' },
+            { '\u1ee9', '\u00f8' },
+            { '\u1eed', '\u00f6' },
+            { '\u1eef', '\u00f7' },
+            { '\u1ef1', '\u00f9' },
+            { '\u1ef3', '\u00fa' },
+            { '\u00fd', '\u00fd' },
+            { '\u1ef7', '\u00fb' },
+            { '\u1ef9', '\u00fc' },
+            { '\u1ef5', '\u00fe' },
+            { '\u00c0', '\u00b5' },
+            { '\u00c1', '\u00b8' },
+            { '\u1ea2', '\u00b6' },
+            { '\u00c3', '\u00b7' },
+            { '\u1ea0', '\u00b9' },
+            { '\u0102', '\u00a1' },
+            { '\u1eb0', '\u00bb' },
+            { '\u1eae', '\u00be' },
+            { '\u1eb2', '\u00bc' },
+            { '\u1eb4', '\u00bd' },
+            { '\u1eb6', '\u00c6' },
+            { '\u00c2', '\u00a2' },
+            { '\u1ea6', '\u00c7' },
+            { '\u1ea4', '\u00ca' },
+            { '\u1ea8', '\u00c8' },
+            { '\u1eaa', '\u00c9' },
+            { '\u1eac', '\u00cb' },
+            { '\u0110', '\u00a7' },
+            { '\u00c8', '\u00cc' },
+            { '\u00c9', '\u00d0' },
+            { '\u1eba', '\u00ce' },
+            { '\u1ebc', '\u00cf' },
+            { '\u1eb8', '\u00d1' },
+            { '\u00ca', '\u00a3' },
+            { '\u1ec0', '\u00d2' },
+            { '\u1ebe', '\u00d5' },
+            { '\u1ec2', '\u00d3' },
+            { '\u1ec4', '\u00d4' },
+            { '\u1ec6', '\u00d6' },
+            { '\u00cc', '\u00d7' },
+            { '\u00cd', '\u00dd' },
+            { '\u1ec8', '\u00d8' },
+            { '\u0128', '\u00dc' },
+            { '\u1eca', '\u00de' },
+            { '\u00d2', '\u00df' },
+            { '\u00d3', '\u00e3' },
+            { '\u1ece', '\u00e1' },
+            { '\u00d5', '\u00e2' },
+            { '\u1ecc', '\u00e4' },
+            { '\u00d4', '\u00a4' },
+            { '\u1ed2', '\u00e5' },
+            { '\u1ed0', '\u00e8' },
+            { '\u1ed4', '\u00e6' },
+            { '\u1ed6', '\u00e7' },
+            { '\u1ed8', '\u00e9' },
+            { '\u01a0', '\u00a5' },
+            { '\u1edc', '\u00ea' },
+            { '\u1eda', '\u00ed' },
+            { '\u1ede', '\u00eb' },
+            { '\u1ee0', '\u00ec' },
+            { '\u1ee2', '\u00ee' },
+            { '\u00d9', '\u00ef' },
+            { '\u00da', '\u00f3' },
+            { '\u1ee6', '\u00f1' },
+            { '\u0168', '\u00f2' },
+            { '\u1ee4', '\u00f4' },
+            { '\u01af', '\u00a6' },
+            { '\u1eea', '\u00f5' },
+            { '\u1ee8', '\u00f8' },
+            { '\u1eec', '\u00f6' },
+            { '\u1eee', '\u00f7' },
+            { '\u1ef0', '\u00f9' },
+            { '\u1ef2', '\u00fa' },
+            { '\u00dd', '\u00fd' },
+            { '\u1ef6', '\u00fb' },
+            { '\u1ef8', '\u00fc' },
+            { '\u1ef4', '\u00fe' }
+        };
+        public static string Decode(string encoded)
+        {
+            var reverse = new Dictionary<char, char>();
+            // Explicit lower-case preference matches legacy BHT decoding of shared codes.
+            foreach (var pair in Map) if (char.IsLower(pair.Key) && !reverse.ContainsKey(pair.Value)) reverse.Add(pair.Value, pair.Key);
+            foreach (var pair in Map) if (!reverse.ContainsKey(pair.Value)) reverse.Add(pair.Value, pair.Key);
+            var output = new StringBuilder();
+            foreach (char ch in encoded ?? "") { char decoded; output.Append(reverse.TryGetValue(ch, out decoded) ? decoded : ch); }
+            return output.ToString();
+        }
+        public static string Encode(string unicode)
+        {
+            var output = new StringBuilder();
+            foreach (char ch in (unicode ?? "").Normalize(NormalizationForm.FormC))
+            {
+                char glyph;
+                output.Append(Map.TryGetValue(ch, out glyph) ? glyph : ch);
+            }
+            return output.ToString();
+        }
+    }
+}

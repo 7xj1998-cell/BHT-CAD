@@ -1,0 +1,32 @@
+;;; Regression for removing the DCL fallback while preserving shared functionality.
+(setq *review-fail* 0)
+(defun review-check (name ok)
+  (if (not ok) (setq *review-fail* (1+ *review-fail*)))
+  (princ (strcat "\n" (if ok "PASS " "FAIL ") "REVIEW " name)))
+(review-check "DCL-commands-removed" (and (not (bht:fn-defined-p 'c:BHTDCL)) (not (bht:fn-defined-p 'c:BHTUITEST))))
+(review-check "DCL-helpers-removed"
+  (not (vl-some 'bht:fn-defined-p '(bht:ansi-roundtrip bht:dcl-unicode-file-p bht:dcl-escape bht:ui-status
+    bht:ui-captions bht:ui-fill-line bht:ui-step-row bht:ui-dcl-template bht:ui-write-dcl
+    bht:ui-apply-captions bht:ui-bind bht:ui-dialog bht:ui-call bht:ui-validate))))
+(review-check "search-and-condition-fold" (and (= (bht:search-fold "ĐI CHẬM") "di cham") (= (bht:condition-value "hu hong") "Hư hỏng")))
+(setq saved-search BHTSIGNSEARCH BHTSIGNSEARCH nil)
+(review-check "internal-sign-search" (assoc "W.245a" (bht:sign-search "di cham" 30)))
+(setq BHTSIGNSEARCH saved-search)
+(setq before-review-points (bht:pt-all) before-review-objects (bht:obj-ids))
+(review-check "status-data-readable" (= (cdr (assoc 'points (bht:status-data))) (length before-review-points)))
+(review-check "status-lines-retained" (= (length (bht:status-lines)) 4))
+(setq *bht-screen-messages* nil result (vl-catch-all-apply 'c:BHTTRANGTHAI nil))
+(review-check "status-command" (and (not (vl-catch-all-error-p result)) (vl-some '(lambda (m) (vl-string-search (strcat "BHT " *bht-version*) m)) *bht-screen-messages*)))
+(review-check "status-read-only" (and (equal before-review-points (bht:pt-all)) (equal before-review-objects (bht:obj-ids))))
+(setq result (vl-catch-all-apply 'bht:selftest nil))
+(review-check "selftest-without-DCL" (and (not (vl-catch-all-error-p result)) (= (cadr result) 0) (> (car result) 45)))
+;; Exercise the actual error branch without loading a UI or changing installed DLLs.
+(setq saved-palette-load bht:palette-load)
+(defun bht:palette-load () nil)
+(setq *bht-screen-messages* nil result (vl-catch-all-apply 'c:BHTLOAD nil))
+(setq bht:palette-load saved-palette-load)
+(review-check "load-failure-guidance" (and (not (vl-catch-all-error-p result))
+  (vl-some '(lambda (m) (vl-string-search "BHT.Palette.dll" m)) *bht-screen-messages*)
+  (not (vl-some '(lambda (m) (vl-string-search "BHTDCL" m)) *bht-screen-messages*))))
+(princ (strcat "\nREVIEW-FAIL=" (itoa *review-fail*)))
+(princ)

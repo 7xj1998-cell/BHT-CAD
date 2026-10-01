@@ -1,0 +1,47 @@
+# BHT - CI: CHI build + kiem thu BHT.Core (thuan .NET, khong tham chieu AutoCAD).
+# Plugin AutoCAD (BHT.Bridge, BHT.Palette) can acdbmgd/accoremgd/acmgd.dll cua Autodesk - KHONG co
+# tren runner va KHONG duoc dua vao repo -> buoc cuoi in SKIP ro rang, khong bao thanh cong gia.
+name: BHT.Core build + test
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  core:
+    name: BHT.Core (net48, x64) - chi phan khong phu thuoc AutoCAD
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Check version metadata
+        shell: pwsh
+        run: ./scripts/check-version.ps1
+
+      - name: Build BHT.Core + BHT.CoreTests
+        shell: pwsh
+        run: dotnet build tests/CoreTests/BHT.CoreTests.csproj -c Release -p:Platform=x64 "-p:OutDir=$env:GITHUB_WORKSPACE\build\bin\"
+
+      - name: Chay BHT.CoreTests (ma thoat = so FAIL)
+        shell: pwsh
+        run: |
+          & "$env:GITHUB_WORKSPACE\build\bin\BHT.CoreTests.exe"
+          if ($LASTEXITCODE -ne 0) { Write-Error "BHT.CoreTests: $LASTEXITCODE FAIL"; exit $LASTEXITCODE }
+
+      - name: Plugin AutoCAD (BHT.Bridge / BHT.Palette) - SKIP neu khong co tham chieu
+        shell: pwsh
+        run: |
+          $d = $env:ACAD_INSTALL_DIR
+          $ok = $d -and (Test-Path "$d\acdbmgd.dll") -and (Test-Path "$d\accoremgd.dll") -and (Test-Path "$d\acmgd.dll")
+          if (-not $ok) {
+            Write-Host "::warning title=SKIP plugin AutoCAD::Khong co acdbmgd/accoremgd/acmgd.dll tren runner -> BHT.Bridge va BHT.Palette KHONG duoc build o CI (khong phai thanh cong). Build tren may co AutoCAD: scripts/build.ps1"
+            "## SKIP: BHT.Bridge / BHT.Palette khong duoc build (khong co tham chieu AutoCAD tren runner)" >> $env:GITHUB_STEP_SUMMARY
+          } else {
+            powershell -ExecutionPolicy Bypass -File scripts/build.ps1 -AcadDir $d
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }

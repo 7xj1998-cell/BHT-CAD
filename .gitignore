@@ -24,7 +24,20 @@ data/
 # Ket qua chay kiem thu
 tests/IntegrationTests/run/
 *.console.txt
+*.log
 *.scr
 BHT_LOG*
 # Goi phat hanh (nam o release/ ngoai repo)
 *.zip
+# 5.0: ban sao phong chu (TDT / AutoCAD) chi dung cuc bo, KHONG dua vao repo
+fonts_local/
+*.ttf
+*.shx
+
+# Temporary build output and compiled installers
+*.msi
+*.vlx
+*.fas
+*.prv
+*-latest.txt
+build-verify.txt
