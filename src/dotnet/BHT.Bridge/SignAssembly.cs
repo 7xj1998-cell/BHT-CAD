@@ -76,7 +76,7 @@ namespace BHT.Bridge
     public sealed class SignAssemblyFunctions
     {
         [LispFunction("BHTSIGNASSEMBLY")]
-        public string Build(ResultBuffer args)
+        public static string Build(ResultBuffer args)
         {
             var names = Convert.ToString(args.AsArray()[0].Value, CultureInfo.InvariantCulture).Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries);
             return SignAssembly.Ensure(AcApp.DocumentManager.MdiActiveDocument.Database, names);

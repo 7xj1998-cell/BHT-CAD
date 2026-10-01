@@ -50,7 +50,9 @@ $interactive = @(
   '(signs-check "label-show-keeps-RTK" (equal before-label-review (bht:pt-all)))',
   '(princ (strcat "\nFREE-INPUT-FAIL=" (itoa *sign-test-fail*)))'
 )
-$lines = $lines[0..($lines.Count - 3)] + $interactive + @('_.QUIT', '_Y')
+$apiProbeResult = Join-Path $BinDir 'assembly-api.txt'
+if (Test-Path -LiteralPath $apiProbeResult) { Remove-Item -LiteralPath $apiProbeResult }
+$lines = $lines[0..($lines.Count - 3)] + $interactive + @('BHTASSEMBLYAPIPROBE', '_.QUIT', '_Y')
 $scr = Join-Path $out 'run.scr'
 $utf8Bom = New-Object System.Text.UTF8Encoding($true)
 [IO.File]::WriteAllLines($scr, $lines, $utf8Bom)
@@ -61,6 +63,8 @@ New-Item -ItemType Directory -Force -Path $isolation | Out-Null
 & "$AcadDir\accoreconsole.exe" /isolate BHTSignTests $isolation /p "<<Unnamed Profile>>" /s $scr /l en-US > $log
 $console = [IO.File]::ReadAllText($log).Replace([string][char]0, '')
 if ($console -match '; error:|malformed list|no function definition') { throw 'Lisp execution error in sign tests' }
+if (-not (Test-Path -LiteralPath $apiProbeResult)) { throw 'Palette acedInvoke assembly probe did not complete' }
+Write-Host ([IO.File]::ReadAllText($apiProbeResult))
 $console | Set-Content -LiteralPath (Join-Path $out 'console.txt') -Encoding UTF8
 $results = Get-Content -LiteralPath (Join-Path $BinDir 'probe.txt')
 $results | ForEach-Object { Write-Host $_ }

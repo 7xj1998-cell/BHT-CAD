@@ -1,5 +1,5 @@
 ﻿;;; ======================================================================
-;;; BHT-0.6.6.lsp - BHT 0.6.6 (build 2026-10-01)
+;;; BHT-0.6.7.lsp - BHT 0.6.7 (build 2026-10-01)
 ;;; Quan ly khao sat bao hieu / coc tieu / cot Km / bang va cong trinh ven
 ;;; tuyen: diem RTK, ho so doi tuong, anh TimeMark (KMZ), tuyen tham chieu,
 ;;; ly trinh, goi thau / doan tuyen, xuat CSV cho Excel.
@@ -128,12 +128,12 @@
 
 (vl-load-com)
 
-(setq *bht-version* "0.6.6")
+(setq *bht-version* "0.6.7")
 (setq *bht-build* "2026-10-01")
 
 ;; Luu duong dan ngay khi APPLOAD / Application Bundle nap Lisp. DLL dat canh
 ;; file Lisp de nguoi dung chi can APPLOAD mot lan, khong phai tu NETLOAD.
-(setq *bht-lsp-file* (findfile "BHT-0.6.6.lsp"))
+(setq *bht-lsp-file* (findfile "BHT-0.6.7.lsp"))
 (setq *bht-lsp-dir*
   (if *bht-lsp-file* (vl-filename-directory *bht-lsp-file*) *bht-module-root*))
 (setq *bht-palette-dll*

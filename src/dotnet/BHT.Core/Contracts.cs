@@ -85,7 +85,9 @@ namespace BHT.Core
             var r = new LispReply();
             if (raw == null || raw.Count == 0) { r.Error = "Lisp không trả về giá trị (hàm chưa nạp / chưa đăng ký?)"; return r; }
             if (raw[0] == "OK") { r.Ok = true; for (int i = 1; i < raw.Count; i++) r.Values.Add(raw[i]); }
-            else { r.Error = raw.Count > 1 ? raw[1] : raw[0]; }
+            else { r.Error = raw.Count > 1 ? raw[1] : raw[0];
+                if (string.IsNullOrWhiteSpace(r.Error)) r.Error = "Lisp đã dừng thao tác mà không trả về chi tiết. Kiểm tra bộ BHT đang nạp và dòng lệnh CAD (F2).";
+            }
             return r;
         }
 

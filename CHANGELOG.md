@@ -1,4 +1,10 @@
-﻿## v0.6.6 — 2026-10-02
+﻿## v0.6.7 — 2026-10-02
+
+- Sửa đăng ký hàm ghép cụm nhiều mặt biển để Lisp gọi được; kiểm tra chèn/cập nhật 1 trụ với W.239 và S.509a@7 qua API Palette.
+- Thanh thao tác hồ sơ có hai hàng cố định; Đặt tự do và Thư viện biển nằm trên cùng.
+- Hiển thị hướng dẫn khi Lisp trả lỗi rỗng.
+
+## v0.6.6 — 2026-10-02
 
 - Nhúng ảnh biển báo vào DLL Palette, bảo đảm R.122 và toàn bộ thư viện có ảnh ngay cả khi thiếu thư mục Images. Giữ hỗ trợ ảnh TDT cho mã ngoài bộ ảnh đi kèm.
 - Kiểm tra riêng ảnh R.122, P.131c, S.508a/b và toàn bộ mục thư viện bằng WinForms.

@@ -134,17 +134,23 @@ namespace BHT.Palette
             row("Lý trình tay", chainPanel); row("Thông tin", _oInfo);
             form.Controls.Add(new Label()); form.Controls.Add(_oAllowShared);
 
-            var f1 = Flow();
-            f1.Controls.Add(Btn("Tạo hồ sơ từ điểm", (s, e) => PickSurveyPoints(NewObjectFromPoints)));
-            f1.Controls.Add(Btn("Lưu", (s, e) => SaveObject()));
-            f1.Controls.Add(Btn("Chèn/Cập nhật ký hiệu", (s, e) => SymbolForCurrent()));
-            var freeActions = Flow(); freeActions.Dock = DockStyle.None;
-            freeActions.Controls.Add(Btn("Đặt tự do…", (s, e) => PlaceCurrentObject()));
+            var f1 = new TableLayoutPanel { Dock = DockStyle.Top, Height = 76, ColumnCount = 4, RowCount = 2, Padding = new Padding(2) };
+            for (int column = 0; column < 4; column++) f1.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 25));
+            for (int rowIndex = 0; rowIndex < 2; rowIndex++) f1.RowStyles.Add(new RowStyle(SizeType.Percent, 50));
+            var actions = new[] {
+                Btn("Tạo hồ sơ", (s, e) => PickSurveyPoints(NewObjectFromPoints)),
+                Btn("Lưu", (s, e) => SaveObject()),
+                Btn("Đặt tự do…", (s, e) => PlaceCurrentObject()),
+                Btn("Thư viện biển", (s, e) => OpenSignPicker()) };
+            for (int column = 0; column < actions.Length; column++) { actions[column].AutoSize = false; actions[column].Dock = DockStyle.Fill; f1.Controls.Add(actions[column], column, 0); }
+            _objectTips.SetToolTip(actions[0], "Chọn điểm RTK trên CAD để tạo hồ sơ đối tượng.");
+            var insertAction = Btn("Chèn/Cập nhật ký hiệu", (s, e) => SymbolForCurrent());
+            insertAction.AutoSize = false; insertAction.Dock = DockStyle.Fill;
+            f1.Controls.Add(insertAction, 0, 1); f1.SetColumnSpan(insertAction, 2);
             _oSignFill.Text = "Tô màu biển"; _oSignFill.Margin = new Padding(4, 7, 2, 2);
             _objectTips.SetToolTip(_oSignFill, "Áp dụng cho tất cả biển báo BHT đã chèn trong bản vẽ này. Bật: có Hatch; tắt: chỉ đường nét. Không đổi Hatch của công trình khác.");
             _oSignFill.CheckedChanged += (s, e) => { if (!_syncingSignFill) CallLisp("bht:api-sign-fill", new[] { _oSignFill.Checked ? "1" : "0" }, "Tô màu tất cả biển BHT", null); };
-            freeActions.Controls.Add(_oSignFill); f1.Controls.Add(freeActions);
-            f1.Controls.Add(Btn("Thư viện biển", (s, e) => OpenSignPicker()));
+            f1.Controls.Add(_oSignFill, 2, 1); f1.SetColumnSpan(_oSignFill, 2);
             var f2 = Flow(); f2.Dock = DockStyle.Bottom;
             f2.Controls.Add(Btn("Chọn thêm điểm trên CAD", (s, e) => PickSurveyPoints(AddPointIds)));
             f2.Controls.Add(Btn("Gỡ điểm đã chọn", (s, e) => RemoveListPoints()));

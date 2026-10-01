@@ -9,6 +9,13 @@ using BHT.Bridge;
 using App = Autodesk.AutoCAD.ApplicationServices.Core.Application;
 public class SignLibraryProbe
 {
+    [CommandMethod("BHTASSEMBLYAPIPROBE")]
+    public void AssemblyApiProbe()
+    {
+        var reply = new LispApi().Call("bht:api-symbol-sync", "OBJ-MULTI");
+        if (!reply.Ok) throw new InvalidOperationException("Palette API assembly failed: " + reply.Error);
+        File.WriteAllText(Path.Combine(Path.GetDirectoryName(typeof(SignLibraryProbe).Assembly.Location), "assembly-api.txt"), "PASS palette-acedInvoke-two-plates-seven-metres");
+    }
     [CommandMethod("BHTOFFLINEPROBE")]
     public static void Offline()
     {

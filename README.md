@@ -21,8 +21,8 @@ Xem [hướng dẫn sử dụng](docs/HUONG_DAN.md), [cài đặt](packaging/REA
 
 ## Mã nguồn và build
 
-- `src/lisp/BHT-0.6.6.lsp`: loader duy nhất, với 12 module trong `src/lisp/modules`.
-- `src/dotnet`: BHT.Core, BHT.Bridge và BHT.Palette; phiên bản assembly `0.6.6.0`.
+- `src/lisp/BHT-0.6.7.lsp`: loader duy nhất, với 12 module trong `src/lisp/modules`.
+- `src/dotnet`: BHT.Core, BHT.Bridge và BHT.Palette; phiên bản assembly `0.6.7.0`.
 - `scripts`: build, kiểm phiên bản, đóng gói và kiểm thư viện TDT.
 - `tests`: Core, tích hợp CAD và bộ cài; `.github/workflows` chạy Core trên Windows.
 - `packaging`: Application Bundle và trình cài PowerShell.
