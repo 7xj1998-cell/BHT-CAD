@@ -19,6 +19,12 @@ $utf8Bom = New-Object System.Text.UTF8Encoding($true)
 foreach ($file in $files) {
   $text = [IO.File]::ReadAllText($file.FullName)
   $next = $text.Replace("$old.0", "$Version.0").Replace("BHT-$old.lsp", "BHT-$Version.lsp").Replace("BHT $old", "BHT $Version").Replace(('"' + $old + '"'), ('"' + $Version + '"')).Replace(("'" + $old + "'"), ("'" + $Version + "'"))
+  if ($file.FullName -eq (Join-Path $root 'README.md') -or $file.FullName -eq (Join-Path $root 'docs\HUONG_DAN.md')) {
+    $next = [regex]::Replace($next, '^# BHT v\d+\.\d+\.\d+', ('# BHT v' + $Version))
+    $next = [regex]::Replace($next, 'BHT-\d+\.\d+\.\d+\.zip', ('BHT-' + $Version + '.zip'))
+    $next = [regex]::Replace($next, 'Bản \d+\.\d+\.\d+ gồm', ('Bản ' + $Version + ' gồm'))
+    $next = [regex]::Replace($next, 'Các thay đổi chính của v\d+\.\d+\.\d+', ('Các thay đổi chính của v' + $Version))
+  }
   if ($next -ne $text) { [IO.File]::WriteAllText($file.FullName, $next, $utf8Bom) }
 }
 [IO.File]::WriteAllText((Join-Path $root 'VERSION'), "$Version`n", [Text.Encoding]::ASCII)

@@ -52,6 +52,20 @@ public class SignLibraryProbe
     {
         var lines = new List<string>();
         var db = App.DocumentManager.MdiActiveDocument.Database;
+        lines.Add(TdtSignLibrary.Find("P.12") == null && TdtSignLibrary.Find("W.207zz") == null && TdtSignLibrary.Find("P.127-800") == null ? "PASS no-wrong-prefix-sign" : "FAIL no-wrong-prefix-sign");
+        var invalidSpeed = TdtSignLibrary.EnsureBlock(db, "P.127-800");
+        lines.Add(!invalidSpeed.Ok && invalidSpeed.Error.Contains("130") ? "PASS invalid-speed-block-rejected" : "FAIL invalid-speed-block-rejected");
+        using (var tr = db.TransactionManager.StartTransaction())
+        {
+            var table = (BlockTable)tr.GetObject(db.BlockTableId, OpenMode.ForWrite);
+            var invalid = new BlockTableRecord { Name = TdtSignLibrary.WrapperName("W.207zz") };
+            table.Add(invalid); tr.AddNewlyCreatedDBObject(invalid, true); tr.Commit();
+        }
+        lines.Add(!TdtSignLibrary.EnsureBlock(db, "W.207zz").Ok ? "PASS old-invalid-cached-sign-rejected" : "FAIL old-invalid-cached-sign-rejected");
+        try { SignAssembly.Ensure(db, new[] { "P.127-missing-block" }); lines.Add("FAIL missing-single-plate"); }
+        catch (InvalidOperationException) { lines.Add("PASS missing-single-plate-rejected"); }
+        try { SignAssembly.Ensure(db, new string[0]); lines.Add("FAIL empty-assembly"); }
+        catch (ArgumentException) { lines.Add("PASS empty-assembly-rejected"); }
         foreach (string code in new[] { "P.127-80", "P.127-40", "P.127", "I.434a", "R.415", "W.207c", "S.501@350", "S.502@150", "S.509a@4.5", "P.117@3.8", "P.118@2.8", "P.119@8", "P.120@9" })
         {
             var result = TdtSignLibrary.EnsureBlock(db, code);

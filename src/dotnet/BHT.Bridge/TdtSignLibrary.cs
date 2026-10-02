@@ -107,15 +107,16 @@ namespace BHT.Bridge
 
         public static TdtSignEntry Find(string code)
         {
+            if (SignPresentation.ValidationError(code) != "") return null;
+            if (SignPresentation.Speed(code, "").HasValue) code = "P.127";
             string key = Normalize(SignPresentation.BaseCode(code));
             if (key == "") return null;
             var all = GetCatalog();
             var exact = all.FirstOrDefault(x => Normalize(x.Code) == key);
             if (exact != null) return exact;
-            var prefix = all.Where(x => key.StartsWith(Normalize(x.Code), StringComparison.Ordinal))
-                .OrderByDescending(x => Normalize(x.Code).Length).FirstOrDefault();
-            if (prefix != null) return prefix;
-            return all.Where(x => Normalize(x.Code).StartsWith(key, StringComparison.Ordinal))
+            // An omitted letter may select the first variant; extra suffixes never select another sign.
+            return all.Where(x => Normalize(x.Code).StartsWith(key, StringComparison.Ordinal)
+                    && System.Text.RegularExpressions.Regex.IsMatch(Normalize(x.Code).Substring(key.Length), @"^[A-Z]+$"))
                 .OrderBy(x => Normalize(x.Code).Length).FirstOrDefault();
         }
 
@@ -149,14 +150,18 @@ namespace BHT.Bridge
         {
             var result = new TdtSignImportResult { BlockName = WrapperName(code), FaceScale = 1.0 };
             if (destination == null) { result.Error = "không có bản vẽ đích"; return result; }
-            if ((code ?? "").Contains("@") && SignPresentation.MetreValue(code) == "")
-            { result.Error = "Giá trị mét không hợp lệ hoặc mã biển không hỗ trợ giá trị mét."; return result; }
-            if (HasBlock(destination, result.BlockName)) { result.Ok = true; return result; }
-
+            result.Error = SignPresentation.ValidationError(code);
+            if (result.Error != "") return result;
             var entry = Find(code);
-            if (entry == null) { result.Error = "mã " + code + " không có trong danh mục TDT"; return result; }
+            if (entry == null)
+            {
+                // A saved vector remains usable on a machine without the complete TDT catalog.
+                if (InstalledRoot == "" && HasBlock(destination, result.BlockName)) { result.Ok = true; return result; }
+                result.Error = "mã " + code + " không có trong danh mục TDT"; return result;
+            }
             result.Description = entry.Description;
             result.SourceDrawing = entry.SourceDrawing;
+            if (HasBlock(destination, result.BlockName)) { result.Ok = true; return result; }
 
             string cache;
             try { cache = EnsureCache(); }

@@ -34,4 +34,7 @@ Require ($manifest.ApplicationPackage.AppVersion -eq $version) 'Bundle AppVersio
 Require (@($manifest.ApplicationPackage.Components.ComponentEntry | Where-Object { $_.AppName -eq 'BHT.Lisp' })[0].ModuleName -eq "./Contents/Windows/BHT-$version.lsp") 'Bundle Lisp filename mismatch'
 $installer = Get-Content -LiteralPath (Join-Path $root 'packaging\INSTALL_BHT.ps1') -Raw
 Require ($installer.Contains("`$bhtVersion = '$version'")) 'Installer version mismatch'
+$readme = [IO.File]::ReadAllText((Join-Path $root 'README.md')).TrimStart([char]0xFEFF)
+Require ($readme.StartsWith("# BHT v$version ")) 'README release heading mismatch'
+Require ($readme.Contains("BHT-$version.zip")) 'README installation ZIP mismatch'
 Write-Host "VERSION CHECK PASSED: $version / $assemblyVersion"

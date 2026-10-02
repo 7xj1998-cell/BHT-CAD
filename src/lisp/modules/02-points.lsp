@@ -1,4 +1,4 @@
-;;; ----------------------------------------------------------------------
+﻿;;; ----------------------------------------------------------------------
 ;;; Diem RTK: POINT layer BHT_RTK
 ;;;  XData "BHT_RTK" (tuong thich v0.1): ten diem, mo ta (<=80 ky tu dau)
 ;;;  XData "BHT_PT" (v0.2): id, dataset, dong, ten, N goc, E goc, Z goc,
@@ -295,9 +295,6 @@
   (bht:log-flush)
   (princ)
 )
-(defun c:BHTIMPORT () (c:BHTNHAP))
-(defun c:BHTCSV () (c:BHTNHAP))
-
 (defun c:BHTNHAPTSV (/ *error* path)
   (setq *error* bht:on-error)
   (if (setq path (getfiled "Chọn BHT_RTK.tsv (định dạng trao đổi; CSV là cách nhập mặc định)" (bht:dwg-folder) "tsv;txt" 0))
@@ -305,8 +302,6 @@
   (bht:log-flush)
   (princ)
 )
-(defun c:BHTNK () (c:BHTNHAPTSV))
-
 ;;; --- Engine nhan RTK: cau hinh, bao toan nhan tay va bo tri ---
 ;; Sau khi nhap diem: hoi tao/cap nhat nhan (cap nhat tai cho, khong nhan doi).
 (defun bht:ask-labels-after-import ()

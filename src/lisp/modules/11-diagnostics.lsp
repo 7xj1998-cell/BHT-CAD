@@ -155,8 +155,6 @@
   (bht:log-flush)
   (princ)
 )
-(defun c:BHTCHECK () (c:BHTKT))
-
 ;;; ----------------------------------------------------------------------
 ;;; Thong tin / chan doan
 ;;; ----------------------------------------------------------------------
@@ -388,22 +386,22 @@
   (foreach l
     '("  Quy trình: 1 Nhập điểm RTK -> 2 Nhãn điểm -> 3 Nhập TimeMark -> 4 Kiểm tra/xem ảnh -> 5 Ghép ảnh"
       "             -> 6 Hồ sơ đối tượng -> 7 Ký hiệu -> 8 Tuyến + Km -> 9 Xuất thống kê (gõ BHT để mở bảng)"
-      "  BHTNHAP      Nhập CSV RTK (MẶC ĐỊNH; tên, Bắc, Đông, Z, mô tả) -> POINT layer BHT_RTK, ID <dataset>-R-<dòng> (BHTIMPORT, BHTCSV)"
-      "  BHTNHAPTSV   Nhập BHT_RTK.tsv (định dạng trao đổi/chuẩn hóa; KHÔNG cần nhập lại dữ liệu đã nhập bằng CSV) (BHTNK)"
-      "  BHTNHANDIEM  Nhãn điểm RTK: tên / +mô tả / +cao độ, ưu tiên hồ sơ, ID nội bộ, sắp xếp, ẩn/hiện, cài đặt (BHTLABEL)"
+      "  BHTNHAP      Nhập CSV RTK (MẶC ĐỊNH; tên, Bắc, Đông, Z, mô tả) -> POINT layer BHT_RTK, ID <dataset>-R-<dòng>"
+      "  BHTNHAPTSV   Nhập BHT_RTK.tsv (định dạng trao đổi/chuẩn hóa; KHÔNG cần nhập lại dữ liệu đã nhập bằng CSV)"
+      "  BHTNHANDIEM  Nhãn điểm RTK: tên / +mô tả / +cao độ, ưu tiên hồ sơ, ID nội bộ, sắp xếp, ẩn/hiện, cài đặt"
       "  BHTSAPNHAN   Sắp xếp nhãn tránh chồng lấn theo vùng chọn / danh sách ID / tất cả (POINT không bị di chuyển)"
       "  BHTKIEUDIEM  Đặt POINT thành dấu X đúng tâm, mặc định 1 unit; tùy chọn sắp lại toàn bộ nhãn"
       "  BHTNHANTUDONG Trả nhãn đã dời tay về vị trí tự động   BHTANNHAN  Ẩn / hiện nhãn điểm RTK"
-      "  BHTDOITUONG  Tạo hồ sơ đối tượng từ nhiều điểm RTK (điểm đã thuộc hồ sơ khác: xem / sửa / thêm điểm / tạo mới có xác nhận) (BHTTAG)"
-      "  BHTSUADT     Sửa hồ sơ (BHTEDIT)      BHTXOADT   Xóa hồ sơ, giữ điểm (BHTDELETE)"
-      "  BHTTHEMDIEM  Thêm điểm vào đối tượng  BHTBOTDIEM Gỡ điểm khỏi đối tượng (BHTUNTAG)"
+      "  BHTDOITUONG  Tạo hồ sơ đối tượng từ nhiều điểm RTK (điểm đã thuộc hồ sơ khác: xem / sửa / thêm điểm / tạo mới có xác nhận)"
+      "  BHTSUADT     Sửa hồ sơ      BHTXOADT   Xóa hồ sơ, giữ điểm"
+      "  BHTTHEMDIEM  Thêm điểm vào đối tượng  BHTBOTDIEM Gỡ điểm khỏi đối tượng"
       "  BHTKMZ       Giải nén KMZ TimeMark -> ảnh + BHT_PHOTO.tsv (giữ cả ảnh GPS 0,0)"
-      "  BHTANHNAP    Nạp BHT_PHOTO.tsv vào bản vẽ (BHTDSANH)   BHTHETOADO  Chọn hệ VN-2000 cho ảnh GPS"
+      "  BHTANHNAP    Nạp BHT_PHOTO.tsv vào bản vẽ   BHTHETOADO  Chọn hệ VN-2000 cho ảnh GPS"
       "  BHTGHEPANH   Đề xuất ghép ảnh - điểm/đối tượng (CHỈ đề xuất)"
-      "  BHTXACNHANANH Duyệt/xác nhận đề xuất   BHTGANANH  Gắn ảnh thủ công (BHTPHOTO)   BHTBOANH  Bỏ ảnh"
+      "  BHTXACNHANANH Duyệt/xác nhận đề xuất   BHTGANANH  Gắn ảnh thủ công   BHTBOANH  Bỏ ảnh"
       "  BHTXEMANH    Xem ảnh: chọn ký hiệu ảnh / điểm RTK / nhập mã -> thông tin + mở JPG, ảnh trước/sau, gắn đối tượng"
       "  BHTANH       Mở ảnh theo mã (T = đặt thư mục ảnh)   BHTTHUMUCANH  Chỉ lại thư mục ảnh khi mất đường dẫn"
-      "  BHTDONGBOANH Đồng bộ ký hiệu + nhãn mã ảnh + đường dẫn từ bản ghi (không trùng; ảnh GPS 0,0 không có ký hiệu) (BHTSYNCANH)"
+      "  BHTDONGBOANH Đồng bộ ký hiệu + nhãn mã ảnh + đường dẫn từ bản ghi (không trùng; ảnh GPS 0,0 không có ký hiệu)"
       "  BHTNHANANH   Ẩn / hiện nhãn mã ảnh   BHTCHENANH  Chèn ảnh JPG đã chọn làm raster (+ đường dẫn tùy chọn; không chèn hàng loạt)"
       "  BHTTUYEN     Khai báo Polyline tuyến tham chiếu (từ chối proxy TDT)"
       "  BHTMOCKM     Thêm mốc Km đã xác nhận / điểm gãy Km   BHTDSMOC  Xem/xóa mốc"
@@ -414,8 +412,8 @@
       "  BHTBLOCK     Danh mục block chuẩn / nạp DWG tùy chọn / trở lại mặc định"
       "  BHTBBDANHMUC Danh mục biển báo từ ảnh KMZ DT830, đối chiếu QCVN 41:2024"
       "  BHTTHUTUVE   Thứ tự hiển thị: nhãn > ký hiệu/điểm > raster BHT > ảnh nền IRT"
-      "  BHTXUAT      Xuất CSV: DIEM_RTK, DOI_TUONG, ANH, TONG_HOP (BHTEXPORT, BHTSUMMARY)"
-      "  BHTKT        Kiểm tra toàn vẹn (BHTCHECK)   BHTINFO  Xem dữ liệu   BHTDIAG  Chẩn đoán đối tượng/proxy"
+      "  BHTXUAT      Xuất CSV: DIEM_RTK, DOI_TUONG, ANH, TONG_HOP"
+      "  BHTKT        Kiểm tra toàn vẹn   BHTINFO  Xem dữ liệu   BHTDIAG  Chẩn đoán đối tượng/proxy"
       "  BHTTRANGTHAI Trạng thái bản vẽ (điểm, nhãn, hồ sơ, ảnh, JPG, ghép, tuyến, lý trình)"
       "  BHTTEST      Tự kiểm tra hàm   BTH/BHT  Mở Palette   BHTHELP  Danh sách này"
       "  BHTLOAD      Kiểm tra / nạp lại Palette")

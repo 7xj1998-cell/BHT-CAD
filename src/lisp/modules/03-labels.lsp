@@ -572,8 +572,6 @@
   (bht:log-flush)
   (princ)
 )
-(defun c:BHTLABEL () (c:BHTNHANDIEM))
-
 ;; Sap xep lai nhan theo pham vi (khong di chuyen POINT).
 (defun c:BHTSAPNHAN (/ *error*)
   (setq *error* bht:on-error)

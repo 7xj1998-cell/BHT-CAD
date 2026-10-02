@@ -28,7 +28,7 @@ namespace BHT.Core
             if (MetreDefault(code) == "" || !(code ?? "").Contains("@")) return "";
             double value;
             string text = code.Substring(code.IndexOf('@') + 1).Trim().Replace(',', '.');
-            return double.TryParse(text, NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture, out value) && value > 0 && value <= 100000
+            return double.TryParse(text, NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture, out value) && value > 0 && value <= 100000 && value == Math.Round(value, 3)
                 ? value.ToString("0.###", CultureInfo.InvariantCulture) : "";
         }
         public static string ReplaceMetres(string code, string text)
@@ -42,7 +42,7 @@ namespace BHT.Core
         }
         public static int? Speed(string code, string description)
         {
-            var match = Regex.Match(code ?? "", @"^P\.?127(?:[-_ ](\d{1,3}))?$", RegexOptions.IgnoreCase);
+            var match = Regex.Match((code ?? "").Trim(), @"^P\.?127(?:\s*[-_/]?\s*(\d{1,3}))?$", RegexOptions.IgnoreCase);
             if (!match.Success) return null;
             string value = match.Groups[1].Value;
             if (value == "")
@@ -53,6 +53,16 @@ namespace BHT.Core
             }
             int speed;
             return int.TryParse(value, out speed) && speed >= 5 && speed <= 130 ? (int?)speed : null;
+        }
+        public static string ValidationError(string code)
+        {
+            code = (code ?? "").Trim();
+            if (code.Contains("@") && MetreValue(code) == "")
+                return "Giá trị mét phải lớn hơn 0, tối đa 100000 và có tối đa 3 chữ số thập phân; mã biển phải hỗ trợ giá trị mét.";
+            if (Regex.IsMatch(code, @"^P\.?127", RegexOptions.IgnoreCase)
+                && !Regex.IsMatch(code, @"^P\.?127$", RegexOptions.IgnoreCase) && !Speed(code, "").HasValue)
+                return "Nhập tốc độ nguyên từ 5 đến 130 km/h; ví dụ P.127-80.";
+            return "";
         }
         public static string ResolveCode(string code, string description)
         {

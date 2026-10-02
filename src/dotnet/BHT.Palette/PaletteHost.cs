@@ -68,12 +68,6 @@ namespace BHT.Palette
         [CommandMethod("BHT", CommandFlags.Session)]
         public void ShowBht() { ShowPalette("BHT"); }
 
-        [CommandMethod("BHTSHOW", CommandFlags.Session)]
-        public void ShowInternal() { ShowPalette("BHTSHOW"); }
-
-        [CommandMethod("BHTPALETTE", CommandFlags.Session)]
-        public void ShowLegacy() { ShowPalette("BHTPALETTE"); }
-
         private static void ShowPalette(string command)
         {
             // AutoCAD can invoke a saved palette restore command on the Start tab.

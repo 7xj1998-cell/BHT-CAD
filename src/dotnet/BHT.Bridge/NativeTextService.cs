@@ -11,6 +11,12 @@ namespace BHT.Bridge
     {
         [LispFunction("BHTRUNTIMEROOT")]
         public static string RuntimeRoot(ResultBuffer args) { return System.IO.Path.GetDirectoryName(typeof(NativeTextService).Assembly.Location); }
+        [LispFunction("BHTSIGNVALIDATE")]
+        public static string ValidateSign(ResultBuffer args)
+        {
+            var values = args == null ? new TypedValue[0] : args.AsArray();
+            return SignPresentation.ValidationError(values.Length == 0 ? "" : Convert.ToString(values[0].Value));
+        }
         [LispFunction("BHTNATIVESIGNCODE")]
         public static string SignCode(ResultBuffer args)
         {

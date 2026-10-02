@@ -1,4 +1,4 @@
-;;; ----------------------------------------------------------------------
+﻿;;; ----------------------------------------------------------------------
 ;;; He toa do cho anh GPS: WGS84 -> VN-2000 (7 tham so, cung bo so voi
 ;;; IRTv6_2026-09-25_google-satellite-tiles-fix-5.lsp, viet lai doc lap,
 ;;; KHONG can nap IRT). Chi dung de dat vi tri CHUP anh / de xuat ghep.
@@ -198,8 +198,6 @@
   (bht:log-flush)
   (princ)
 )
-(defun c:BHTDSANH () (c:BHTANHNAP))
-
 ;;; ---- KMZ -> thu muc anh + BHT_PHOTO.tsv -------------------------------
 
 (defun bht:ps-quote (s) (bht:replace s "'" "''"))
@@ -609,8 +607,6 @@
   (bht:log-flush)
   (princ)
 )
-(defun c:BHTSYNCANH () (c:BHTDONGBOANH))
-
 ;; Bat/tat nhan ma anh (layer BHT_ANH_TEN; khong xoa).
 (defun c:BHTNHANANH (/ *error*)
   (setq *error* bht:on-error)
@@ -1168,8 +1164,6 @@
   (bht:log-flush)
   (princ)
 )
-(defun c:BHTPHOTO () (c:BHTGANANH))
-
 (defun c:BHTBOANH (/ *error* oid v)
   (setq *error* bht:on-error)
   (if (setq oid (bht:pick-object "Chọn đối tượng cần bỏ ảnh"))

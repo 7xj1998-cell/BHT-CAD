@@ -1,4 +1,13 @@
-﻿## v0.6.7 — 2026-10-02
+﻿## v0.6.8 — 2026-10-02
+
+- Đã bỏ 14 bí danh Lisp và hai bí danh mở bảng; có bảng lệnh thay thế cho script CAD.
+- Đã chặn tốc độ/mét sai và mã không khớp, tránh vẽ biển mặc định khi nhập sai. Giữ các cách ghi tốc độ cũ và mã ghép W.239a + S.509a.
+- Đã giới hạn bộ chọn ở 20 mặt/trụ và kiểm tra từng mặt trước khi xác nhận; kiểm tra block thiếu và cụm rỗng.
+- Đã từ chối giá trị mét quá ba số thập phân thay vì âm thầm làm tròn, kể cả làm tròn về 0.
+- Đã bỏ control không dùng, hai bản sao thư mục ảnh và tệp biên dịch trong mã nguồn đóng gói. Ảnh được nhúng trong DLL Palette.
+- Đã đồng bộ README/hướng dẫn với phiên bản và thêm kiểm tra chống sai tên ZIP cài đặt.
+
+## v0.6.7 — 2026-10-02
 
 - Sửa đăng ký hàm ghép cụm nhiều mặt biển để Lisp gọi được; kiểm tra chèn/cập nhật 1 trụ với W.239 và S.509a@7 qua API Palette.
 - Thanh thao tác hồ sơ có hai hàng cố định; Đặt tự do và Thư viện biển nằm trên cùng.

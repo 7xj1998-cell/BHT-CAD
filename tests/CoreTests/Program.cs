@@ -35,6 +35,12 @@ namespace BHT.CoreTests
             Check("SV5", "other sign", SignPresentation.ResolveCode("R.415", "gioihan80") == "R.415");
             Check("SV6", "no supplied speed", SignPresentation.ResolveCode("P.127", "") == "P.127");
             Check("SV7", "reject overlong number", !SignPresentation.Speed("P.127", "gioihan8000").HasValue);
+            Check("SV10", "reject invalid explicit speed instead of defaulting", SignPresentation.ValidationError("P.127-800") != "" && SignPresentation.ValidationError("P.127-abc") != "" && SignPresentation.ValidationError("P.127-") != "");
+            Check("SV11", "accept speed boundaries and surrounding spaces", SignPresentation.ValidationError(" P.127-5 ") == "" && SignPresentation.Speed(" P.127-130 ", "").Value == 130);
+            Check("SV12", "explicit invalid speed cannot use description", SignPresentation.Speed("P.127-800", "gioihan80") == null && SignPresentation.ValidationError("P.127-0") != "");
+            Check("SV13", "legacy separators resolve without default speed", SignPresentation.ResolveCode("P.127 - 20", "") == "P.127-20" && SignPresentation.ResolveCode("P.127/40", "") == "P.127-40" && SignPresentation.ResolveCode("P12780", "") == "P.127-80");
+            Check("MV6", "reject unsupported and duplicate metre suffix", SignPresentation.ValidationError("R.415@5") != "" && SignPresentation.ValidationError("S.502@5@6") != "" && SignPresentation.ValidationError("S.509a@4,5") == "");
+            Check("MV7", "metres never silently round to zero or another value", SignPresentation.MetreValue("S.502@0.0001") == "" && SignPresentation.MetreValue("S.509a@4.5678") == "" && SignPresentation.MetreValue("S.509a@0.001") == "0.001");
             Check("MV1", "metres decimal comma", SignPresentation.MetreValue("S.509a@4,5") == "4.5");
             Check("MV2", "whole distance text", SignPresentation.ReplaceMetres("S.502@150", "200m") == "150 m");
             Check("MV3", "dimension number", SignPresentation.ReplaceMetres("P.117@3.8", "4.2") == "3.8");
@@ -263,7 +269,7 @@ namespace BHT.CoreTests
 
         static void Versions()
         {
-            Check("C11a", "hằng phiên bản", BhtVersion.Version == "0.6.7" && BhtVersion.AssemblyVersion == BhtVersion.Version + ".0" && BhtVersion.FileVersion == BhtVersion.AssemblyVersion);
+            Check("C11a", "hằng phiên bản", BhtVersion.Version == "0.6.8" && BhtVersion.AssemblyVersion == BhtVersion.Version + ".0" && BhtVersion.FileVersion == BhtVersion.AssemblyVersion);
             Check("C11b", "Lisp phải cùng phiên bản", BhtVersion.LispCompatible(BhtVersion.Version, "1") && BhtVersion.LispCompatible(" " + BhtVersion.Version + " ", "1")
                 && !BhtVersion.LispCompatible("5.0", "1") && !BhtVersion.LispCompatible("0.4.6-fix3", "1") && !BhtVersion.LispCompatible(BhtVersion.Version, "") && !BhtVersion.LispCompatible(BhtVersion.Version, "0"));
             var asm = typeof(BhtRecord).Assembly.GetName().Version.ToString();

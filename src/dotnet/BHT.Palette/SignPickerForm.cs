@@ -74,7 +74,6 @@ namespace BHT.Palette
             metres.Location = new Point(0, 23); metresPanel.Controls.Add(metres); metresPanel.Visible = false;
             var hint = new Label { Dock = DockStyle.Bottom, Height = 65, Text = "Ảnh là mẫu; CAD dùng giá trị thực tế bạn nhập. Tô màu áp dụng khi chèn CAD. Mặt đầu tiên là biển chính, nằm trên cùng.", ForeColor = Color.DimGray };
             sidebar.Controls.Add(faces); sidebar.Controls.Add(actions); sidebar.Controls.Add(hint);
-            var fillPanel = new FlowLayoutPanel { Dock = DockStyle.Top, Height = 32 }; fillPanel.Controls.Add(fill);
             // Fill is controlled for the whole drawing in the Palette toolbar.
             sidebar.Controls.Add(validation); sidebar.Controls.Add(multiPanel); sidebar.Controls.Add(metresPanel); sidebar.Controls.Add(speedPanel); sidebar.Controls.Add(details); sidebar.Controls.Add(preview);
             foreach (string code in SignSearch.SplitCodes(faceCodes)) faces.Items.Add(code);
@@ -209,7 +208,7 @@ namespace BHT.Palette
             {
                 string candidateMetres = SelectedSign.Code + "@" + metres.Text.Trim();
                 string parsed = SignPresentation.MetreValue(candidateMetres);
-                if (parsed == "") { validation.Text = "Nhập giá trị m lớn hơn 0, tối đa 100000."; metres.Focus(); return null; }
+                if (parsed == "") { validation.Text = "Nhập m lớn hơn 0, tối đa 100000, tối đa 3 số thập phân."; metres.Focus(); return null; }
                 return SelectedSign.Code + "@" + parsed;
             }
             if (!IsSpeedSign(SelectedSign) || string.IsNullOrWhiteSpace(speed.Text)) return SelectedSign.Code;
@@ -220,6 +219,7 @@ namespace BHT.Palette
         }
         private void AddFace()
         {
+            if (faces.Items.Count >= 20) { validation.Text = "Một trụ hỗ trợ tối đa 20 mặt biển."; return; }
             string code = CurrentCode();
             if (code == null) return;
             if (!multi.Checked) multi.Checked = true;
@@ -237,6 +237,13 @@ namespace BHT.Palette
             if (multi.Checked)
             {
                 if (faces.Items.Count == 0) { AddFace(); if (faces.Items.Count == 0) return; }
+                if (faces.Items.Count > 20) { validation.Text = "Một trụ hỗ trợ tối đa 20 mặt biển."; return; }
+                foreach (string code in faces.Items)
+                {
+                    string error = SignPresentation.ValidationError(code);
+                    if (error != "") { validation.Text = error; return; }
+                    if (TdtSignLibrary.Find(code) == null) { validation.Text = "Mã biển không có trong danh mục: " + code; return; }
+                }
                 SelectedFaces = faces.Items.Cast<string>().ToList(); SelectedCode = SelectedFaces[0];
                 string baseCode = SignPresentation.Speed(SelectedCode, "").HasValue ? "P.127" : SignPresentation.BaseCode(SelectedCode);
                 TdtSignEntry entry; entries.TryGetValue(baseCode, out entry);

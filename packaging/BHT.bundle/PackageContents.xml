@@ -1,7 +1,7 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <ApplicationPackage
   SchemaVersion="1.0"
-  AppVersion="0.6.7"
+  AppVersion="0.6.8"
   ProductCode="{23E89180-4C3E-4BC6-8F21-0841E4A10404}"
   UpgradeCode="{712C995D-E8C7-4699-A93F-B9B26C6BEB94}"
   Name="BHT"
@@ -21,8 +21,6 @@
       <Commands GroupName="BHT">
         <Command Global="BTH" Local="BTH" />
         <Command Global="BHT" Local="BHT" />
-        <Command Global="BHTSHOW" Local="BHTSHOW" />
-        <Command Global="BHTPALETTE" Local="BHTPALETTE" />
       </Commands>
     </ComponentEntry>
 
@@ -30,7 +28,7 @@
     <ComponentEntry
       AppName="BHT.Lisp"
       AppDescription="Lõi dữ liệu và thuật toán BHT"
-      ModuleName="./Contents/Windows/BHT-0.6.7.lsp"
+      ModuleName="./Contents/Windows/BHT-0.6.8.lsp"
       PerDocument="True">
       <LoadReasons LoadOnAutoCADStartup="True" LoadOnAppearance="True" />
     </ComponentEntry>

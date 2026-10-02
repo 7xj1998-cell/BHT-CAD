@@ -1,4 +1,4 @@
-# BHT 0.4.6 — KIẾN TRÚC
+﻿# BHT 0.4.6 — KIẾN TRÚC
 
 ```
 BHT-0.4.6.lsp  (lõi Lisp + thư viện block: dữ liệu, nhãn / ký hiệu / ảnh / kiểm tra / thứ tự hiển thị)
@@ -14,7 +14,7 @@ BHT.Core.dll     (thuần .NET: mô hình dữ liệu, mã hóa bản ghi giốn
 * **DWG là nguồn dữ liệu duy nhất.** C# đọc/ghi đúng định dạng Lisp (docs/DATA_CONTRACT.md). Lisp không phụ thuộc Palette;
   `BHTDCL` vẫn cung cấp giao diện dự phòng khi DLL không nạp được.
 * **Một điểm vào giao diện.** `BTH` và `BHT` là lệnh .NET cùng gọi một `PaletteHost`. Lisp không định nghĩa hai lệnh này,
-  tránh xung đột và tránh mở song song DCL/Palette. `BHTPALETTE` và `BHTSHOW` chỉ là bí danh tương thích.
+  tránh xung đột và tránh mở song song DCL/Palette. Từ v0.6.8 chỉ đăng ký `BHT` và `BTH` để mở bảng; đã bỏ hai bí danh `BHTPALETTE` và `BHTSHOW`.
 * **Tự nạp.** Autodesk Application Bundle nạp Lisp theo từng tài liệu và nạp DLL khi gọi lệnh. Khi dùng APPLOAD,
   Lisp tự `NETLOAD` `BHT.Palette.dll` đặt cạnh nó. Người dùng không cần thao tác NETLOAD thủ công.
 * **Không viết lại thuật toán của Lisp trong C#**: kiểu điểm, nhãn, ký hiệu, ký hiệu ảnh, kiểm tra, thứ tự hiển thị → gọi `bht:api-*`.

@@ -1,4 +1,4 @@
-;;; ----------------------------------------------------------------------
+﻿;;; ----------------------------------------------------------------------
 ;;; Ho so doi tuong (object) - dictionary "OBJ"
 ;;; Truong: object_id nhom ma_hieu loai_ma mo_ta so_tru so_mat mat* tinh_trang
 ;;;  trang_thai_kt ghi_chu phia_duong pt* anh* anh_file* route_id ly_trinh_m
@@ -401,8 +401,6 @@
   (bht:log-flush)
   (princ)
 )
-(defun c:BHTTAG () (c:BHTDOITUONG))
-
 (defun c:BHTSUADT (/ *error* id)
   (setq *error* bht:on-error)
   (if (setq id (bht:pick-object "Chọn đối tượng cần sửa"))
@@ -410,8 +408,6 @@
   (bht:log-flush)
   (princ)
 )
-(defun c:BHTEDIT () (c:BHTSUADT))
-
 (defun c:BHTXOADT (/ *error* id ans)
   (setq *error* bht:on-error)
   (if (setq id (bht:pick-object "Chọn đối tượng cần xóa hồ sơ"))
@@ -422,8 +418,6 @@
   (bht:log-flush)
   (princ)
 )
-(defun c:BHTDELETE () (c:BHTXOADT))
-
 (defun c:BHTTHEMDIEM (/ *error* id pids n ov other)
   (setq *error* bht:on-error)
   (if (setq id (bht:pick-object "Chọn đối tượng cần thêm điểm"))
@@ -457,5 +451,3 @@
   (bht:log-flush)
   (princ)
 )
-(defun c:BHTUNTAG () (c:BHTBOTDIEM))
-

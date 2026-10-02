@@ -15,7 +15,10 @@ namespace BHT.Bridge
     {
         public static string Ensure(Database db, string[] names)
         {
-            if (names.Length < 2) return names.FirstOrDefault() ?? "";
+            if (db == null) throw new ArgumentNullException("db");
+            if (names == null || names.Length == 0 || names.Any(string.IsNullOrWhiteSpace))
+                throw new ArgumentException("Cần tên block cho từng mặt biển.");
+            names = names.Select(name => name.Trim()).ToArray();
             if (names.Length > 20) throw new InvalidOperationException("Một trụ hỗ trợ tối đa 20 mặt biển.");
             string key;
             using (var hash = SHA256.Create()) key = BitConverter.ToString(hash.ComputeHash(Encoding.UTF8.GetBytes(string.Join(";", names)))).Replace("-", "").Substring(0, 24);
@@ -23,8 +26,9 @@ namespace BHT.Bridge
             using (var tr = db.TransactionManager.StartTransaction())
             {
                 var table = (BlockTable)tr.GetObject(db.BlockTableId, OpenMode.ForRead);
-                if (table.Has(result)) return result;
                 foreach (var name in names) if (!table.Has(name)) throw new InvalidOperationException("Thiếu mặt biển: " + name);
+                if (names.Length == 1) return names[0];
+                if (table.Has(result)) return result;
                 table.UpgradeOpen();
                 var assembly = new BlockTableRecord { Name = result };
                 table.Add(assembly); tr.AddNewlyCreatedDBObject(assembly, true);
@@ -78,7 +82,8 @@ namespace BHT.Bridge
         [LispFunction("BHTSIGNASSEMBLY")]
         public static string Build(ResultBuffer args)
         {
-            var names = Convert.ToString(args.AsArray()[0].Value, CultureInfo.InvariantCulture).Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries);
+            if (args == null || args.AsArray().Length != 1) throw new ArgumentException("Cần danh sách block cách nhau bằng dấu ';'.");
+            var names = Convert.ToString(args.AsArray()[0].Value, CultureInfo.InvariantCulture).Split(';');
             return SignAssembly.Ensure(AcApp.DocumentManager.MdiActiveDocument.Database, names);
         }
     }

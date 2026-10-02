@@ -114,6 +114,21 @@ class PickerProbe
             if (form.SelectedCode != "S.509a@3.8") throw new Exception("Edited metres not returned");
             Console.WriteLine("PASS picker-metres-load-validate-edit");
         }
+        using (var form = new BHT.Palette.SignPickerForm("P.127-80", "", "P.127-800"))
+        {
+            ShowHidden(form); Invoke(form, "AcceptSign");
+            if (form.DialogResult == DialogResult.OK || form.SelectedCode != null) throw new Exception("Invalid staged face accepted");
+            Console.WriteLine("PASS invalid-staged-face-rejected");
+        }
+        using (var form = new BHT.Palette.SignPickerForm("P.127-80", "", ""))
+        {
+            ShowHidden(form);
+            for (int i = 0; i < 21; i++) Invoke(form, "AddFace");
+            if (Field<ListBox>(form, "faces").Items.Count != 20) throw new Exception("More than 20 faces allowed");
+            Invoke(form, "AcceptSign");
+            if (form.SelectedFaces.Count != 20) throw new Exception("Valid 20-face assembly rejected");
+            Console.WriteLine("PASS picker-twenty-face-limit");
+        }
         using (var form = new BHT.Palette.PlacementOptionsForm("Cọc tiêu", 2, 3, "90"))
         {
             ShowHidden(form); form.PerformLayout();
