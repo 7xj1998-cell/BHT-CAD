@@ -194,3 +194,11 @@
 
 ## 0.3.3 và cũ hơn
 Xem CHANGELOG trong các gói phát hành `release/BHT-0.3.x`.
+## v0.6.9 — 2026-10-02
+
+- Sửa mũi tên chọn/đảo chiều tuyến: hiển thị đầu mũi tên đặc, giữ hình trong lúc xác nhận và REGEN; dọn hình khi chấp nhận, hủy hoặc lỗi. Hỗ trợ UCS xoay và điểm đầu/cuối tuyến.
+- Đọc nhãn Km trong đối tượng TDT gốc và block lồng nhau; đọc riêng từng thuộc tính và loại nhãn trùng. Tuyến TDT nguồn chỉ được mở để đọc.
+- Lấy vị trí cọc TDT tại vạch trên tim, tránh dùng vị trí chữ gây lệch khoảng 0,75 m. Nếu không nhận diện được vạch, giữ cách chiếu nhãn để người dùng kiểm tra.
+- Sửa lỗi `eDegenerateGeometry` khi cập nhật lại Polyline tham chiếu có cung; giữ nguyên handle, không tạo tuyến trùng.
+- Kiểm tra trên bản sao bản vẽ TDT thực tế: bản cũ đọc 0 cọc, bản mới đọc đủ 371 cọc; giữ hai cảnh báo để người dùng xét duyệt. Lưu/mở lại giữ 371 cọc đọc được và 369 mốc đã nạp trong ca thử.
+

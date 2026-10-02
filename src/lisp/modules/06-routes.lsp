@@ -497,7 +497,7 @@
   (princ)
 )
 
-;; Doc TEXT/MTEXT/Attribute cọc Km quanh Polyline tham chieu. Bridge chi doc ForRead.
+;; Doc nhan Km, block long nhau va nhan trong TDT. Bridge chi doc ForRead.
 ;; Candidate: (model-dist station offset x y type handle text layer confidence raw-dist).
 (defun bht:tdt-stake-candidates (rec / ent r out f d)
   (setq ent (bht:route-ent rec) out nil)
@@ -580,7 +580,7 @@
                              "  offset=" (bht:fnum (nth 2 c) 2) " m  " (nth 5 c) "#" (nth 6 c)
                              (if (assoc (nth 6 c) issues) (strcat "  <- CẢNH BÁO: " (cdr (assoc (nth 6 c) issues))) "")))
             (setq i (1+ i)))
-          (if (null cands) (bht:warn "BHT: chưa nhận diện được cọc có text/attribute dạng KmN+M quanh tuyến.")
+          (if (null cands) (bht:warn "BHT: chưa đọc được nhãn KmN+M quanh tuyến. Kiểm tra đã nạp module TDT, chọn đúng tim và khoảng cách quét tới nhãn cọc.")
             (progn
               (setq ans (strcase (bht:ask-string "Nạp các cọc KHÔNG cảnh báo vào Station Control? [C/K]" "K")))
               (if (= ans "C")
@@ -599,43 +599,58 @@
        (if (member v ids) v (progn (bht:warn "Không có tuyến này.") nil))))
 )
 
-(defun bht:route-preview-direction (rec raw direction / ent len d1 p0 p1 dx dy mag nx ny s a b)
+;; Thuc the xem truoc ton tai qua getstring/REGEN; grdraw bi xoa khi CAD doi prompt.
+;; Cac diem la WCS; khong phu thuoc UCS hien tai. Ham tra ve danh sach de don khi huy/loi.
+(defun bht:route-preview-clear (entities)
+  (foreach e entities (if (and e (entget e)) (entdel e)))
+  (redraw) nil)
+
+(defun bht:route-preview-direction (rec raw direction / ent len param tangent p0 p1 dx dy mag nx ny s a b shaft head out)
   (setq ent (bht:route-ent rec) len (if ent (bht:curve-length ent) nil))
   (if (and ent len (> len 0.01))
     (progn
-      (setq d1 (+ raw (* (if (= direction -1) -1 1) (min 20.0 (max 2.0 (/ len 20.0))))))
-      (if (bht:curve-closed-p ent)
-        (progn (while (< d1 0.0) (setq d1 (+ d1 len))) (while (> d1 len) (setq d1 (- d1 len))))
-        (setq d1 (max 0.0 (min len d1))))
+      (setq raw (max 0.0 (min len raw))
+            param (vlax-curve-getParamAtDist ent raw)
+            tangent (vl-catch-all-apply 'vlax-curve-getFirstDeriv (list ent param)))
       (setq p0 (vl-catch-all-apply 'vlax-curve-getPointAtDist (list ent raw))
-            p1 (vl-catch-all-apply 'vlax-curve-getPointAtDist (list ent d1)))
-      (if (and p0 p1 (not (vl-catch-all-error-p p0)) (not (vl-catch-all-error-p p1)))
+            s (max 0.1 (min (* (getvar "VIEWSIZE") 0.10) (* len 0.20))))
+      (if (and p0 tangent (not (vl-catch-all-error-p p0)) (not (vl-catch-all-error-p tangent)))
         (progn
-          (setq dx (- (car p1) (car p0)) dy (- (cadr p1) (cadr p0)) mag (sqrt (+ (* dx dx) (* dy dy))))
+          (setq dx (* (if (= direction -1) -1.0 1.0) (car tangent))
+                dy (* (if (= direction -1) -1.0 1.0) (cadr tangent))
+                mag (sqrt (+ (* dx dx) (* dy dy))))
           (if (> mag 1e-9)
             (progn
-              (setq nx (/ (- dy) mag) ny (/ dx mag) s (min 4.0 (/ mag 3.0))
-                    a (list (+ (car p1) (* -0.7 s (/ dx mag)) (* 0.45 s nx))
-                            (+ (cadr p1) (* -0.7 s (/ dy mag)) (* 0.45 s ny)) (if (caddr p1) (caddr p1) 0.0))
-                    b (list (+ (car p1) (* -0.7 s (/ dx mag)) (* -0.45 s nx))
-                            (+ (cadr p1) (* -0.7 s (/ dy mag)) (* -0.45 s ny)) (if (caddr p1) (caddr p1) 0.0)))
-              (redraw)
-              (grdraw p0 p1 2 1) (grdraw p1 a 2 1) (grdraw p1 b 2 1))))))))
+              (setq dx (/ dx mag) dy (/ dy mag) nx (- dy) ny dx
+                    p1 (list (+ (car p0) (* s dx)) (+ (cadr p0) (* s dy)) 0.0)
+                    a (list (+ (car p1) (* -0.30 s dx) (* 0.13 s nx))
+                            (+ (cadr p1) (* -0.30 s dy) (* 0.13 s ny)) 0.0)
+                    b (list (+ (car p1) (* -0.30 s dx) (* -0.13 s nx))
+                            (+ (cadr p1) (* -0.30 s dy) (* -0.13 s ny)) 0.0)
+                    shaft (entmakex (list '(0 . "LWPOLYLINE") '(100 . "AcDbEntity") '(8 . "0") '(62 . 2)
+                                          '(100 . "AcDbPolyline") '(90 . 2) '(70 . 0) (cons 43 (* s 0.025))
+                                          (cons 10 (list (car p0) (cadr p0))) (cons 10 (list (car p1) (cadr p1)))))
+                    out (list shaft)
+                    head (entmakex (list '(0 . "SOLID") '(100 . "AcDbEntity") '(8 . "0") '(62 . 2)
+                                         '(100 . "AcDbTrace") (cons 10 p1) (cons 11 a) (cons 12 b) (cons 13 b)))
+                    out (cons head out))))))))
+  (vl-remove nil out))
 
-(defun c:BHTROUTESTART (/ *error* id rec ent pt raw dir ans res)
-  (setq *error* bht:on-error)
+(defun c:BHTROUTESTART (/ *error* id rec ent pt raw dir ans res preview)
+  (defun *error* (msg) (bht:route-preview-clear preview) (bht:on-error msg))
   (if (and (setq id (bht:ask-route)) (setq rec (bht:route-read id)) (setq ent (bht:route-ent rec)))
     (if (setq pt (getpoint "\nChọn điểm đầu tuyến trên/gần Polyline: "))
       (progn
         (setq pt (trans pt 1 0) raw (bht:curve-project ent pt) dir 1)
         (if (null raw) (bht:warn "BHT: không chiếu được điểm đầu lên tuyến.")
           (progn
-            (bht:route-preview-direction rec (car raw) dir)
+            (setq preview (bht:route-preview-direction rec (car raw) dir))
             (setq ans (strcase (bht:ask-string "Chiều mũi tên [C=Chấp nhận/D=Đảo/K=Hủy]" "C")))
             (if (= ans "D")
-              (progn (setq dir -1) (bht:route-preview-direction rec (car raw) dir)
+              (progn (bht:route-preview-clear preview)
+                     (setq dir -1 preview (bht:route-preview-direction rec (car raw) dir))
                      (setq ans (strcase (bht:ask-string "Chấp nhận chiều đã đảo? [C/K]" "C")))))
-            (redraw)
+            (bht:route-preview-clear preview) (setq preview nil)
             (if (= ans "C")
               (progn
                 (setq res (bht:route-set-start-dir id pt dir))
@@ -646,15 +661,15 @@
               (bht:msg "BHT: đã hủy, chưa thay đổi tuyến.")))))))
   (bht:log-flush) (princ))
 
-(defun c:BHTROUTEREVERSE (/ *error* id rec ent start dir p res ans)
-  (setq *error* bht:on-error)
+(defun c:BHTROUTEREVERSE (/ *error* id rec ent start dir p res ans preview)
+  (defun *error* (msg) (bht:route-preview-clear preview) (bht:on-error msg))
   (if (and (setq id (bht:ask-route)) (setq rec (bht:route-read id)) (setq ent (bht:route-ent rec)))
     (progn
       (setq start (bht:num (bht:get rec "start_dist")) dir (if (= (bht:int (bht:get rec "direction")) -1) -1 1))
       (if (null start) (setq start 0.0))
-      (bht:route-preview-direction rec start (- dir))
+      (setq preview (bht:route-preview-direction rec start (- dir)))
       (setq ans (strcase (bht:ask-string "Đảo chiều tuyến như mũi tên? [C=Chấp nhận/K=Hủy]" "K")))
-      (redraw)
+      (bht:route-preview-clear preview) (setq preview nil)
       (if (= ans "C")
         (progn
           (setq p (vlax-curve-getPointAtDist ent start) res (bht:route-set-start-dir id p (- dir)))

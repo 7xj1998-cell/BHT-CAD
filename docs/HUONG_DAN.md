@@ -1,9 +1,9 @@
-﻿# BHT 0.6.8 — Hướng dẫn sử dụng
+﻿# BHT 0.6.9 — Hướng dẫn sử dụng
 
 BHT là bộ lệnh AutoLISP quản lý điểm khảo sát RTK, hồ sơ đối tượng (biển báo, cọc tiêu, cột Km…), ảnh TimeMark (KMZ), tuyến / lý trình và xuất thống kê.
 
 - Lệnh chính: **`BTH`** hoặc **`BHT`** mở một Palette gắn bên trái AutoCAD.
-- Bản 0.6.8 gồm `BHT-0.6.8.lsp`, `BHT.Palette.dll`, `BHT.Bridge.dll` và `BHT.Core.dll`, cùng thư mục `modules` chứa 12 module.
+- Bản 0.6.9 gồm `BHT-0.6.9.lsp`, `BHT.Palette.dll`, `BHT.Bridge.dll` và `BHT.Core.dll`, cùng thư mục `modules` chứa 12 module.
 - Palette .NET là giao diện chính. Từ v0.5.5 đã bỏ bảng DCL dự phòng.
 - Định dạng dữ liệu trong bản vẽ không đổi: bản vẽ từ 0.3.2 đến 0.5.5 mở bằng 0.6.0 mà không cần chuyển đổi.
 - Mục tiêu hỗ trợ AutoCAD 2021–2024 và Civil 3D 2023 trên Windows.
@@ -15,17 +15,17 @@ Chữ CAD mặc định dùng `VNRomancUpdate.shx` với bảng mã **Unicode**.
 ## 1. Cài đặt khuyến nghị
 
 1. Đóng AutoCAD.
-2. Giải nén gói `BHT-0.6.8.zip` và chạy `INSTALL_BHT.cmd`.
+2. Giải nén gói `BHT-0.6.9.zip` và chạy `INSTALL_BHT.cmd`.
 3. Mở AutoCAD, gõ `BTH` hoặc `BHT`.
 
 AutoCAD tự nhận `BHT.bundle`; không cần `APPLOAD` hoặc `NETLOAD`. Nếu từng cài bản cũ bằng Startup Suite, hãy gỡ file Lisp cũ để tránh hai phiên bản cùng nạp.
 
 ## 1b. Cách di động bằng APPLOAD
 
-1. Đặt `BHT-0.6.8.lsp` và ba DLL cùng thư mục `modules` trong một thư mục tin cậy đã có trên Support Path.
+1. Đặt `BHT-0.6.9.lsp` và ba DLL cùng thư mục `modules` trong một thư mục tin cậy đã có trên Support Path.
 2. Kiểm tra **LISPSYS = 1**. Nếu phải đổi từ 0 sang 1, khởi động lại AutoCAD.
-3. Gõ `APPLOAD`, chọn duy nhất `BHT-0.6.8.lsp`. Sau APPLOAD, gõ BHTLOAD để nạp giao diện khi cần.
-4. Khi dòng lệnh báo `BHT 0.6.8 đã nạp thành công`, gõ `BTH` hoặc `BHT`.
+3. Gõ `APPLOAD`, chọn duy nhất `BHT-0.6.9.lsp`. Sau APPLOAD, gõ BHTLOAD để nạp giao diện khi cần.
+4. Khi dòng lệnh báo `BHT 0.6.9 đã nạp thành công`, gõ `BTH` hoặc `BHT`.
 
 Nếu Palette không nạp được, gõ `BHTLOAD` để thử lại và đọc lỗi tại dòng lệnh. Kiểm tra ba DLL nằm cạnh file Lisp hoặc cài lại bundle rồi mở lại AutoCAD. Các lệnh nghiệp vụ trực tiếp vẫn dùng được khi Lisp đã nạp.
 
@@ -90,7 +90,7 @@ vẽ (dictionary BHT_V02 / XData) — palette chỉ là giao diện; đóng pale
 - Biển báo tự đặt ra ngoài tim theo phía tuyến, xoay theo hướng tuyến, có leader nối về điểm RTK. Nhãn hiện mã biển và lý trình; ID hồ sơ chỉ nằm trong XData.
 - Nút **Xuất báo cáo biển báo Excel** tạo `.xlsx` Unicode gồm sheet tổng hợp và danh sách chi tiết. Báo cáo có STT, công trình, đoạn/gói, loại và tên biển, phía, lý trình, tình trạng, số trụ/mặt, trạng thái kiểm tra, ghi chú và ID hồ sơ.
 - Báo cáo kiểm tra/trạng thái mở trong hộp thoại lớn; vùng thông báo dưới Palette chỉ hiển thị trạng thái ngắn và không nhận con trỏ nhập.
-- Toàn bộ block dự phòng vẫn nằm trong `BHT-0.6.8.lsp`; không nạp thêm `BHT-BIENBAO.lsp`. `BHTBLOCK` tiếp tục nhận DWG tùy chọn khi cần mẫu riêng.
+- Toàn bộ block dự phòng vẫn nằm trong `BHT-0.6.9.lsp`; không nạp thêm `BHT-BIENBAO.lsp`. `BHTBLOCK` tiếp tục nhận DWG tùy chọn khi cần mẫu riêng.
 
 ### Lấy tim từ TDTSolution 9.1 bằng `BHTTUYENTDT`
 
@@ -100,6 +100,14 @@ vẽ (dictionary BHT_V02 / XData) — palette chỉ là giao diện; đóng pale
 4. BHT lưu handle/class nguồn để lần chạy sau cập nhật đúng Polyline tham chiếu. Tính lý trình và phía đường diễn ra trên Polyline BHT này.
 
 `BHTTUYENTDT` từ chối tim đang là proxy (từ 0.4.6-fix3 thông báo nêu rõ: phiên AutoCAD chưa nạp TDTSolution 9.1 — lưu, đóng AutoCAD, mở lại bằng biểu tượng/profile TDTSolution 9.1, cắm khóa USB TDT nếu cần, rồi chạy lại). Không dùng `BHTTUYENTDT` trong AutoCAD chưa nạp TDT, và không dùng `vlax-curve-*` trực tiếp trên `TDTDBALIGNMENT`. Nếu TDT chưa sẵn sàng, dùng `BHTTUYEN` với một Polyline tham chiếu đã được kiểm tra.
+
+### Chọn chiều và đọc cọc trên tuyến
+
+Trong **Tuyến & báo cáo**, chọn **Chọn điểm đầu và chiều tuyến**. Mũi tên vàng có đầu đặc được giữ trong lúc xác nhận; chọn `C` để lưu chiều, `D` để đảo hoặc `K` để hủy. Hình xem trước được dọn sau khi kết thúc lệnh.
+
+Chọn **Đọc / kiểm tra cọc TDT** để đọc nhãn `KmN+M` trong đối tượng TDT, TEXT/MTEXT, thuộc tính và block lồng nhau. Từ v0.6.9, BHT lấy vị trí tại vạch cọc trên tim khi nhận diện được vạch; nếu chỉ có nhãn chữ thì chiếu vị trí nhãn lên tuyến và hiển thị offset để kiểm tra.
+
+BHT liệt kê cọc và cảnh báo trước khi hỏi nạp Station Control. Cọc trùng, lý trình giảm hoặc tỷ lệ khoảng cách bất thường được giữ để kiểm tra, không tự nạp. Quét lại không tạo mốc trùng. Nếu chưa đọc được cọc, kiểm tra TDT đã nạp, chọn đúng tim và khoảng cách quét tới nhãn.
 
 ### Các chức năng kế thừa từ 0.4.3
 

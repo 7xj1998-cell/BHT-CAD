@@ -85,13 +85,13 @@ namespace BHT.Bridge
     }
 
     /// <summary>
-    /// Bo quet cọc TDT chi doc: TEXT/MTEXT va Attribute cua INSERT co chuoi KmN+M.
+    /// Quet nhan Km trong TEXT/MTEXT, block long nhau va hinh hien thi cua TDT.
     /// Chi project len Polyline tham chieu BHT thuong; khong goi vlax-curve tren proxy,
     /// khong sua cọc TDT va khong tu chap nhan cọc bat thuong.
     /// </summary>
     public static class Tdt91Stakes
     {
-        private static readonly Regex KmPattern = new Regex(@"(?i)(?:^|[^a-z0-9])km\s*(\d{1,5})\s*\+\s*(\d{1,3}(?:[\.,]\d+)?)", RegexOptions.Compiled);
+        private static readonly Regex KmPattern = new Regex(@"(?i)(?:^|[^a-z0-9])km\s*(\d{1,5})\s*\+\s*(\d{1,3}(?:[\.,]\d+)?)(?![\d.,])", RegexOptions.Compiled);
 
         public static List<Tdt91StakeCandidate> Scan(Database db, string routeHandle, double maxOffset)
         {
@@ -103,6 +103,13 @@ namespace BHT.Bridge
             {
                 var route = tr.GetObject(routeId, OpenMode.ForRead, false) as Curve;
                 if (route == null) return result;
+                string sourceHandle = "";
+                using (var data = route.GetXDataForApplication(Tdt91Alignment.AppName))
+                {
+                    if (data != null)
+                        sourceHandle = data.AsArray().Where(x => x.TypeCode == (int)DxfCode.ExtendedDataAsciiString)
+                            .Select(x => Convert.ToString(x.Value)).FirstOrDefault() ?? "";
+                }
                 var table = (BlockTable)tr.GetObject(db.BlockTableId, OpenMode.ForRead);
                 var model = (BlockTableRecord)tr.GetObject(table[BlockTableRecord.ModelSpace], OpenMode.ForRead);
                 foreach (ObjectId id in model)
@@ -112,62 +119,142 @@ namespace BHT.Bridge
                     try { entity = tr.GetObject(id, OpenMode.ForRead, false) as Entity; }
                     catch { continue; }
                     if (entity == null) continue;
-                    string text = "", type = "", blockName = "";
-                    Point3d position;
-                    if (!ReadText(tr, entity, out text, out position, out type, out blockName)) continue;
-                    double station;
-                    if (!TryStation(text, out station)) continue;
+                    var rx = entity.GetRXClass();
+                    string className = rx == null ? "" : rx.Name + "/" + rx.DxfName;
+                    if (sourceHandle != "" && className.IndexOf("TDTDBALIGNMENT", StringComparison.OrdinalIgnoreCase) >= 0
+                        && !string.Equals(entity.Handle.ToString(), sourceHandle, StringComparison.OrdinalIgnoreCase)) continue;
+                    int budget = 200000;
+                    ReadEntity(tr, entity, Matrix3d.Identity, entity.Handle.ToString(), entity.Layer,
+                        "", 0, new HashSet<ObjectId>(), route, maxOffset, result, ref budget);
+                    if (budget <= 0) throw new InvalidOperationException("nhãn cọc quá nhiều trong đối tượng "
+                        + entity.Handle + "; chưa trả kết quả quét đầy đủ");
+                }
+                tr.Commit();
+            }
+            // Mot nhan co the duoc hien ca trong attribute va hinh explode cua TDT.
+            // Giu nhan gan tim nhat; cac ly trinh/vị trí khac nhau van can kiem tra.
+            var unique = new List<Tdt91StakeCandidate>();
+            foreach (var candidate in result.OrderBy(x => x.Offset))
+                if (!unique.Any(x => Math.Abs(x.Station - candidate.Station) < 0.001
+                    && Math.Abs(x.RawDistance - candidate.RawDistance) < 0.01)) unique.Add(candidate);
+            return unique.OrderBy(x => x.RawDistance).ThenBy(x => x.Station).ToList();
+        }
+
+        private static void AddText(Entity entity, Matrix3d transform, string handle, string layer,
+            string origin, Curve route, double maxOffset, List<Tdt91StakeCandidate> result, Point3d? stakePoint = null)
+        {
+            var textEntity = entity as DBText;
+            var mText = entity as MText;
+            if (textEntity == null && mText == null) return;
+            // AttributeDefinition khong phai gia tri attribute cua tung INSERT.
+            if (entity is AttributeDefinition) return;
+            string text = textEntity != null ? textEntity.TextString : mText.Text;
+            Point3d position = (stakePoint ?? (textEntity != null ? textEntity.Position : mText.Location)).TransformBy(transform);
+            double station;
+            if (!TryStation(text, out station)) return;
+            try
+            {
                     Point3d closest;
-                    try { closest = route.GetClosestPointTo(position, false); }
-                    catch { continue; }
+                    closest = route.GetClosestPointTo(position, false);
                     double offset = new Point2d(position.X, position.Y).GetDistanceTo(new Point2d(closest.X, closest.Y));
-                    if (maxOffset > 0.0 && offset > maxOffset) continue;
-                    double raw;
-                    try { raw = route.GetDistAtPoint(closest); }
-                    catch { continue; }
-                    int confidence = type == "INSERT" ? 90 : 85;
-                    string clue = (blockName + " " + entity.Layer).ToUpperInvariant();
+                    if (maxOffset > 0.0 && offset > maxOffset) return;
+                    double raw = route.GetDistAtPoint(closest);
+                    string type = origin == "" ? (mText != null ? "MTEXT" : "TEXT") : origin;
+                    int confidence = type == "TDT_COC" ? 95 : (type == "INSERT" ? 90 : 85);
+                    string clue = (layer + " " + origin).ToUpperInvariant();
                     if (clue.Contains("COC") || clue.Contains("STAKE") || clue.Contains("KM")) confidence += 10;
                     result.Add(new Tdt91StakeCandidate
                     {
                         Station = station, RawDistance = raw, Offset = offset, X = position.X, Y = position.Y,
-                        EntityType = type, Handle = entity.Handle.ToString(), Text = Clean(text), Layer = entity.Layer ?? "",
+                        EntityType = type, Handle = handle, Text = Clean(text), Layer = layer ?? "",
                         Confidence = Math.Min(100, confidence)
                     });
-                }
-                tr.Commit();
             }
-            return result.OrderBy(x => x.RawDistance).ThenBy(x => x.Station).ToList();
+            catch { /* Mot nhan loi khong chan cac cọc con lai. */ }
         }
 
-        private static bool ReadText(Transaction tr, Entity entity, out string text, out Point3d position, out string type, out string blockName)
+        private static void ReadEntity(Transaction tr, Entity entity, Matrix3d transform, string handle,
+            string layer, string origin, int depth, HashSet<ObjectId> ancestors,
+            Curve route, double maxOffset, List<Tdt91StakeCandidate> result, ref int budget)
         {
-            text = ""; position = Point3d.Origin; type = ""; blockName = "";
-            var dbText = entity as DBText;
-            if (dbText != null) { text = dbText.TextString ?? ""; position = dbText.Position; type = "TEXT"; return text != ""; }
-            var mText = entity as MText;
-            if (mText != null) { text = mText.Contents ?? ""; position = mText.Location; type = "MTEXT"; return text != ""; }
+            if (entity == null || depth > 12 || --budget < 0) return;
+            AddText(entity, transform, handle, layer, origin, route, maxOffset, result);
             var block = entity as BlockReference;
-            if (block == null) return false;
-            position = block.Position; type = "INSERT";
-            try
+            if (block != null)
             {
-                var record = tr.GetObject(block.BlockTableRecord, OpenMode.ForRead, false) as BlockTableRecord;
-                if (record != null) blockName = record.Name ?? "";
-            }
-            catch { }
-            var values = new List<string>();
-            foreach (ObjectId aid in block.AttributeCollection)
-            {
-                try
+                foreach (ObjectId aid in block.AttributeCollection)
                 {
                     var attribute = tr.GetObject(aid, OpenMode.ForRead, false) as AttributeReference;
-                    if (attribute != null && !string.IsNullOrWhiteSpace(attribute.TextString)) values.Add(attribute.TextString);
+                    if (attribute != null) AddText(attribute, transform, handle + ":A" + aid.Handle,
+                        layer, "INSERT", route, maxOffset, result);
+                }
+                ObjectId blockId = block.BlockTableRecord;
+                if (!ancestors.Add(blockId)) return;
+                try
+                {
+                    var record = (BlockTableRecord)tr.GetObject(blockId, OpenMode.ForRead, false);
+                    if (record.IsFromExternalReference) return;
+                    Matrix3d childTransform = transform * block.BlockTransform;
+                    foreach (ObjectId childId in record)
+                        ReadEntity(tr, tr.GetObject(childId, OpenMode.ForRead, false) as Entity,
+                            childTransform, handle + ":B" + childId.Handle, layer, "INSERT", depth + 1,
+                            ancestors, route, maxOffset, result, ref budget);
+                }
+                finally { ancestors.Remove(blockId); }
+                return;
+            }
+            // Proxy khong co module TDT khong duoc coi la du lieu da doc duoc.
+            if (entity is ProxyEntity) return;
+            var rx = entity.GetRXClass();
+            if (rx == null || (rx.Name + "/" + rx.DxfName).IndexOf("TDT", StringComparison.OrdinalIgnoreCase) < 0) return;
+            var pieces = new DBObjectCollection();
+            try
+            {
+                // Chi explode vao bo nho; khong EXPLODE/ghi/erase doi tuong TDT goc.
+                entity.Explode(pieces);
+                for (int i = 0; i < pieces.Count && budget > 0; i++)
+                {
+                    // TDT ve vach cọc tai tim, vach tai nhan, ten cọc roi nhan Km.
+                    // Dung tam vach tren tim de tranh dich moc theo vi tri chu (+0.75 m).
+                    var label = pieces[i] as DBText;
+                    double station;
+                    Point3d? anchor = label != null && TryStation(label.TextString, out station)
+                        ? StakeAnchor(pieces, i, transform, route) : null;
+                    if (anchor.HasValue)
+                    {
+                        --budget;
+                        AddText(label, transform, handle + ":X" + i, layer, "TDT_COC",
+                            route, maxOffset, result, anchor);
+                        continue;
+                    }
+                    ReadEntity(tr, pieces[i] as Entity, transform, handle + ":X" + i,
+                        layer, "TDT", depth + 1, ancestors, route, maxOffset, result, ref budget);
+                }
+            }
+            catch { }
+            finally { foreach (DBObject piece in pieces) piece.Dispose(); }
+        }
+
+        private static Point3d? StakeAnchor(DBObjectCollection pieces, int labelIndex, Matrix3d transform, Curve route)
+        {
+            for (int i = labelIndex - 1; i >= Math.Max(0, labelIndex - 4); i--)
+            {
+                var tick = pieces[i] as Line;
+                if (tick == null || tick.Length < 1e-6) continue;
+                Point3d centre = tick.StartPoint + (tick.EndPoint - tick.StartPoint) * 0.5;
+                Point3d world = centre.TransformBy(transform);
+                try
+                {
+                    Point3d closest = route.GetClosestPointTo(world, false);
+                    if (new Point2d(world.X, world.Y).GetDistanceTo(new Point2d(closest.X, closest.Y)) > 0.02) continue;
+                    Vector3d along = route.GetFirstDerivative(closest);
+                    Vector3d across = (tick.EndPoint - tick.StartPoint).TransformBy(transform);
+                    if (along.Length < 1e-9 || Math.Abs(along.GetNormal().DotProduct(across.GetNormal())) > 0.05) continue;
+                    return centre;
                 }
                 catch { }
             }
-            text = string.Join(" ", values.ToArray());
-            return text != "";
+            return null;
         }
 
         public static bool TryStation(string value, out double station)
@@ -293,8 +380,8 @@ namespace BHT.Bridge
                     Polyline target = ExistingReference(tr, db, existingReferenceHandle);
                     if (target != null)
                     {
-                        CopyGeometry(geometry, target);
-                        geometry.Dispose();
+                        try { CopyGeometry(geometry, target); }
+                        finally { geometry.Dispose(); }
                         result.Updated = true;
                     }
                     else
@@ -528,12 +615,25 @@ namespace BHT.Bridge
 
         private static void CopyGeometry(Polyline source, Polyline target)
         {
-            while (target.NumberOfVertices > 0) target.RemoveVertexAt(target.NumberOfVertices - 1);
-            for (int i = 0; i < source.NumberOfVertices; i++)
-                target.AddVertexAt(i, source.GetPoint2dAt(i), source.GetBulgeAt(i), source.GetStartWidthAt(i), source.GetEndWidthAt(i));
-            target.Closed = source.Closed;
-            target.Elevation = source.Elevation;
+            // Khong xoa het dinh: polyline co cung co the bao eDegenerateGeometry.
+            // Giu Entity/handle va cap nhat tai cho; bo bulge cu truoc khi doi dinh.
+            target.Closed = false;
+            for (int i = 0; i < target.NumberOfVertices; i++) target.SetBulgeAt(i, 0.0);
+            while (target.NumberOfVertices > source.NumberOfVertices) target.RemoveVertexAt(target.NumberOfVertices - 1);
             target.Normal = source.Normal;
+            target.Elevation = source.Elevation;
+            for (int i = 0; i < source.NumberOfVertices; i++)
+            {
+                if (i < target.NumberOfVertices)
+                {
+                    target.SetPointAt(i, source.GetPoint2dAt(i));
+                    target.SetStartWidthAt(i, source.GetStartWidthAt(i));
+                    target.SetEndWidthAt(i, source.GetEndWidthAt(i));
+                }
+                else target.AddVertexAt(i, source.GetPoint2dAt(i), 0.0, source.GetStartWidthAt(i), source.GetEndWidthAt(i));
+            }
+            for (int i = 0; i < source.NumberOfVertices; i++) target.SetBulgeAt(i, source.GetBulgeAt(i));
+            target.Closed = source.Closed;
         }
 
         private static void EnsureLayer(Transaction tr, Database db)

@@ -1,10 +1,10 @@
-﻿;;; BHT 0.6.8 - phien N: BAN SAO ban ve do BHT 0.3.3 tao (A_out.dwg cua bo kiem thu 0.3.3: 526 diem, 205 anh,
+﻿;;; BHT 0.6.9 - phien N: BAN SAO ban ve do BHT 0.3.3 tao (A_out.dwg cua bo kiem thu 0.3.3: 526 diem, 205 anh,
 ;;; ho so, ky hieu, nhan). Nap BHT-0.4.6.lsp + NETLOAD BHT.Bridge.dll: C# doc giong het Lisp, C# ghi -> Lisp thay,
 ;;; Lisp ghi -> C# thay, goi Lisp tu .NET (Application.Invoke), bo dieu phoi, bo nho dem. SAVEAS 2018 o cuoi.
 (load "C:/Users/Le Bao/BHT_TEST_V044/t_common.lsp")
 (tbegin "N")
 (setq e (tload))
-(tchk "N00" "nạp BHT-5.0 trên bản vẽ 0.3.3" (and (null e) (= *bht-version* "0.6.8")) (if e e (getvar "DWGNAME")))
+(tchk "N00" "nạp BHT-5.0 trên bản vẽ 0.3.3" (and (null e) (= *bht-version* "0.6.9")) (if e e (getvar "DWGNAME")))
 (tchk "N01" "16 hàm API đăng ký vl-acad-defun (5.0 thêm bht:api-route-diag)" (= *bht-api-registered* 16) *bht-api-registered*)
 (setq NP (length (bht:pt-all)) NPH (length (bht:rec-keys "PHOTO")) NO (length (bht:obj-ids))
       CK0 (bht:check) SNAP (t-snapshot) PC0 (t-pt-coords))
@@ -103,7 +103,7 @@
 (defun t-inv (f) (t-lines (t-run f)))
 (defun t-n-check-invoke (/ v i s s2 p c d b pg lb inf)
   (setq v (t-inv "N_inv_version.txt"))
-  (tchk "N20" "Application.Invoke từ lệnh .NET (Lisp rảnh, ngữ cảnh lệnh): bht:api-version = OK 5.0 1" (and (= (car v) "OK") (= (cadr v) "0.6.8") (= (caddr v) "1")) v)
+  (tchk "N20" "Application.Invoke từ lệnh .NET (Lisp rảnh, ngữ cảnh lệnh): bht:api-version = OK 5.0 1" (and (= (car v) "OK") (= (cadr v) "0.6.9") (= (caddr v) "1")) v)
   (setq i (t-inv "N_inv_info.txt") inf (bht:obj-info-lines NID))
   (tchk "N21" "thông tin hồ sơ qua API = đúng các dòng BHTINFO (bht:obj-info-lines) của Lisp" (and (= (car i) "OK") (equal (cdr i) inf)) (list (length i) (length inf)))
   (setq s (t-inv "N_inv_sym.txt") s2 (t-inv "N_inv_sym2.txt"))
