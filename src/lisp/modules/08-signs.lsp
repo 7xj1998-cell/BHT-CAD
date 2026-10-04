@@ -40,7 +40,7 @@
 ;; Chon block theo ma hieu ho so. Bien the a,b,c... dung chung hinh tong quat
 ;; cua cung ma; gia tri so 20/40 cua P.127 duoc giu rieng neu co trong ma.
 (defun bht:tdt-block-name (code / s out i ch a under)
-  (setq s (strcase (bht:trim code)) out "BHT_TDT_V51_" i 1 under nil)
+  (setq s (strcase (bht:trim code)) out "BHT_TDT_V0610_" i 1 under nil)
   (while (<= i (strlen s))
     (setq ch (substr s i 1) a (ascii ch))
     (if (or (and (>= a 48) (<= a 57)) (and (>= a 65) (<= a 90)))
@@ -552,6 +552,9 @@
     (T
       (setq blk (if (= (bht:get rec "nhom") "BIEN_BAO")
                     (bht:tdt-import-block (bht:get rec "ma_hieu") (bht:get rec "mo_ta")) nil))
+      (if (and (= (strcase (bht:get rec "ma_hieu")) "I.439") (setq result (bht:bridge-sign-block rec))) (setq blk result))
+      (if (and (= (bht:get rec "nhom") "COT_KM") (/= (bht:get rec "marker_km") "") (bht:fn-defined-p 'BHTMILESTONE))
+        (setq blk (BHTMILESTONE (bht:get rec "marker_km"))))
       (if (null blk) (setq blk (bht:kh-default-block (bht:get rec "nhom") (bht:effective-sign-code rec))))
       (if (= (bht:get rec "nhom") "BIEN_BAO")
         (progn
@@ -565,13 +568,21 @@
             (progn
               (setq blocks nil)
               (foreach value codes
-                (setq result (bht:tdt-import-block value (bht:get rec "mo_ta")))
+                (setq result (if (= (strcase value) "I.439") (bht:bridge-sign-block rec) nil))
+                (if (null result) (setq result (bht:tdt-import-block value (bht:get rec "mo_ta"))))
                 (if (null result) (setq result (bht:kh-default-block "BIEN_BAO" value)))
                 (setq blocks (append blocks (list result))))
               (setq result (vl-catch-all-apply 'BHTSIGNASSEMBLY (list (bht:join blocks ";"))))
               (if (and (= (type result) 'STR) (tblsearch "BLOCK" result)) (setq blk result)
                 (vl-exit-with-error "Không tạo được đủ các mặt biển. Kiểm tra thư viện hoặc BHT.Bridge.dll."))))))
       (if (tblsearch "BLOCK" blk) blk "BHT_KH_CHUA_XAC_DINH"))))
+
+(defun bht:bridge-sign-block (rec / name station road style)
+  (if (and (/= (bht:get rec "bridge_name") "") (bht:fn-defined-p 'BHTBRIDGESIGN))
+    (progn
+      (setq name (bht:get rec "bridge_name") station (bht:get rec "sign_chainage") road (bht:get rec "road_name")
+            style (bht:kh-label-style (strcat name station road)))
+      (BHTBRIDGESIGN (bht:cad-text name style) (bht:cad-text station style) (bht:cad-text road style) style))))
 
 (defun bht:kh-block (rec / blk result)
   (setq blk (bht:kh-base-block rec))
@@ -627,10 +638,12 @@
         detail (cond ((/= code "") (bht:kh-code-label group code))
                      ((/= chainage "") (bht:kh-code-label group chainage))
                      (T "")))
-  (if (= group "BIEN_BAO")
+  (if (and (= group "COC_TIEU") (/= (bht:get rec "marker_km") "") (/= (bht:get rec "marker_h") ""))
+    (strcat "H" (bht:get rec "marker_h") "/" (bht:get rec "marker_km"))
+    (if (= group "BIEN_BAO")
     (strcat (if (/= code "") (bht:kh-code-label group code) "Biển báo")
             (if (/= chainage "") (strcat "  " chainage) ""))
-    (strcat (bht:group-label group) (if (/= detail "") (strcat " " detail) "")))
+    (strcat (bht:group-label group) (if (/= detail "") (strcat " " detail) ""))))
 )
 
 ;; Vi tri/goc ky hieu tu dong theo tim: bien bao duoc day ra ngoai phia duong,
@@ -926,7 +939,10 @@
               (setq layout (bht:kh-sign-label-layout blk anchor) lpos (car layout) h (cadr layout) trot rot))
             (if (and (= (bht:get rec "nhom") "COC_TIEU") (= blk "BHT_KH_COC_TIEU"))
               (setq lpos (polar (polar (car anchor) rot (* -1.67 sc)) (+ rot (/ pi 2.0)) (* 0.75 sc)) h (* 0.35 sc)))
-            (setq trot rot g (cdr (assoc oid txt)))
+            (if (and (= (bht:get rec "nhom") "COC_TIEU") (/= (bht:get rec "marker_km") "") (/= (bht:get rec "marker_h") ""))
+              (setq lpos (polar (polar (car anchor) rot (* -1.67 sc)) (/ pi 2.0) (* 0.75 sc))))
+            (setq trot (if (and (= (bht:get rec "nhom") "COC_TIEU") (/= (bht:get rec "marker_km") "") (/= (bht:get rec "marker_h") "")) 0.0 rot)
+                  g (cdr (assoc oid txt)))
             (foreach e2 (cdr g) (entdel e2) (setq dup (1+ dup)))
             (if (setq e (car g))
               (progn

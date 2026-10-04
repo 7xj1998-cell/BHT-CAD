@@ -1,4 +1,4 @@
-﻿{
+{
   "url": "https://pbgdpl.haiphong.gov.vn/upload/phobienphapluat/product/2025/09-2025/000175499/51-bgtvt-kem-29797.pdf",
   "signs": {
     "IE.450a": {
@@ -1783,23 +1783,23 @@
     },
     "W.239a": {
       "page": 112,
-      "area": 10080.0,
       "rect": [
-        304.0,
-        54.0,
-        416.0,
-        144.0
-      ]
+        189,
+        58,
+        283,
+        142
+      ],
+      "area": 7896
     },
     "W.239": {
       "page": 112,
-      "area": 10080.0,
       "rect": [
-        304.0,
-        54.0,
-        416.0,
-        144.0
-      ]
+        189,
+        58,
+        283,
+        142
+      ],
+      "area": 7896
     },
     "W.240": {
       "page": 112,
@@ -4235,5 +4235,6 @@
       "source": "TDT local DWG, CAD vector rendering",
       "preview": "schematic"
     }
-  }
+  },
+  "corrections": "W.239 legacy resolves to W.239a; R.415 legacy resolves to R.415a. Explicit a/b entries are selectable."
 }

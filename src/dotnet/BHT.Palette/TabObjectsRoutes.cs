@@ -16,6 +16,9 @@ namespace BHT.Palette
         private TabPage _tabObjects;
         private ListView _objList;
         private TextBox _oId, _oDesc, _oPoles, _oFaces, _oNote, _oChainage, _oInfo;
+        private TextBox _oBridgeName, _oBridgeStation, _oRoadName, _oMarkerKm, _oMarkerH;
+        private CheckBox _oMarkerNumber;
+        private readonly List<Control> _markerRows = new List<Control>();
         private ComboBox _oCustomBlock;
         private int _placementMode = 1, _placementDirection;
         private string _placementAngle = "0";
@@ -47,7 +50,7 @@ namespace BHT.Palette
             _oGroup = new NoWheelComboBox { Dock = DockStyle.Fill, DropDownStyle = ComboBoxStyle.DropDownList };
             foreach (var g in Groups.All) _oGroup.Items.Add(g[1] + " - " + g[2]);
             _oGroup.SelectionChangeCommitted += (s, e) => OnGroupChangedByUser();
-            _oGroup.SelectedIndexChanged += (s, e) => { foreach (var control in _signRows) control.Visible = GroupRules.HasSignCode(EditorGroup()); };
+            _oGroup.SelectedIndexChanged += (s, e) => { foreach (var control in _signRows) control.Visible = GroupRules.HasSignCode(EditorGroup()); foreach (var control in _markerRows) control.Visible = EditorGroup() == "COC_TIEU" || EditorGroup() == "COT_KM"; };
             // 5.0: tim khi go (khong dau) tren ma + ten bien; coc tieu / cot Km khong co ma bien -> danh sach rong.
             _oCode = new NoWheelComboBox { Dock = DockStyle.Fill, MaxDropDownItems = 18, DropDownWidth = 430 };
             Func<List<TdtSignEntry>> catalog = () => { try { return TdtSignLibrary.GetCatalog(); } catch { return new List<TdtSignEntry>(); } };
@@ -55,6 +58,14 @@ namespace BHT.Palette
             _oCode.SelectedIndexChanged += (s, e) => { if (!_codeFilter.Busy) ApplySelectedSignSuggestion(); };
             _oCodeType = new NoWheelComboBox { Dock = DockStyle.Fill, DropDownStyle = ComboBoxStyle.DropDownList };
             _oCodeType.Items.AddRange(new object[] { "CHUA_XAC_DINH", "QCVN", "NOI_BO" });
+            _oBridgeName = new TextBox { Dock = DockStyle.Fill, MaxLength = 80 };
+            _oBridgeStation = new TextBox { Dock = DockStyle.Fill, MaxLength = 80 };
+            _oRoadName = new TextBox { Dock = DockStyle.Fill, MaxLength = 80 };
+            _oMarkerKm = new TextBox { Dock = DockStyle.Fill, MaxLength = 5 };
+            _oMarkerH = new TextBox { Dock = DockStyle.Fill, MaxLength = 1 };
+            _oMarkerNumber = new CheckBox { Text = "Ghi số Km trên ký hiệu", AutoSize = true };
+            _oMarkerNumber.CheckedChanged += (s, e) => { _oMarkerKm.Enabled = _oMarkerH.Enabled = _oMarkerNumber.Checked; };
+            _oMarkerKm.Enabled = _oMarkerH.Enabled = false;
             _oDesc = new TextBox { Dock = DockStyle.Fill };
             _oPoles = new TextBox { Dock = DockStyle.Fill };
             _oFaces = new TextBox { Dock = DockStyle.Fill };
@@ -123,6 +134,13 @@ namespace BHT.Palette
             row("Block tùy chỉnh", customPanel);
             signRow("Mã biển", _oCode); signRow("Loại mã", _oCodeType);
 
+            signRow("Tên cầu I.439", _oBridgeName); signRow("Lý trình biển", _oBridgeStation); signRow("Tên đường", _oRoadName);
+            foreach (var item in new[] { new { Label = "", Control = (Control)_oMarkerNumber }, new { Label = "Số Km", Control = (Control)_oMarkerKm }, new { Label = "H (cọc tiêu)", Control = (Control)_oMarkerH } })
+            {
+                var label = new Label { Text = item.Label, AutoSize = true }; form.Controls.Add(label); form.Controls.Add(item.Control); _markerRows.Add(label); _markerRows.Add(item.Control);
+                label.Visible = item.Control.Visible = false;
+            }
+            _objectTips.SetToolTip(_oMarkerH, "H là số hectomet: 9 và Km 39 hiển thị H9/39. Cọc Km chỉ dùng ô Số Km.");
             row("Số trụ/chân", _oPoles); signRow("Số mặt biển", _oFaces); signRow("Các mặt biển", _oFaceCodes);
             var tip = new ToolTip { AutoPopDelay = 15000 };
             tip.SetToolTip(_oCode, "Mã biển chính (quyết định ký hiệu/nhãn). Gõ mã hoặc tên, có dấu hay không dấu: vd 'di cham', '245a'. Cọc tiêu / Cột Km: để trống.");
@@ -211,6 +229,7 @@ namespace BHT.Palette
             _oAllowShared.Enabled = true;
             _objectTips.SetToolTip(_oMode, "Chọn điểm và kiểm tra nhóm đối tượng trước khi lưu hồ sơ.");
             _objectTips.SetToolTip(_oAllowShared, "Mặc định mỗi điểm RTK chỉ thuộc một hồ sơ. Bật để tạo thêm hồ sơ dùng cùng điểm; BHT hỏi xác nhận và không ghi đè hồ sơ cũ.");
+            _oBridgeName.Text = _oBridgeStation.Text = _oRoadName.Text = _oMarkerKm.Text = _oMarkerH.Text = ""; _oMarkerNumber.Checked = false;
             _oId.Text = ""; _oId.ReadOnly = false; _oCustomBlock.Text = "";
             _oGroup.SelectedIndex = Groups.All.Length - 1;
             _oCode.SelectedIndex = -1; _oCode.Text = ""; _oCodeType.SelectedIndex = 0; _oDesc.Text = ""; _oPoles.Text = ""; _oFaces.Text = ""; _oFaceCodes.Text = ""; _faceAuto = null;
@@ -283,6 +302,8 @@ namespace BHT.Palette
             _oId.Text = oid.ToUpperInvariant(); _oId.ReadOnly = true; _oCustomBlock.Text = r.Get(ObjFields.CustomBlock);
             SelectCombo(_oGroup, r.Get(ObjFields.Group));
             _oCode.Text = r.Get(ObjFields.Code); SelectCombo(_oCodeType, r.Get(ObjFields.CodeType) == "" ? "CHUA_XAC_DINH" : r.Get(ObjFields.CodeType));
+            _oBridgeName.Text = r.Get(ObjFields.BridgeName); _oBridgeStation.Text = r.Get(ObjFields.SignChainage); _oRoadName.Text = r.Get(ObjFields.RoadName);
+            _oMarkerKm.Text = r.Get(ObjFields.MarkerKm); _oMarkerH.Text = r.Get(ObjFields.MarkerH); _oMarkerNumber.Checked = _oMarkerKm.Text != "";
             _oDesc.Text = r.Get(ObjFields.Desc); _oPoles.Text = r.Get(ObjFields.PoleCount); _oFaces.Text = r.Get(ObjFields.FaceCount);
             _oFaceCodes.Items.Clear(); _oFaceCodes.Text = string.Join("; ", r.GetAll(ObjFields.Face).ToArray()); _faceAuto = null;
             _oCode.Items.Clear(); _oCode.Text = r.Get(ObjFields.Code);
@@ -412,9 +433,10 @@ namespace BHT.Palette
 
         private void OpenSignPicker()
         {
-            using (var picker = new SignPickerForm(EditorSignCode(), _oDesc.Text, _oFaceCodes.Text))
+            using (var picker = new SignPickerForm(EditorSignCode(), _oDesc.Text, _oFaceCodes.Text, _oSignFill.Checked, _oBridgeName.Text, _oBridgeStation.Text, _oRoadName.Text))
             {
                 if (picker.ShowDialog(this) != DialogResult.OK || picker.SelectedSign == null) return;
+                _oBridgeName.Text = picker.SelectedBridgeName; _oBridgeStation.Text = picker.SelectedBridgeStation; _oRoadName.Text = picker.SelectedBridgeRoad;
                 var sign = picker.SelectedSign;
                 SelectCombo(_oGroup, "BIEN_BAO");
                 _oCode.Items.Clear(); _oCode.SelectedIndex = -1; _oCode.Text = picker.SelectedCode;
@@ -492,6 +514,11 @@ namespace BHT.Palette
         {
             var f = new BhtRecord()
                 .Add(ObjFields.Group, EditorGroup())
+                .Add(ObjFields.BridgeName, _oBridgeName.Text.Trim().Normalize())
+                .Add(ObjFields.SignChainage, _oBridgeStation.Text.Trim().Normalize())
+                .Add(ObjFields.RoadName, _oRoadName.Text.Trim().Normalize())
+                .Add(ObjFields.MarkerKm, _oMarkerNumber.Checked ? _oMarkerKm.Text.Trim() : "")
+                .Add(ObjFields.MarkerH, _oMarkerNumber.Checked ? _oMarkerH.Text.Trim() : "")
                 .Add(ObjFields.CustomBlock, _oCustomBlock.Text.Trim())
                 .Add(ObjFields.Code, SignPresentation.ResolveCode(EditorSignCode(), _oDesc.Text))
                 .Add(ObjFields.CodeType, ((string)_oCodeType.SelectedItem ?? "CHUA_XAC_DINH"))
@@ -521,6 +548,14 @@ namespace BHT.Palette
                 _oCode.Text = faceCodes[0];
                 if (!int.TryParse(_oFaces.Text, out faceCount) || faceCount < faceCodes.Count) _oFaces.Text = faceCodes.Count.ToString();
             }
+            if (_oMarkerNumber.Checked && (EditorGroup() == "COC_TIEU" || EditorGroup() == "COT_KM"))
+            {
+                int km, hm;
+                if (!int.TryParse(_oMarkerKm.Text, out km) || km < 0 || km > 99999 || (EditorGroup() == "COC_TIEU" && (!int.TryParse(_oMarkerH.Text, out hm) || hm < 0 || hm > 9)))
+                { StatusWarn("Nhập số Km nguyên từ 0 đến 99999; cọc tiêu cần H từ 0 đến 9."); return false; }
+                _oMarkerKm.Text = km.ToString();
+            }
+            if (_oBridgeStation.Text.Trim() != "") { double chainage; if (!Chainage.TryParse(_oBridgeStation.Text, out chainage)) { StatusWarn("Lý trình trên biển không hợp lệ; ví dụ Km252+831."); return false; } }
             var f = EditorFields();
             if (f.Get(ObjFields.CustomBlock) != "" && !CustomBlockExists(f.Get(ObjFields.CustomBlock)))
             { StatusWarn("Block tùy chỉnh không tồn tại trong bản vẽ hiện tại."); return false; }

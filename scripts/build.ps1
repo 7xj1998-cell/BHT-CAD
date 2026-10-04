@@ -90,6 +90,7 @@ if ($sdk) {
     if ($haveBridgeRefs) {
       $br = Join-Path $OutDir 'BHT.Bridge.dll'
       $a = $common + @('/target:library', ('/out:' + $br), ('/r:' + $core), ('/r:' + $refs.acdbmgd), ('/r:' + $refs.accoremgd)) + (Src (Join-Path $root 'src\dotnet\BHT.Bridge'))
+      $a += '/resource:' + (Join-Path $root 'assets/sign-vectors/qcvn-corrections.xml') + ',BHT.SignVectors.xml'
       $bridgeCode = Run-Tool $csc $a 'csc BHT.Bridge (AcDbMgd + AcCoreMgd)'
       if ($bridgeCode -ne 0) { $failed = $true }
       if ($havePaletteRefs -and $bridgeCode -eq 0) {

@@ -111,6 +111,7 @@ namespace BHT.Bridge
             if (SignPresentation.Speed(code, "").HasValue) code = "P.127";
             string key = Normalize(SignPresentation.BaseCode(code));
             if (key == "") return null;
+            key = Normalize(SignCorrections.Canonical(code));
             var all = GetCatalog();
             var exact = all.FirstOrDefault(x => Normalize(x.Code) == key);
             if (exact != null) return exact;
@@ -128,7 +129,7 @@ namespace BHT.Bridge
 
         public static string WrapperName(string code)
         {
-            var sb = new StringBuilder("BHT_TDT_V51_");
+            var sb = new StringBuilder("BHT_TDT_V0610_");
             bool underscore = false;
             foreach (char c0 in (code ?? "").Trim().ToUpperInvariant())
             {
@@ -152,6 +153,8 @@ namespace BHT.Bridge
             if (destination == null) { result.Error = "không có bản vẽ đích"; return result; }
             result.Error = SignPresentation.ValidationError(code);
             if (result.Error != "") return result;
+            string corrected = SignCorrections.Ensure(destination, code);
+            if (corrected != null) { result.Ok = true; result.BlockName = corrected; result.Description = SuggestedDescription(code); result.SourceBlock = "QCVN 41:2024 " + SignCorrections.Canonical(code); return result; }
             var entry = Find(code);
             if (entry == null)
             {
@@ -433,7 +436,16 @@ namespace BHT.Bridge
                         else if (mtext != null) mtext.Contents = changed;
                     }
                 }            }
-            if (hatches.Count > 0) draw.MoveToBottom(hatches);
+            // Larger background fills must precede smaller foreground symbols.
+            // Moving all hatches together preserves the defective legacy TDT order.
+            foreach (ObjectId id in hatches.Cast<ObjectId>().OrderBy(x => FillArea((Entity)tr.GetObject(x, OpenMode.ForRead))))
+                draw.MoveToBottom(new ObjectIdCollection(new[] { id }));
+        }
+
+        private static double FillArea(Entity entity)
+        {
+            try { var b = entity.GeometricExtents; return (b.MaxPoint.X - b.MinPoint.X) * (b.MaxPoint.Y - b.MinPoint.Y); }
+            catch (Autodesk.AutoCAD.Runtime.Exception) { return 0; }
         }
 
         private static string AttributeValue(string code, string defaultValue, string tag)
@@ -563,6 +575,9 @@ namespace BHT.Bridge
             }
             catch { }
             if (list.Count == 0) return BuiltInFallback();
+            list.RemoveAll(x => x.Code == "W.239" || x.Code == "R.415");
+            foreach (var item in new[] { new[] { "W.239a", "Đường cáp điện ở phía trên" }, new[] { "W.239b", "Chiều cao tĩnh không thực tế" }, new[] { "R.415a", "Biển gộp làn đường theo phương tiện" }, new[] { "R.415b", "Kết thúc làn đường theo phương tiện" } })
+                if (!list.Any(x => x.Code.Equals(item[0], StringComparison.OrdinalIgnoreCase))) list.Add(new TdtSignEntry { Code = item[0], Description = item[1], Group = item[0].StartsWith("W.") ? "Biển nguy hiểm" : "Biển hiệu lệnh", HasVector = true });
             return list.OrderBy(x => SignSortKey(x.Code), StringComparer.OrdinalIgnoreCase).ToList();
         }
 
@@ -570,7 +585,7 @@ namespace BHT.Bridge
         {
             string[][] data =
             {
-                new[] { "W.207a", "Giao nhau với đường không ưu tiên" }, new[] { "W.209", "Giao nhau có tín hiệu đèn" },
+                new[] { "R.415a", "Biển gộp làn đường theo phương tiện" }, new[] { "R.415b", "Kết thúc làn đường theo phương tiện" }, new[] { "W.239b", "Chiều cao tĩnh không thực tế" }, new[] { "I.439", "Tên cầu" }, new[] { "W.207a", "Giao nhau với đường không ưu tiên" }, new[] { "W.209", "Giao nhau có tín hiệu đèn" },
                 new[] { "W.239a", "Đường cáp điện phía trên" }, new[] { "W.245a", "Đi chậm" },
                 new[] { "W.201", "Chỗ ngoặt nguy hiểm" }, new[] { "W.225", "Trẻ em" },
                 new[] { "R.412a", "Làn đường dành riêng cho từng loại xe" }, new[] { "I.414a", "Chỉ hướng đường" },

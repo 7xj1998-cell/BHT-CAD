@@ -47,7 +47,7 @@ namespace BHT.Core
     public static class ObjFields
     {
         public const string Id = "object_id", Group = "nhom", Code = "ma_hieu", CodeType = "loai_ma", Desc = "mo_ta",
-            SignFill = "sign_fill", CustomBlock = "custom_block", PoleCount = "so_tru", FaceCount = "so_mat", Face = "mat", Condition = "tinh_trang", CheckState = "trang_thai_kt",
+            BridgeName = "bridge_name", SignChainage = "sign_chainage", RoadName = "road_name", MarkerKm = "marker_km", MarkerH = "marker_h", SignFill = "sign_fill", CustomBlock = "custom_block", PoleCount = "so_tru", FaceCount = "so_mat", Face = "mat", Condition = "tinh_trang", CheckState = "trang_thai_kt",
             Note = "ghi_chu", RoadSide = "phia_duong", Point = "pt", Photo = "anh", PhotoFile = "anh_file",
             RouteId = "route_id", ChainageM = "ly_trinh_m", ChainageKm = "ly_trinh_km", OffsetM = "offset_m",
             RouteSide = "phia_tuyen", KmState = "trang_thai_km", KmSource = "nguon_km",
@@ -55,7 +55,7 @@ namespace BHT.Core
             SegMethod = "gan_doan_pp", SegCandidates = "doan_ung_vien", CreatedAt = "tao_luc", ModifiedAt = "sua_luc";
 
         /// <summary>Cac truong nguoi dung duoc sua tu palette (giong bht:ask-fields).</summary>
-        public static readonly string[] Editable = { SignFill, CustomBlock, Group, Code, CodeType, Desc, PoleCount, FaceCount, Condition, CheckState, Note, RoadSide,
+        public static readonly string[] Editable = { BridgeName, SignChainage, RoadName, MarkerKm, MarkerH, SignFill, CustomBlock, Group, Code, CodeType, Desc, PoleCount, FaceCount, Condition, CheckState, Note, RoadSide,
             RouteId, ChainageM, ChainageKm, OffsetM, RouteSide, KmState, KmSource, StationRouteRevision, StationStatus };
     }
 
@@ -141,9 +141,9 @@ namespace BHT.Core
 
     public static class BhtVersion
     {
-        public const string Version = "0.6.9";
-        public const string AssemblyVersion = "0.6.9.0";
-        public const string FileVersion = "0.6.9.0";
+        public const string Version = "0.6.10";
+        public const string AssemblyVersion = "0.6.10.0";
+        public const string FileVersion = "0.6.10.0";
         public const string LispApiLevel = "1";
         public const string DictName = "BHT_V02";
 

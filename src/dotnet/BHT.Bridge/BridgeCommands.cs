@@ -13,6 +13,7 @@ using CoreApp = Autodesk.AutoCAD.ApplicationServices.Core.Application;
 [assembly: CommandClass(typeof(BHT.Bridge.BridgeCommands))]
 [assembly: CommandClass(typeof(BHT.Bridge.TdtSignLispFunctions))]
 [assembly: CommandClass(typeof(BHT.Bridge.SignAssemblyFunctions))]
+[assembly: CommandClass(typeof(BHT.Bridge.SignCorrectionFunctions))]
 [assembly: CommandClass(typeof(BHT.Bridge.NativeTextService))]
 [assembly: CommandClass(typeof(BHT.Bridge.Tdt91LispFunctions))]
 

@@ -141,8 +141,23 @@ class PickerProbe
             if (form.DialogResult != DialogResult.OK || form.Degrees != "-45.5") throw new Exception("Valid angle rejected: " + form.DialogResult + "/" + form.Degrees);
             Console.WriteLine("PASS native-placement-options-waypoints-validation-decimal-angle");
         }
+        foreach (string legacy in new[] { "R.415", "W.239" })
+        using (var parameterForm = new BHT.Palette.SignPickerForm(legacy, "", ""))
+        {
+            if (parameterForm.SelectedSign == null || !parameterForm.SelectedSign.Code.EndsWith("a")) throw new Exception("Legacy variant selection " + legacy);
+        }
+        using (var parameterForm = new BHT.Palette.SignPickerForm("I.439", "", "", true, "CẦU YÊN CHÂU", "Km252+831", "QL.6"))
+        {
+            ShowHidden(parameterForm);
+            if (!Field<Panel>(parameterForm, "bridgePanel").Visible) throw new Exception("Bridge fields hidden");
+            Field<TextBox>(parameterForm, "bridgeStation").Text = "bad"; Invoke(parameterForm, "AcceptSign");
+            if (parameterForm.DialogResult == DialogResult.OK) throw new Exception("Invalid bridge station accepted");
+            Field<TextBox>(parameterForm, "bridgeStation").Text = "Km39+900"; Invoke(parameterForm, "AcceptSign");
+            if (parameterForm.SelectedCode != "I.439" || parameterForm.SelectedBridgeName != "CẦU YÊN CHÂU" || parameterForm.SelectedBridgeStation != "Km39+900" || parameterForm.SelectedBridgeRoad != "QL.6") throw new Exception("Bridge parameters missing: " + parameterForm.SelectedCode + "|" + parameterForm.SelectedBridgeName + "|" + parameterForm.SelectedBridgeStation + "|" + parameterForm.SelectedBridgeRoad);
+        }
+        Console.WriteLine("PASS legacy-variants-bridge-input-validation-preview-and-selection");
     }
-    static void ShowHidden(Form form) { form.ShowInTaskbar = false; form.Opacity = 0; form.Show(); Application.DoEvents(); }
-    static T Field<T>(object form, string name) { return (T)form.GetType().GetField(name, BindingFlags.Instance | BindingFlags.NonPublic).GetValue(form); }
-    static void Invoke(object form, string name, params object[] args) { form.GetType().GetMethod(name, BindingFlags.Instance | BindingFlags.NonPublic).Invoke(form, args); }
+    static void ShowHidden(Form parameterForm) { parameterForm.ShowInTaskbar = false; parameterForm.Opacity = 0; parameterForm.Show(); Application.DoEvents(); }
+    static T Field<T>(object parameterForm, string name) { return (T)parameterForm.GetType().GetField(name, BindingFlags.Instance | BindingFlags.NonPublic).GetValue(parameterForm); }
+    static void Invoke(object parameterForm, string name, params object[] args) { parameterForm.GetType().GetMethod(name, BindingFlags.Instance | BindingFlags.NonPublic).Invoke(parameterForm, args); }
 }

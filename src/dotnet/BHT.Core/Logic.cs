@@ -127,6 +127,8 @@ namespace BHT.Core
             if (fields.Has("kh_label_h")) rec.Set("kh_label_h", fields.Get("kh_label_h"));
             if (fields.Has(ObjFields.SignFill)) rec.Set(ObjFields.SignFill, fields.Get(ObjFields.SignFill) == "0" ? "0" : "1");
             if (fields.Has(ObjFields.CustomBlock)) rec.Set(ObjFields.CustomBlock, fields.Get(ObjFields.CustomBlock));
+            foreach (string key in new[] { ObjFields.BridgeName, ObjFields.SignChainage, ObjFields.RoadName, ObjFields.MarkerKm, ObjFields.MarkerH })
+                if (fields.Has(key)) rec.Set(key, fields.Get(key));
             rec.SetAll(ObjFields.Face, fields.GetAll(ObjFields.Face));
             rec.SetAll(ObjFields.Point, pids.Select(p => p.ToUpperInvariant()));
             rec.Set(ObjFields.ModifiedAt, now); // bht:obj-write luon dong dau sua_luc

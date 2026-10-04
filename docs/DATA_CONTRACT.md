@@ -147,3 +147,12 @@ META.sign_fill_all: chuỗi 1 (mặc định) hoặc 0, điều khiển tô màu
 BHTSIGNBOUNDS(blockName) trả minX,minY,maxX,maxY của BlockReference tại gốc, gồm trụ. Nhãn tại ((minX+maxX)/2, minY−0.08×height), cỡ chữ 0.15×height, sau đó áp dụng scale/rotation/translation INSERT. TEXT dùng DXF72=1,73=3,11 làm điểm căn chỉnh; DXF50 bằng Rotation INSERT, không lật chữ sang góc khác. Nhãn biển được bố trí lại theo quy tắc này khi đồng bộ; nhãn nhóm khác vẫn giữ xử lý vị trí tay trước đây. Khi Bridge chưa đăng ký, dùng khung dự phòng và không gọi hàm native chưa tồn tại.
 
 Các biến thể không tô màu tiếp tục dùng hậu tố V062; không sửa block nguồn TDT, không đổi FILLMODE. API đăng ký hiện có 19 hàm.
+
+
+## Nội dung thể hiện từ v0.6.10
+
+Các trường OBJ tùy chọn `bridge_name`, `sign_chainage`, `road_name` giữ nội dung I.439 bằng Unicode NFC. Mỗi ô giao diện tối đa 80 ký tự. Đây là chữ in trên biển; `sign_chainage` không thay `ly_trinh_km` tính theo tuyến. Các mặt I.439 trong cùng hồ sơ dùng chung ba trường này.
+
+`marker_km` chứa số Km nguyên từ 0 đến 99999; chuỗi rỗng tương ứng không ghi số. `marker_h` chứa số H từ 0 đến 9 cho cọc tiêu. Km 39 và H 9 tạo nhãn H9/39. Cọc Km tạo block riêng theo số; cập nhật một số không đổi nội dung block của các số khác. Hồ sơ cũ thiếu các trường này tiếp tục dùng ký hiệu không ghi số.
+
+Chữ được chuyển theo phông tại lớp thể hiện; hồ sơ vẫn giữ Unicode. Block tùy chỉnh do người dùng gán được ưu tiên hơn hình mặc định có tham số.

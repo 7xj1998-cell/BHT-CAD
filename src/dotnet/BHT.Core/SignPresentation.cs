@@ -13,6 +13,7 @@ namespace BHT.Core
         {
             switch (BaseCode(code).ToUpperInvariant())
             {
+                case "W.239B": return "4.5";
                 case "S.501": return "800";
                 case "S.502": return "200";
                 case "S.509A": return "5";

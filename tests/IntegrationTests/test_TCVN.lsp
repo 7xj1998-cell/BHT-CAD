@@ -2,7 +2,7 @@
 (defun tcvn-check (name ok)
   (if (not ok) (setq *tcvn-fail* (1+ *tcvn-fail*)))
   (princ (strcat "\n" (if ok "PASS " "FAIL ") "TCVN " name)))
-(tcvn-check "version-current" (= *bht-version* "0.6.9"))
+(tcvn-check "version-current" (= *bht-version* "0.6.10"))
 (tcvn-check "find-real-font-path" (= (type (bht:sign-font-file)) 'STR))
 (tcvn-check "vietnamese-mixed" (equal (vl-string->list (bht:tcvn-encode "Cọc tiêu")) '(67 228 99 32 116 105 170 117)))
 (tcvn-check "decomposed-accent" (equal (bht:tcvn-encode (vl-list->string '(67 111 803 99 32 116 105 101 770 117))) (bht:tcvn-encode "Cọc tiêu")))

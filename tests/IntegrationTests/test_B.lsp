@@ -2,7 +2,7 @@
 (load "C:/Users/Le Bao/BHT_TEST_V044/t_common.lsp")
 (tbegin "B")
 (setq e (tload))
-(tchk "B00" "nạp BHT-5.0 trên bản vẽ đã lưu (SAVEAS 2018)" (and (null e) (= *bht-version* "0.6.9") (wcmatch (strcase (getvar "DWGNAME")) "A_OUT*")) (getvar "DWGNAME"))
+(tchk "B00" "nạp BHT-5.0 trên bản vẽ đã lưu (SAVEAS 2018)" (and (null e) (= *bht-version* "0.6.10") (wcmatch (strcase (getvar "DWGNAME")) "A_OUT*")) (getvar "DWGNAME"))
 (setq S (t-read-state "A"))
 (defun sv (k) (cdr (assoc k S)))
 (setq st (t-lbl-states))

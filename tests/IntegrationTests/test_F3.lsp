@@ -1,11 +1,11 @@
-﻿;;; BHT 0.6.9 - phien F3: cua so thong bao loi / canh bao (bht:err / bht:warn / *error*),
+﻿;;; BHT 0.6.10 - phien F3: cua so thong bao loi / canh bao (bht:err / bht:warn / *error*),
 ;;; tu tat trong Core Console va khi chay script, bht:api-problems cho Palette. Ban ve moi.
 (load "C:/Users/Le Bao/BHT_TEST_V044/t_common.lsp")
 (vl-load-com)
 (tbegin "F3")
 (setq e (tload))
 (tchk "F3-00" "nạp BHT-5.0; *bht-version* = 5.0; thông báo APPLOAD"
-      (and (null e) (= *bht-version* "0.6.9") (= (bht:load-message) "BHT 0.6.9 đã nạp thành công."))
+      (and (null e) (= *bht-version* "0.6.10") (= (bht:load-message) "BHT 0.6.10 đã nạp thành công."))
       (if e e (list *bht-version* (bht:load-message))))
 (tchk "F3-01" "Core Console được nhận ra (vlax-get-acad-object không trả VLA-OBJECT)"
       (= (bht:core-console-p) T) (list (getvar "PROGRAM") (type (vl-catch-all-apply 'vlax-get-acad-object nil))))

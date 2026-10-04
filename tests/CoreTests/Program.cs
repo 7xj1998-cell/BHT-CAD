@@ -40,6 +40,15 @@ namespace BHT.CoreTests
             Check("SV12", "explicit invalid speed cannot use description", SignPresentation.Speed("P.127-800", "gioihan80") == null && SignPresentation.ValidationError("P.127-0") != "");
             Check("SV13", "legacy separators resolve without default speed", SignPresentation.ResolveCode("P.127 - 20", "") == "P.127-20" && SignPresentation.ResolveCode("P.127/40", "") == "P.127-40" && SignPresentation.ResolveCode("P12780", "") == "P.127-80");
             Check("MV6", "reject unsupported and duplicate metre suffix", SignPresentation.ValidationError("R.415@5") != "" && SignPresentation.ValidationError("S.502@5@6") != "" && SignPresentation.ValidationError("S.509a@4,5") == "");
+            Check("MV8", "W239b supports real clearance", SignPresentation.MetreValue("W.239b@5,2") == "5.2" && SignPresentation.ValidationError("W.239a@5.2") != "");
+            BhtRecord presentationRecord;
+            var presentationFields = new BhtRecord().Add(ObjFields.Group, "BIEN_BAO").Add(ObjFields.BridgeName, "CẦU YÊN CHÂU").Add(ObjFields.SignChainage, "Km252+831").Add(ObjFields.RoadName, "QL.6").Add(ObjFields.MarkerKm, "39").Add(ObjFields.MarkerH, "9");
+            string presentationError = ObjectLogic.BuildNew("OBJ-PRESENTATION", presentationFields, new[] { "P1" }, false, new HashSet<string> { "P1" }, new Dictionary<string,BhtRecord>(), "now", out presentationRecord);
+            Check("PRES1", "new object retains bridge and marker parameters", presentationError == null && presentationRecord.Get(ObjFields.BridgeName) == "CẦU YÊN CHÂU" && presentationRecord.Get(ObjFields.RoadName) == "QL.6" && presentationRecord.Get(ObjFields.MarkerKm) == "39" && presentationRecord.Get(ObjFields.MarkerH) == "9");
+            presentationRecord.Add(ObjFields.Photo, "PHOTO1");
+            var presentationEdit = ObjectLogic.ApplyEdit(presentationRecord, new BhtRecord().Add(ObjFields.MarkerKm, "40").Add(ObjFields.RoadName, "ĐT.1"), "later");
+            Check("PRES2", "edit preserves Unicode and linked photos", presentationEdit.Get(ObjFields.MarkerKm) == "40" && presentationEdit.Get(ObjFields.RoadName) == "ĐT.1" && presentationEdit.Get(ObjFields.BridgeName) == "CẦU YÊN CHÂU" && presentationEdit.Get(ObjFields.Photo) == "PHOTO1");
+            Check("PRES3", "marker number can be disabled without losing station", ObjectLogic.ApplyEdit(presentationEdit, new BhtRecord().Add(ObjFields.MarkerKm, ""), "later").Get(ObjFields.MarkerKm) == "" && presentationEdit.Get(ObjFields.SignChainage) == "Km252+831");
             Check("MV7", "metres never silently round to zero or another value", SignPresentation.MetreValue("S.502@0.0001") == "" && SignPresentation.MetreValue("S.509a@4.5678") == "" && SignPresentation.MetreValue("S.509a@0.001") == "0.001");
             Check("MV1", "metres decimal comma", SignPresentation.MetreValue("S.509a@4,5") == "4.5");
             Check("MV2", "whole distance text", SignPresentation.ReplaceMetres("S.502@150", "200m") == "150 m");
@@ -269,7 +278,7 @@ namespace BHT.CoreTests
 
         static void Versions()
         {
-            Check("C11a", "hằng phiên bản", BhtVersion.Version == "0.6.9" && BhtVersion.AssemblyVersion == BhtVersion.Version + ".0" && BhtVersion.FileVersion == BhtVersion.AssemblyVersion);
+            Check("C11a", "hằng phiên bản", BhtVersion.Version == "0.6.10" && BhtVersion.AssemblyVersion == BhtVersion.Version + ".0" && BhtVersion.FileVersion == BhtVersion.AssemblyVersion);
             Check("C11b", "Lisp phải cùng phiên bản", BhtVersion.LispCompatible(BhtVersion.Version, "1") && BhtVersion.LispCompatible(" " + BhtVersion.Version + " ", "1")
                 && !BhtVersion.LispCompatible("5.0", "1") && !BhtVersion.LispCompatible("0.4.6-fix3", "1") && !BhtVersion.LispCompatible(BhtVersion.Version, "") && !BhtVersion.LispCompatible(BhtVersion.Version, "0"));
             var asm = typeof(BhtRecord).Assembly.GetName().Version.ToString();

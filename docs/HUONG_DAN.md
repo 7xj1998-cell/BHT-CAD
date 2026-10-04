@@ -1,9 +1,9 @@
-﻿# BHT 0.6.9 — Hướng dẫn sử dụng
+﻿# BHT 0.6.10 — Hướng dẫn sử dụng
 
 BHT là bộ lệnh AutoLISP quản lý điểm khảo sát RTK, hồ sơ đối tượng (biển báo, cọc tiêu, cột Km…), ảnh TimeMark (KMZ), tuyến / lý trình và xuất thống kê.
 
 - Lệnh chính: **`BTH`** hoặc **`BHT`** mở một Palette gắn bên trái AutoCAD.
-- Bản 0.6.9 gồm `BHT-0.6.9.lsp`, `BHT.Palette.dll`, `BHT.Bridge.dll` và `BHT.Core.dll`, cùng thư mục `modules` chứa 12 module.
+- Bản 0.6.10 gồm `BHT-0.6.10.lsp`, `BHT.Palette.dll`, `BHT.Bridge.dll` và `BHT.Core.dll`, cùng thư mục `modules` chứa 12 module.
 - Palette .NET là giao diện chính. Từ v0.5.5 đã bỏ bảng DCL dự phòng.
 - Định dạng dữ liệu trong bản vẽ không đổi: bản vẽ từ 0.3.2 đến 0.5.5 mở bằng 0.6.0 mà không cần chuyển đổi.
 - Mục tiêu hỗ trợ AutoCAD 2021–2024 và Civil 3D 2023 trên Windows.
@@ -15,17 +15,17 @@ Chữ CAD mặc định dùng `VNRomancUpdate.shx` với bảng mã **Unicode**.
 ## 1. Cài đặt khuyến nghị
 
 1. Đóng AutoCAD.
-2. Giải nén gói `BHT-0.6.9.zip` và chạy `INSTALL_BHT.cmd`.
+2. Giải nén gói `BHT-0.6.10.zip` và chạy `INSTALL_BHT.cmd`.
 3. Mở AutoCAD, gõ `BTH` hoặc `BHT`.
 
 AutoCAD tự nhận `BHT.bundle`; không cần `APPLOAD` hoặc `NETLOAD`. Nếu từng cài bản cũ bằng Startup Suite, hãy gỡ file Lisp cũ để tránh hai phiên bản cùng nạp.
 
 ## 1b. Cách di động bằng APPLOAD
 
-1. Đặt `BHT-0.6.9.lsp` và ba DLL cùng thư mục `modules` trong một thư mục tin cậy đã có trên Support Path.
+1. Đặt `BHT-0.6.10.lsp` và ba DLL cùng thư mục `modules` trong một thư mục tin cậy đã có trên Support Path.
 2. Kiểm tra **LISPSYS = 1**. Nếu phải đổi từ 0 sang 1, khởi động lại AutoCAD.
-3. Gõ `APPLOAD`, chọn duy nhất `BHT-0.6.9.lsp`. Sau APPLOAD, gõ BHTLOAD để nạp giao diện khi cần.
-4. Khi dòng lệnh báo `BHT 0.6.9 đã nạp thành công`, gõ `BTH` hoặc `BHT`.
+3. Gõ `APPLOAD`, chọn duy nhất `BHT-0.6.10.lsp`. Sau APPLOAD, gõ BHTLOAD để nạp giao diện khi cần.
+4. Khi dòng lệnh báo `BHT 0.6.10 đã nạp thành công`, gõ `BTH` hoặc `BHT`.
 
 Nếu Palette không nạp được, gõ `BHTLOAD` để thử lại và đọc lỗi tại dòng lệnh. Kiểm tra ba DLL nằm cạnh file Lisp hoặc cài lại bundle rồi mở lại AutoCAD. Các lệnh nghiệp vụ trực tiếp vẫn dùng được khi Lisp đã nạp.
 
@@ -90,7 +90,7 @@ vẽ (dictionary BHT_V02 / XData) — palette chỉ là giao diện; đóng pale
 - Biển báo tự đặt ra ngoài tim theo phía tuyến, xoay theo hướng tuyến, có leader nối về điểm RTK. Nhãn hiện mã biển và lý trình; ID hồ sơ chỉ nằm trong XData.
 - Nút **Xuất báo cáo biển báo Excel** tạo `.xlsx` Unicode gồm sheet tổng hợp và danh sách chi tiết. Báo cáo có STT, công trình, đoạn/gói, loại và tên biển, phía, lý trình, tình trạng, số trụ/mặt, trạng thái kiểm tra, ghi chú và ID hồ sơ.
 - Báo cáo kiểm tra/trạng thái mở trong hộp thoại lớn; vùng thông báo dưới Palette chỉ hiển thị trạng thái ngắn và không nhận con trỏ nhập.
-- Toàn bộ block dự phòng vẫn nằm trong `BHT-0.6.9.lsp`; không nạp thêm `BHT-BIENBAO.lsp`. `BHTBLOCK` tiếp tục nhận DWG tùy chọn khi cần mẫu riêng.
+- Toàn bộ block dự phòng vẫn nằm trong `BHT-0.6.10.lsp`; không nạp thêm `BHT-BIENBAO.lsp`. `BHTBLOCK` tiếp tục nhận DWG tùy chọn khi cần mẫu riêng.
 
 ### Lấy tim từ TDTSolution 9.1 bằng `BHTTUYENTDT`
 
@@ -368,3 +368,12 @@ Gõ BTH hoặc BHT để mở bảng. Đóng bảng sẽ ngắt timer và theo d
 Nhãn tự căn giữa dưới khung block và quay cùng biển; không cần nhập cỡ nhãn riêng. Cỡ chữ bằng 15% chiều cao toàn block (bao gồm trụ), khoảng cách dưới bằng 8%. Đây là tỷ lệ BHT hiện tại, chưa xác nhận trị số mặc định TDT trực tiếp.
 
 Cho phép dùng chung điểm RTK chỉ áp dụng khi tạo hồ sơ mới: cho phép một điểm đã thuộc hồ sơ khác được dùng thêm, ví dụ biển và cọc tiêu cùng vị trí. BHT vẫn hỏi xác nhận; không ghi đè hồ sơ cũ. Để chuột trên ô này để xem gợi ý phân nhóm và giải thích; tiêu đề hồ sơ chỉ hiển thị số điểm.
+
+
+## Nội dung biển và số ghi trên cọc từ v0.6.10
+
+Trong **Thư viện hình ảnh biển báo**, chọn I.439 để nhập tên cầu, lý trình trên biển và tên đường. Ảnh xem trước cập nhật theo nội dung nhập. Bấm Chọn biển, rồi Lưu hồ sơ để cập nhật CAD. Các mặt I.439 trong cùng hồ sơ dùng chung nội dung này.
+
+R.415a là biển gộp làn theo phương tiện; R.415b là biển kết thúc. W.239a dùng biểu tượng điện và có thể ghép S.509a ở dưới; W.239b có ô nhập chiều cao tĩnh không thực tế. Mã chung R.415/W.239 cũ được đổi sang biến thể a khi cập nhật ký hiệu.
+
+Với nhóm Cọc tiêu/Cột Km, bật **Ghi số Km trên ký hiệu** và nhập Số Km. Cọc tiêu nhập thêm H: Km 39, H 9 hiển thị H9/39 cạnh đầu cọc; cọc Km hiển thị KM và 39 trong block. Bỏ chọn để không ghi số. Số Km trên ký hiệu độc lập với lý trình tính theo tuyến. Nếu đã gán block tùy chỉnh, bỏ gán khi muốn dùng mẫu mặc định này.

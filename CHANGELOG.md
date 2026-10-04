@@ -1,4 +1,16 @@
-﻿## v0.6.8 — 2026-10-02
+﻿## v0.6.10 — 2026-10-04
+
+- Sửa ảnh và mã biển R.415a/b, W.239a/b; sửa hình W.205c/W.207a và thứ tự hatch che biểu tượng.
+- Nhập tên cầu, lý trình và tên đường trong bảng chọn I.439; lưu nội dung và tự co chữ vừa khung.
+- Thêm số Km/H trên cọc tiêu dạng H9/39 và số Km trong block cọc Km, có tùy chọn bật/tắt.
+- Kiểm tra màu khi in, lưu/mở lại dữ liệu, bảng chọn và các chức năng biển hiện có trong AutoCAD 2024.
+
+## v0.6.9 — 2026-10-02
+
+- Đọc cọc trong hình hiển thị của tuyến TDT và block lồng nhau, lấy vị trí vạch cọc trên tim.
+- Giữ mũi tên trong lúc chọn/đảo chiều tuyến và xác nhận; sửa cập nhật tim có cung, giữ handle tham chiếu.
+
+## v0.6.8 — 2026-10-02
 
 - Đã bỏ 14 bí danh Lisp và hai bí danh mở bảng; có bảng lệnh thay thế cho script CAD.
 - Đã chặn tốc độ/mét sai và mã không khớp, tránh vẽ biển mặc định khi nhập sai. Giữ các cách ghi tốc độ cũ và mã ghép W.239a + S.509a.

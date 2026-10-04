@@ -17,7 +17,7 @@ namespace BHT.Palette
         private readonly List<Image> images = new List<Image>();
         private readonly Label count = new Label { AutoSize = true };
         private readonly PictureBox preview = new PictureBox { Dock = DockStyle.Top, Height = 180, SizeMode = PictureBoxSizeMode.Zoom, BackColor = Color.White };
-        private readonly Label details = new Label { Dock = DockStyle.Top, Height = 78, Padding = new Padding(4) };
+        private readonly Label details = new Label { Dock = DockStyle.Top, Height = 55, Padding = new Padding(4) };
         private readonly ComboBox speed = new NoWheelComboBox { Width = 100, DropDownStyle = ComboBoxStyle.DropDown };
         private readonly CheckBox multi = new CheckBox { Text = "Chọn nhiều mặt trên cùng trụ", AutoSize = true };
         private readonly ListBox faces = new ListBox { Dock = DockStyle.Fill, IntegralHeight = false };
@@ -27,6 +27,13 @@ namespace BHT.Palette
         private readonly Panel metresPanel = new Panel { Dock = DockStyle.Top, Height = 60 };
         private readonly Panel speedPanel = new Panel { Dock = DockStyle.Top, Height = 60 };
         private readonly Label validation = new Label { Dock = DockStyle.Top, Height = 42, ForeColor = Color.Firebrick };
+        private readonly TextBox bridgeName = new TextBox { Width = 238, MaxLength = 80 };
+        private readonly TextBox bridgeStation = new TextBox { Width = 238, MaxLength = 80 };
+        private readonly TextBox bridgeRoad = new TextBox { Width = 238, MaxLength = 80 };
+        private readonly Panel bridgePanel = new Panel { Dock = DockStyle.Top, Height = 155 };
+        public string SelectedBridgeName { get; private set; }
+        public string SelectedBridgeStation { get; private set; }
+        public string SelectedBridgeRoad { get; private set; }
         public TdtSignEntry SelectedSign { get; private set; }
         public string SelectedCode { get; private set; }
         public List<string> SelectedFaces { get; private set; }
@@ -38,12 +45,16 @@ namespace BHT.Palette
         public SignPickerForm(string currentCode, string description, string faceCodes) : this(currentCode, description, faceCodes, true) { }
         public SignPickerForm(string currentCode, string description, string faceCodes, bool filled)
 
+            : this(currentCode, description, faceCodes, filled, "", "", "") { }
+        public SignPickerForm(string currentCode, string description, string faceCodes, bool filled, string name, string station, string road)
         {
+            bridgeName.Text = name; bridgeStation.Text = station; bridgeRoad.Text = road;
+            CaptureBridgeText();
             fill.Checked = filled;
             initialCode = currentCode ?? ""; sourceDescription = description ?? "";
             Text = "Thư viện hình ảnh biển báo";
             Font = new Font("Segoe UI", 9f);
-            Size = new Size(1120, 740); MinimumSize = new Size(900, 630);
+            Size = new Size(1120, 820); MinimumSize = new Size(900, 760);
             StartPosition = FormStartPosition.CenterParent;
             var toolbar = new FlowLayoutPanel { Dock = DockStyle.Top, Height = 42, Padding = new Padding(8) };
             toolbar.Controls.Add(new Label { Text = "Tìm mã / tên:", AutoSize = true, Padding = new Padding(0, 4, 0, 0) });
@@ -72,10 +83,17 @@ namespace BHT.Palette
             speed.Location = new Point(0, 23); speedPanel.Controls.Add(speed);
             metresPanel.Controls.Add(new Label { Text = "Giá trị thực tế (m):", AutoSize = true });
             metres.Location = new Point(0, 23); metresPanel.Controls.Add(metres); metresPanel.Visible = false;
+            foreach (var item in new[] { new { Label = "Tên cầu (I.439):", Box = bridgeName, Y = 0 }, new { Label = "Lý trình trên biển:", Box = bridgeStation, Y = 50 }, new { Label = "Tên đường:", Box = bridgeRoad, Y = 100 } })
+            {
+                bridgePanel.Controls.Add(new Label { Text = item.Label, AutoSize = true, Location = new Point(0, item.Y) });
+                item.Box.Location = new Point(0, item.Y + 21); bridgePanel.Controls.Add(item.Box);
+                item.Box.TextChanged += (s, e) => UpdateBridgePreview();
+            }
+            bridgePanel.Visible = false;
             var hint = new Label { Dock = DockStyle.Bottom, Height = 65, Text = "Ảnh là mẫu; CAD dùng giá trị thực tế bạn nhập. Tô màu áp dụng khi chèn CAD. Mặt đầu tiên là biển chính, nằm trên cùng.", ForeColor = Color.DimGray };
             sidebar.Controls.Add(faces); sidebar.Controls.Add(actions); sidebar.Controls.Add(hint);
             // Fill is controlled for the whole drawing in the Palette toolbar.
-            sidebar.Controls.Add(validation); sidebar.Controls.Add(multiPanel); sidebar.Controls.Add(metresPanel); sidebar.Controls.Add(speedPanel); sidebar.Controls.Add(details); sidebar.Controls.Add(preview);
+            sidebar.Controls.Add(validation); sidebar.Controls.Add(multiPanel); sidebar.Controls.Add(bridgePanel); sidebar.Controls.Add(metresPanel); sidebar.Controls.Add(speedPanel); sidebar.Controls.Add(details); sidebar.Controls.Add(preview);
             foreach (string code in SignSearch.SplitCodes(faceCodes)) faces.Items.Add(code);
             multi.Checked = faces.Items.Count > 0;
             multi.CheckedChanged += (s, e) => { faces.Enabled = actions.Enabled = multi.Checked; };
@@ -116,14 +134,14 @@ namespace BHT.Palette
                 card.Controls.Add(label); card.Controls.Add(picture);
                 entries[sign.Code] = sign;
                 EventHandler choose = (s, e) => Choose(card);
-                EventHandler confirm = (s, e) => { Choose(card); if (multi.Checked) AddFace(); else if (metresPanel.Visible) { metres.Focus(); metres.SelectAll(); } else if (!IsSpeedSign(sign)) AcceptSign(); else speed.Focus(); };
+                EventHandler confirm = (s, e) => { Choose(card); if (multi.Checked) AddFace(); else if (metresPanel.Visible) { metres.Focus(); metres.SelectAll(); } else if (bridgePanel.Visible) bridgeName.Focus(); else if (!IsSpeedSign(sign)) AcceptSign(); else speed.Focus(); };
                 foreach (Control control in new Control[] { card, picture, label }.Concat(picture.Controls.Cast<Control>())) { control.Click += choose; control.DoubleClick += confirm; }
                 cards.Add(card); grid.Controls.Add(card);
             }
             grid.ResumeLayout();
             search.TextChanged += (s, e) => Filter(); groups.SelectedIndexChanged += (s, e) => Filter();
             Filter();
-            string baseCode = SignPresentation.Speed(initialCode, sourceDescription).HasValue ? "P.127" : SignPresentation.BaseCode(initialCode);
+            string baseCode = SignPresentation.Speed(initialCode, sourceDescription).HasValue ? "P.127" : SignCorrections.Canonical(initialCode);
             var initial = cards.FirstOrDefault(x => string.Equals(((TdtSignEntry)x.Tag).Code, baseCode, StringComparison.OrdinalIgnoreCase));
             if (initial != null) { Choose(initial); grid.ScrollControlIntoView(initial); }
         }
@@ -192,6 +210,7 @@ namespace BHT.Palette
             preview.Image = card.Controls.OfType<PictureBox>().First().Image;
             details.Text = sign.Code + " — " + sign.Description + "\r\n" + sign.Group;
             speed.Enabled = IsSpeedSign(sign); speedPanel.Visible = speed.Enabled;
+            bridgePanel.Visible = sign.Code.Equals("I.439", StringComparison.OrdinalIgnoreCase);
             metresPanel.Visible = SignPresentation.MetreDefault(sign.Code) != ""; validation.Text = "";
             if (changed)
             {
@@ -199,7 +218,28 @@ namespace BHT.Palette
                 var value = SignPresentation.Speed(initialCode, sourceDescription) ?? SignPresentation.Speed("P.127", sourceDescription);
                 speed.Text = speed.Enabled && value.HasValue ? value.Value.ToString() : "";
             }
+            UpdateBridgePreview();
             foreach (var c in cards) c.BackColor = c == card ? Color.LightCyan : SystemColors.Control;
+        }
+        private void UpdateBridgePreview()
+        {
+            CaptureBridgeText();
+            if (!bridgePanel.Visible || SelectedSign == null || SelectedSign.Code != "I.439" || bridgeName.Text.Trim() == "") return;
+            var bitmap = new Bitmap(480, 240);
+            using (var g = Graphics.FromImage(bitmap))
+            using (var big = new Font("Segoe UI", 25, FontStyle.Bold))
+            using (var small = new Font("Segoe UI", 16))
+            using (var format = new StringFormat { Alignment = StringAlignment.Center, LineAlignment = StringAlignment.Center })
+            {
+                g.Clear(Color.FromArgb(0, 100, 190)); g.DrawRectangle(Pens.White, 4, 4, 471, 231);
+                g.DrawString(SelectedBridgeName, big, Brushes.White, new RectangleF(12, 15, 456, 115), format);
+                g.DrawString(string.Join("   ", new[] { SelectedBridgeStation, SelectedBridgeRoad }.Where(x => x != "")), small, Brushes.White, new RectangleF(12, 132, 456, 88), format);
+            }
+            var previous = preview.Image;
+            preview.Image = bitmap;
+            // Only dispose generated previews; catalog card images remain shared.
+            if (previous != null && !cards.Any(c => c.Controls.OfType<PictureBox>().First().Image == previous)) { images.Remove(previous); previous.Dispose(); }
+            images.Add(bitmap);
         }
         private string CurrentCode()
         {
@@ -234,6 +274,7 @@ namespace BHT.Palette
         }
         private void AcceptSign()
         {
+            CaptureBridgeText();
             if (multi.Checked)
             {
                 if (faces.Items.Count == 0) { AddFace(); if (faces.Items.Count == 0) return; }
@@ -250,12 +291,23 @@ namespace BHT.Palette
                 SelectedSign = entry ?? new TdtSignEntry { Code = SelectedCode };
             }
             else { SelectedCode = CurrentCode(); if (SelectedCode == null) return; SelectedFaces = null; }
+            if ((SelectedCode == "I.439" || (SelectedFaces != null && SelectedFaces.Contains("I.439"))) && SelectedBridgeStation != "")
+            {
+                double number;
+                if (!Chainage.TryParse(SelectedBridgeStation, out number)) { validation.Text = "Lý trình không hợp lệ; ví dụ Km252+831."; bridgeStation.Focus(); return; }
+            }
             DialogResult = DialogResult.OK; Close();
         }
         protected override void Dispose(bool disposing)
         {
             if (disposing) { preview.Image = null; foreach (var image in images) image.Dispose(); }
             base.Dispose(disposing);
+        }
+        private void CaptureBridgeText()
+        {
+            SelectedBridgeName = bridgeName.Text.Trim().Normalize();
+            SelectedBridgeStation = bridgeStation.Text.Trim().Normalize();
+            SelectedBridgeRoad = bridgeRoad.Text.Trim().Normalize();
         }
     }
 }

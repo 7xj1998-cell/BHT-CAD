@@ -69,6 +69,8 @@
                      (cons "trang_thai_km" "CHUA_TINH")
                      (cons "tao_luc" (bht:now))))
      (if (assoc "custom_block" fields) (setq rec (bht:set rec "custom_block" (bht:get fields "custom_block"))))
+     (foreach key '("bridge_name" "sign_chainage" "road_name" "marker_km" "marker_h")
+       (if (assoc key fields) (setq rec (bht:set rec key (bht:get fields key)))))
      (setq rec (bht:set-all rec "mat" (bht:get-all fields "mat")))
      (setq rec (bht:set-all rec "pt" (mapcar 'strcase pids)))
      (bht:obj-write id rec)

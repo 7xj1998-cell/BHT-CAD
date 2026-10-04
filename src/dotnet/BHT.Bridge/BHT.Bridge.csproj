@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
   <!-- Doc/ghi du lieu BHT trong DWG. CHI AcDbMgd + AcCoreMgd (khong AcMgd) -> NETLOAD duoc trong Core Console. -->
   <PropertyGroup>
     <OutputType>Library</OutputType>
@@ -12,6 +12,7 @@
     <Reference Include="AcDbMgd"><HintPath>$(AcadDir)\acdbmgd.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="AcCoreMgd"><HintPath>$(AcadDir)\accoremgd.dll</HintPath><Private>false</Private></Reference>
   </ItemGroup>
+  <ItemGroup><EmbeddedResource Include="../../../assets/sign-vectors/qcvn-corrections.xml"><LogicalName>BHT.SignVectors.xml</LogicalName></EmbeddedResource></ItemGroup>
   <Target Name="BhtCheckAcadRefs" BeforeTargets="ResolveAssemblyReferences">
     <Error Condition="!Exists('$(AcadDir)\acdbmgd.dll')" Text="Khong tim thay $(AcadDir)\acdbmgd.dll - dat /p:AcadDir=... hoac bien moi truong ACAD_INSTALL_DIR." />
   </Target>
