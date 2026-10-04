@@ -18,6 +18,8 @@ namespace BHT.Palette
         private TextBox _oId, _oDesc, _oPoles, _oFaces, _oNote, _oChainage, _oInfo;
         private TextBox _oBridgeName, _oBridgeStation, _oRoadName, _oMarkerKm, _oMarkerH;
         private CheckBox _oMarkerNumber;
+        private Button _oSaveChainage, _oClearChainage, _oCalculateChainage;
+        private string _storedChainage = "";
         private readonly List<Control> _markerRows = new List<Control>();
         private ComboBox _oCustomBlock;
         private int _placementMode = 1, _placementDirection;
@@ -50,7 +52,7 @@ namespace BHT.Palette
             _oGroup = new NoWheelComboBox { Dock = DockStyle.Fill, DropDownStyle = ComboBoxStyle.DropDownList };
             foreach (var g in Groups.All) _oGroup.Items.Add(g[1] + " - " + g[2]);
             _oGroup.SelectionChangeCommitted += (s, e) => OnGroupChangedByUser();
-            _oGroup.SelectedIndexChanged += (s, e) => { foreach (var control in _signRows) control.Visible = GroupRules.HasSignCode(EditorGroup()); foreach (var control in _markerRows) control.Visible = EditorGroup() == "COC_TIEU" || EditorGroup() == "COT_KM"; };
+            _oGroup.SelectedIndexChanged += (s, e) => { foreach (var control in _signRows) control.Visible = GroupRules.HasSignCode(EditorGroup()); foreach (var control in _markerRows) control.Visible = EditorGroup() == "COC_TIEU" || EditorGroup() == "COT_KM"; UpdateMarkerStation(); };
             // 5.0: tim khi go (khong dau) tren ma + ten bien; coc tieu / cot Km khong co ma bien -> danh sach rong.
             _oCode = new NoWheelComboBox { Dock = DockStyle.Fill, MaxDropDownItems = 18, DropDownWidth = 430 };
             Func<List<TdtSignEntry>> catalog = () => { try { return TdtSignLibrary.GetCatalog(); } catch { return new List<TdtSignEntry>(); } };
@@ -64,8 +66,10 @@ namespace BHT.Palette
             _oMarkerKm = new TextBox { Dock = DockStyle.Fill, MaxLength = 5 };
             _oMarkerH = new TextBox { Dock = DockStyle.Fill, MaxLength = 1 };
             _oMarkerNumber = new CheckBox { Text = "Ghi số Km trên ký hiệu", AutoSize = true };
-            _oMarkerNumber.CheckedChanged += (s, e) => { _oMarkerKm.Enabled = _oMarkerH.Enabled = _oMarkerNumber.Checked; };
+            _oMarkerNumber.CheckedChanged += (s, e) => { _oMarkerKm.Enabled = _oMarkerNumber.Checked; _oMarkerH.Enabled = _oMarkerNumber.Checked && EditorGroup() == "COC_TIEU"; UpdateMarkerStation(); };
             _oMarkerKm.Enabled = _oMarkerH.Enabled = false;
+            _oMarkerKm.TextChanged += (s, e) => UpdateMarkerStation();
+            _oMarkerH.TextChanged += (s, e) => UpdateMarkerStation();
             _oDesc = new TextBox { Dock = DockStyle.Fill };
             _oPoles = new TextBox { Dock = DockStyle.Fill };
             _oFaces = new TextBox { Dock = DockStyle.Fill };
@@ -101,9 +105,9 @@ namespace BHT.Palette
             chainPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, 34));
             chainPanel.Controls.Add(_oChainage, 0, 0);
             chainPanel.SetColumnSpan(_oChainage, 3);
-            var saveChainage = Btn("Ghi tay", (s, e) => SaveManualChainage()); saveChainage.Dock = DockStyle.Fill;
-            var clearChainage = Btn("Xóa", (s, e) => ClearManualChainage()); clearChainage.Dock = DockStyle.Fill;
-            var calculateChainage = Btn("Tính tuyến", (s, e) => SendCmd("BHTLYTRINH")); calculateChainage.Dock = DockStyle.Fill;
+            var saveChainage = _oSaveChainage = Btn("Ghi tay", (s, e) => SaveManualChainage()); saveChainage.Dock = DockStyle.Fill;
+            var clearChainage = _oClearChainage = Btn("Xóa", (s, e) => ClearManualChainage()); clearChainage.Dock = DockStyle.Fill;
+            var calculateChainage = _oCalculateChainage = Btn("Tính tuyến", (s, e) => SendCmd("BHTLYTRINH")); calculateChainage.Dock = DockStyle.Fill;
             chainPanel.Controls.Add(saveChainage, 0, 1);
             chainPanel.Controls.Add(clearChainage, 1, 1);
             chainPanel.Controls.Add(calculateChainage, 2, 1);
@@ -149,7 +153,7 @@ namespace BHT.Palette
             tip.SetToolTip(_oPoles, "Số trụ/cột/chân đỡ của đối tượng (1 trụ gắn 2 biển: Số trụ = 1, Số mặt = 2).");
             section("3. Vị trí và ảnh hiện trường");
             row("Điểm RTK", _oPoints); row("Ảnh", photoPanel);
-            row("Lý trình tay", chainPanel); row("Thông tin", _oInfo);
+            row("Lý trình", chainPanel); row("Thông tin", _oInfo);
             form.Controls.Add(new Label()); form.Controls.Add(_oAllowShared);
 
             var f1 = new TableLayoutPanel { Dock = DockStyle.Top, Height = 76, ColumnCount = 4, RowCount = 2, Padding = new Padding(2) };
@@ -236,7 +240,7 @@ namespace BHT.Palette
             _oCond.Text = ""; _oSide.SelectedIndex = 0;  _oChecked.Checked = false; _oNote.Text = "";
             _oPoints.Items.Clear(); _oPhotos.Items.Clear();
             _oPhotos.Items.Add("(chưa gắn ảnh — bấm Nhập KMZ hoặc sang tab Ảnh)");
-            _oChainage.Text = ""; _oInfo.Text = ""; _oAllowShared.Checked = false;
+            _storedChainage = ""; _oChainage.Text = ""; UpdateMarkerStation(); _oInfo.Text = ""; _oAllowShared.Checked = false;
         }
 
         private static void SelectCombo(ComboBox c, string value)
@@ -320,7 +324,7 @@ namespace BHT.Palette
             _oPhotos.Items.Clear();
             foreach (var a in r.GetAll(ObjFields.Photo)) _oPhotos.Items.Add(a);
             if (_oPhotos.Items.Count == 0) _oPhotos.Items.Add("(chưa gắn ảnh — sang tab Ảnh để chọn và xác nhận gắn)");
-            _oChainage.Text = r.Get(ObjFields.ChainageKm);
+            _storedChainage = r.Get(ObjFields.ChainageKm); _oChainage.Text = _storedChainage; UpdateMarkerStation();
             var km = new StringBuilder();
             if (r.Get(ObjFields.ChainageKm) != "") km.Append(r.Get(ObjFields.ChainageKm)).Append(" offset ").Append(r.Get(ObjFields.OffsetM)).Append(" m ").Append(r.Get(ObjFields.RouteSide));
             else km.Append("(chưa tính lý trình - ").Append(r.Get(ObjFields.KmState)).Append(")");
@@ -343,10 +347,25 @@ namespace BHT.Palette
             SelectPhoto(photoId);
         }
 
+        private void UpdateMarkerStation()
+        {
+            if (_oChainage == null || _oSaveChainage == null || _oMarkerNumber == null) return;
+            double metres;
+            bool derived = _oMarkerNumber.Checked && MarkerStation.TryMetres(EditorGroup(), _oMarkerKm.Text.Trim(), _oMarkerH.Text.Trim(), out metres);
+            _oMarkerH.Enabled = _oMarkerNumber.Checked && EditorGroup() == "COC_TIEU";
+            bool wasDerived = _oChainage.ReadOnly;
+            _oChainage.ReadOnly = derived;
+            _oSaveChainage.Enabled = _oClearChainage.Enabled = _oCalculateChainage.Enabled = !derived;
+            if (derived) { MarkerStation.TryMetres(EditorGroup(), _oMarkerKm.Text.Trim(), _oMarkerH.Text.Trim(), out metres); _oChainage.Text = Chainage.Format(metres); }
+            else if (wasDerived) _oChainage.Text = _storedChainage;
+            _objectTips.SetToolTip(_oChainage, derived ? "Lý trình tự lấy từ số Km/H khi lưu hồ sơ; không cần nhập tay thêm." : "Có thể nhập lý trình tay hoặc tính theo tuyến.");
+        }
+
         private void SaveManualChainage()
         {
             if (_oIsNew || string.IsNullOrEmpty(_oId.Text)) { Status("Lưu hồ sơ trước khi nhập lý trình."); return; }
             if (!NeedDoc()) return;
+            if (_oChainage.ReadOnly) { SaveObject(); return; }
             double metres;
             if (!Chainage.TryParse(_oChainage.Text, out metres))
             {

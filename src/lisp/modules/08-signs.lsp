@@ -277,6 +277,11 @@
   (bht:bb-catalog-report)
 )
 
+(defun bht:kh-km-shift-g (g)
+  (mapcar '(lambda (pair)
+    (if (member (car pair) '(10 11 12 13))
+      (cons (car pair) (mapcar '- (cdr pair) '(1.75 0.0 0.0))) pair)) g))
+
 (defun bht:symbol-blocks ()
   ;; Block tong quat: diem chen o chan cot; dau hoi cho biet chua co ma QCVN.
   (bht:block "BHT_KH_BIEN_BAO_V044"
@@ -413,6 +418,22 @@
       (bht:line-color-g '(0.0 0.75 0.0) '(0.0 -0.75 0.0) 7)
       (bht:solid-g '(1.62 -0.78 0.0) '(1.88 -0.78 0.0) '(1.62 0.78 0.0) '(1.88 0.78 0.0) 7)
       (bht:text-color-g "KM" '(0.35 -0.28 0.0) 0.58 7)))
+  (bht:block "BHT_KH_COT_KM_V0611"
+    (mapcar 'bht:kh-km-shift-g (list
+      (bht:solid-g '(0.0 0.0 0.0) '(0.0 0.75 0.0) '(-0.287 0.693 0.0) '(-0.287 0.693 0.0) 1)
+      (bht:solid-g '(0.0 0.0 0.0) '(-0.287 0.693 0.0) '(-0.530 0.530 0.0) '(-0.530 0.530 0.0) 1)
+      (bht:solid-g '(0.0 0.0 0.0) '(-0.530 0.530 0.0) '(-0.693 0.287 0.0) '(-0.693 0.287 0.0) 1)
+      (bht:solid-g '(0.0 0.0 0.0) '(-0.693 0.287 0.0) '(-0.750 0.0 0.0) '(-0.750 0.0 0.0) 1)
+      (bht:solid-g '(0.0 0.0 0.0) '(-0.750 0.0 0.0) '(-0.693 -0.287 0.0) '(-0.693 -0.287 0.0) 1)
+      (bht:solid-g '(0.0 0.0 0.0) '(-0.693 -0.287 0.0) '(-0.530 -0.530 0.0) '(-0.530 -0.530 0.0) 1)
+      (bht:solid-g '(0.0 0.0 0.0) '(-0.530 -0.530 0.0) '(-0.287 -0.693 0.0) '(-0.287 -0.693 0.0) 1)
+      (bht:solid-g '(0.0 0.0 0.0) '(-0.287 -0.693 0.0) '(0.0 -0.75 0.0) '(0.0 -0.75 0.0) 1)
+      (bht:line-color-g '(0.0 -0.75 0.0) '(1.75 -0.75 0.0) 7)
+      (bht:line-color-g '(1.75 -0.75 0.0) '(1.75 0.75 0.0) 7)
+      (bht:line-color-g '(1.75 0.75 0.0) '(0.0 0.75 0.0) 7)
+      (bht:line-color-g '(0.0 0.75 0.0) '(0.0 -0.75 0.0) 7)
+      (bht:solid-g '(1.62 -0.78 0.0) '(1.88 -0.78 0.0) '(1.62 0.78 0.0) '(1.88 0.78 0.0) 7)
+      (bht:text-color-g "KM" '(0.35 -0.28 0.0) 0.58 7))))
   (bht:block "BHT_KH_BANG_CHI_DAN" (bht:poly-g '((-1.5 -0.7 0.0) (1.5 -0.7 0.0) (1.5 0.7 0.0) (-1.5 0.7 0.0))))
   (bht:block "BHT_KH_BANG_QC" (append (bht:poly-g '((-1.5 -0.7 0.0) (1.5 -0.7 0.0) (1.5 0.7 0.0) (-1.5 0.7 0.0)))
                                       (list (bht:line-g '(-1.5 -0.7 0.0) '(1.5 0.7 0.0)))))
@@ -470,7 +491,7 @@
 (defun bht:kh-default-block (group code)
   (cond ((= group "BIEN_BAO") (bht:bb-block-for code))
         ((= group "COC_TIEU") "BHT_KH_COC_TIEU")
-        ((= group "COT_KM") "BHT_KH_COT_KM_V043")
+        ((= group "COT_KM") "BHT_KH_COT_KM_V0611")
         (T (strcat "BHT_KH_" group)))
 )
 
@@ -582,7 +603,7 @@
     (progn
       (setq name (bht:get rec "bridge_name") station (bht:get rec "sign_chainage") road (bht:get rec "road_name")
             style (bht:kh-label-style (strcat name station road)))
-      (BHTBRIDGESIGN (bht:cad-text name style) (bht:cad-text station style) (bht:cad-text road style) style))))
+      (BHTBRIDGESIGN name station road style))))
 
 (defun bht:kh-block (rec / blk result)
   (setq blk (bht:kh-base-block rec))
@@ -638,13 +659,26 @@
         detail (cond ((/= code "") (bht:kh-code-label group code))
                      ((/= chainage "") (bht:kh-code-label group chainage))
                      (T "")))
-  (if (and (= group "COC_TIEU") (/= (bht:get rec "marker_km") "") (/= (bht:get rec "marker_h") ""))
-    (strcat "H" (bht:get rec "marker_h") "/" (bht:get rec "marker_km"))
-    (if (= group "BIEN_BAO")
-    (strcat (if (/= code "") (bht:kh-code-label group code) "Biển báo")
-            (if (/= chainage "") (strcat "  " chainage) ""))
-    (strcat (bht:group-label group) (if (/= detail "") (strcat " " detail) ""))))
-)
+  (cond
+    ((= group "COT_KM") "")
+    ((and (= group "COC_TIEU") (/= (bht:get rec "marker_km") "") (/= (bht:get rec "marker_h") ""))
+      (strcat "H" (bht:get rec "marker_h") "/" (bht:get rec "marker_km")))
+    ((and (= group "COC_TIEU") (= chainage "")) "")
+    ((= group "BIEN_BAO")
+      (strcat (if (/= code "") (bht:kh-code-label group code) "Biển báo")
+              (if (/= chainage "") (strcat "  " chainage) "")))
+    (T (strcat (bht:group-label group) (if (/= detail "") (strcat " " detail) "")))))
+
+;; Direction describes the visible head, not an arbitrary block X axis.
+;; Custom blocks keep their own +X convention.
+(defun bht:kh-picked-rotation (rec target direction-point / blk heading)
+  (setq blk (bht:kh-base-block rec)
+        heading (cond ((member blk '("BHT_KH_COC_TIEU" "BHT_KH_COT_KM_V043" "BHT_KH_COT_KM_V0611")) pi)
+                      ((wcmatch blk "BHT_KH_COT_KM_V0611_*") pi)
+                      ((and (= (bht:get rec "nhom") "BIEN_BAO")
+                            (wcmatch blk "BHT_TDT_*,BHT_I439_*,BHT_KH_BB_*,BHT_KH_BIEN_BAO_*,BHT_SIGN_*,BHT_ASSEMBLY_*")) (/ pi 2.0))
+                      (T 0.0)))
+  (- (atan (- (cadr direction-point) (cadr target)) (- (car direction-point) (car target))) heading))
 
 ;; Vi tri/goc ky hieu tu dong theo tim: bien bao duoc day ra ngoai phia duong,
 ;; giu diem RTK lam moc that va noi bang duong dan. Cac nhom khac dat dung tam diem.
@@ -732,7 +766,7 @@
       (setq angle0 (getangle base "\nHướng ký hiệu (chỉ hướng hoặc nhập góc) <0>: "))
       (if (null angle0) (setq angle0 0.0))
       ;; UCS angle -> WCS block rotation, without ANGBASE/ANGDIR assumptions.
-      (setq dir (trans (list (cos angle0) (sin angle0) 0.0) 1 0 T) rotation (atan (cadr dir) (car dir)))
+      (setq dir (trans (list (cos angle0) (sin angle0) 0.0) 1 0 T) rotation (bht:kh-picked-rotation rec source (mapcar '+ source dir)))
       (while (not done)
         (initget "Dat Xoa")
         (setq picked (getpoint cursor "\nĐiểm trung gian hoặc [Dat ký hiệu/Xoa điểm cuối] <Dat ký hiệu>: "))
@@ -768,8 +802,9 @@
             ((= direction "ROUTE") (setq route (bht:kh-route-transform rec source (bht:kh-scale)) rot (if route (cadr route) 0.0)))
             ((= direction "ANGLE") (setq rot (* pi (/ (bht:num degrees) 180.0))))
             ((= direction "PICK")
-              (setq ang (getangle picked "\nChọn hướng ký hiệu (Enter = hủy): "))
-              (if ang (setq dir (trans (list (cos ang) (sin ang) 0.0) 1 0 T) rot (atan (cadr dir) (car dir))))))
+              (setq ang (getpoint picked "\nChọn hướng đầu ký hiệu (Enter = hủy): "))
+              (if (and ang (not (equal picked ang 1e-8)))
+                (setq rot (bht:kh-picked-rotation rec target (trans ang 1 0))) (setq ang nil))))
           (if (and (= direction "PICK") (null ang)) (list 'HUY)
             (progn
               (if (and (= mode "ELBOW") (not (equal (car source) (car target) 1e-8)) (not (equal (cadr source) (cadr target) 1e-8)))
@@ -930,7 +965,10 @@
           ((null pos) (setq nopos (1+ nopos))))
         (setq dup (+ dup (bht:kh-leader-sync-one oid pos (if anchor (car anchor) nil) (cdr (assoc oid dan)) (bht:kh-via-points rec))))
         ;; nhan ky hieu (theo vi tri ky hieu thuc te)
-        (if anchor
+        (setq lbl (bht:kh-label oid rec))
+        (if (= lbl "")
+          (foreach e2 (cdr (assoc oid txt)) (if (entget e2) (progn (entdel e2) (setq removed (1+ removed))))))
+        (if (and anchor (/= lbl ""))
           (progn
             (setq h (bht:kh-label-height rec) lbl (bht:kh-label oid rec) sc (cadr anchor) rot (caddr anchor)
                   trot (bht:kh-readable-angle rot)

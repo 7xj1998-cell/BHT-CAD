@@ -1,0 +1,55 @@
+(setvar "FILEDIA" 0)
+(setvar "LISPSYS" 1)
+(setvar "BACKGROUNDPLOT" 0)
+(vl-cmdf "_.NETLOAD" "@STAGE@/@BIN@/BHT.Bridge.dll")
+(vl-cmdf "_.NETLOAD" "@STAGE@/@BIN@/Sign0611Probe.dll")
+(setq *bht-module-root* "@STAGE@")
+(load "@STAGE@/BHT-0.6.11.lsp")
+(bht:symbol-blocks)
+(load "@STAGE@/test_SIGN0611.lsp")
+BHTSIGN0611PROBE
+(bht:kh-place-options "OBJ-QA0610-H" "DIRECT" "PICK" "0")
+100000,99996
+100000,99999
+(qa0611-check "interactive-pick-up-head-up" (equal (sin (+ pi (cadr (bht:kh-free-transform (bht:obj-read "OBJ-QA0610-H"))))) 1.0 1e-8))
+(setvar "ANGBASE" 1.1)
+(setvar "ANGDIR" 1)
+(bht:kh-place-options "OBJ-QA0610-H" "DIRECT" "PICK" "0")
+100000,99996
+100000,99993
+(qa0611-check "interactive-pick-down-angle-settings" (equal (sin (+ pi (cadr (bht:kh-free-transform (bht:obj-read "OBJ-QA0610-H"))))) -1.0 1e-8))
+(setvar "ANGBASE" 0.0)
+(setvar "ANGDIR" 0)
+_.UCS
+_Z
+30
+(bht:kh-place-options "OBJ-QA0610-H" "DIRECT" "PICK" "0")
+136600.540378,36601.616277
+136603.138454,36600.116277
+(qa0611-check "interactive-pick-right-rotated-UCS" (equal (cos (+ pi (cadr (bht:kh-free-transform (bht:obj-read "OBJ-QA0610-H"))))) 1.0 1e-8))
+_.UCS
+_World
+(bht:kh-place-options "OBJ-QA0610-H" "DIRECT" "PICK" "0")
+100000,99996
+100000,99999
+(bht:kh-place-options "OBJ-QA0610-H" "DIRECT" "PICK" "0")
+100000,99996
+99997,99996
+(qa0611-check "interactive-pick-left-head-left" (equal (cos (+ pi (cadr (bht:kh-free-transform (bht:obj-read "OBJ-QA0610-H"))))) -1.0 1e-8))
+(setq qa-cancel-before (bht:obj-read "OBJ-QA0610-H"))
+(bht:kh-place-options "OBJ-QA0610-H" "DIRECT" "PICK" "0")
+100000,99996
+100000,99996
+(qa0611-check "zero-length-direction-cancels-atomically" (equal qa-cancel-before (bht:obj-read "OBJ-QA0610-H")))
+(bht:kh-place-options "OBJ-QA0610-H" "DIRECT" "PICK" "0")
+100000,99996
+100000,99999
+(princ (strcat "\nSIGN0611-FINAL-FAIL=" (itoa *sign0611-fail*)))
+BHTPLOT0611
+_.SAVEAS
+
+"@STAGE@/@GALLERY@"
+_.QUIT
+_N
+
+

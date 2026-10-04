@@ -49,6 +49,24 @@ namespace BHT.CoreTests
             var presentationEdit = ObjectLogic.ApplyEdit(presentationRecord, new BhtRecord().Add(ObjFields.MarkerKm, "40").Add(ObjFields.RoadName, "ĐT.1"), "later");
             Check("PRES2", "edit preserves Unicode and linked photos", presentationEdit.Get(ObjFields.MarkerKm) == "40" && presentationEdit.Get(ObjFields.RoadName) == "ĐT.1" && presentationEdit.Get(ObjFields.BridgeName) == "CẦU YÊN CHÂU" && presentationEdit.Get(ObjFields.Photo) == "PHOTO1");
             Check("PRES3", "marker number can be disabled without losing station", ObjectLogic.ApplyEdit(presentationEdit, new BhtRecord().Add(ObjFields.MarkerKm, ""), "later").Get(ObjFields.MarkerKm) == "" && presentationEdit.Get(ObjFields.SignChainage) == "Km252+831");
+            double markerMetres;
+            Check("MK1", "Km46 H1 derives 46100", MarkerStation.TryMetres("COC_TIEU", "46", "1", out markerMetres) && markerMetres == 46100);
+            Check("MK2", "milestone ignores unused H", MarkerStation.TryMetres("COT_KM", "39", "", out markerMetres) && markerMetres == 39000);
+            Check("MK3", "reject fractional negative or out-of-range markers", !MarkerStation.TryMetres("COC_TIEU", "46", "10", out markerMetres) && !MarkerStation.TryMetres("COC_TIEU", "46.1", "1", out markerMetres) && !MarkerStation.TryMetres("COT_KM", "-1", "", out markerMetres));
+            var marker = new BhtRecord().Add(ObjFields.Group, "COC_TIEU").Add(ObjFields.MarkerKm, "46").Add(ObjFields.MarkerH, "1").Add(ObjFields.RouteId, "ROUTE1").Add(ObjFields.Point, "P1").Add(ObjFields.Photo, "PHOTO1");
+            marker = ObjectLogic.ApplyEdit(marker, new BhtRecord().Add(ObjFields.Note, "unchanged links"), "now");
+            Check("MK4", "save derives station and preserves route RTK photo links", marker.Get(ObjFields.ChainageKm) == "Km46+100.00" && marker.Get(ObjFields.KmSource) == MarkerStation.Source && marker.Get(ObjFields.RouteId) == "ROUTE1" && marker.Get(ObjFields.Point) == "P1" && marker.Get(ObjFields.Photo) == "PHOTO1");
+            var moved = ObjectLogic.ApplyEdit(marker, new BhtRecord().Add(ObjFields.MarkerH, "9"), "now");
+            Check("MK5", "editing H updates station", moved.Get(ObjFields.ChainageM) == "46900.000");
+            Check("MK6", "disabling marker clears only its derived station", ObjectLogic.ApplyEdit(moved, new BhtRecord().Add(ObjFields.MarkerKm, ""), "now").Get(ObjFields.ChainageKm) == "");
+            var independent = new BhtRecord().Add(ObjFields.Group, "COC_TIEU").Add(ObjFields.ChainageKm, "Km2+345.00").Add(ObjFields.KmSource, "Nhập thủ công từ Palette");
+            Check("MK7", "unrelated manual station preserved", ObjectLogic.ApplyEdit(independent, new BhtRecord().Add(ObjFields.MarkerKm, ""), "now").Get(ObjFields.ChainageKm) == "Km2+345.00");
+            BhtRecord newMarker;
+            var markerError = ObjectLogic.BuildNew("OBJ-MARKER", new BhtRecord().Add(ObjFields.Group, "COC_TIEU").Add(ObjFields.MarkerKm, "46").Add(ObjFields.MarkerH, "1"), new[] { "P1" }, false, new HashSet<string> { "P1" }, new Dictionary<string,BhtRecord>(), "now", out newMarker);
+            Check("MK8", "new marker derives station without manual entry", markerError == null && newMarker.Get(ObjFields.ChainageKm) == "Km46+100.00");
+            Check("BR1", "bridge bottom line matches original sign", SignPresentation.BridgeLine("Km38+723.00", "ĐT.830") == "KM38+723-ĐT.830");
+            Check("BR2", "partial bridge inputs remain usable", SignPresentation.BridgeLine("", "QL.6") == "QL.6" && SignPresentation.BridgeLine("Km0+008.47", "") == "KM0+008.47");
+            Check("BR3", "fractional metres preserved", SignPresentation.BridgeLine("12.125", "QL.1") == "KM0+012.125-QL.1");
             Check("MV7", "metres never silently round to zero or another value", SignPresentation.MetreValue("S.502@0.0001") == "" && SignPresentation.MetreValue("S.509a@4.5678") == "" && SignPresentation.MetreValue("S.509a@0.001") == "0.001");
             Check("MV1", "metres decimal comma", SignPresentation.MetreValue("S.509a@4,5") == "4.5");
             Check("MV2", "whole distance text", SignPresentation.ReplaceMetres("S.502@150", "200m") == "150 m");
@@ -278,7 +296,7 @@ namespace BHT.CoreTests
 
         static void Versions()
         {
-            Check("C11a", "hằng phiên bản", BhtVersion.Version == "0.6.10" && BhtVersion.AssemblyVersion == BhtVersion.Version + ".0" && BhtVersion.FileVersion == BhtVersion.AssemblyVersion);
+            Check("C11a", "hằng phiên bản", BhtVersion.Version == "0.6.11" && BhtVersion.AssemblyVersion == BhtVersion.Version + ".0" && BhtVersion.FileVersion == BhtVersion.AssemblyVersion);
             Check("C11b", "Lisp phải cùng phiên bản", BhtVersion.LispCompatible(BhtVersion.Version, "1") && BhtVersion.LispCompatible(" " + BhtVersion.Version + " ", "1")
                 && !BhtVersion.LispCompatible("5.0", "1") && !BhtVersion.LispCompatible("0.4.6-fix3", "1") && !BhtVersion.LispCompatible(BhtVersion.Version, "") && !BhtVersion.LispCompatible(BhtVersion.Version, "0"));
             var asm = typeof(BhtRecord).Assembly.GetName().Version.ToString();

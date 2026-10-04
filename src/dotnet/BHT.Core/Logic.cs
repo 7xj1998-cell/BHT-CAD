@@ -131,6 +131,7 @@ namespace BHT.Core
                 if (fields.Has(key)) rec.Set(key, fields.Get(key));
             rec.SetAll(ObjFields.Face, fields.GetAll(ObjFields.Face));
             rec.SetAll(ObjFields.Point, pids.Select(p => p.ToUpperInvariant()));
+            MarkerStation.Apply(rec);
             rec.Set(ObjFields.ModifiedAt, now); // bht:obj-write luon dong dau sua_luc
             return null;
         }
@@ -149,6 +150,7 @@ namespace BHT.Core
                 else if (p.Key == ObjFields.Group) r.Set(p.Key, Groups.Code(p.Value) ?? p.Value);
                 else r.Set(p.Key, p.Value);
             }
+            MarkerStation.Apply(r);
             r.Set(ObjFields.ModifiedAt, now);
             return r;
         }

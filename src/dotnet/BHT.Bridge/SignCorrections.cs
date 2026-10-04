@@ -117,20 +117,49 @@ namespace BHT.Bridge
         }
         public static string Bridge(Database db, string bridge, string station, string road, string styleName)
         {
-            string name = TextKey("BHT_I439_V0610_", bridge + "\n" + station + "\n" + road + "\n" + styleName);
+            // Reuse the original TDT face, including its three frame contours,
+            // background fills, proportions and Giaothong1 lettering.
+            string name = TextKey("BHT_I439_V0611_", bridge + "\n" + station + "\n" + road);
+            string line = SignPresentation.BridgeLine(station, road);
+            var template = TdtSignLibrary.EnsureBlock(db, "I.439");
+            if (!template.Ok) throw new InvalidOperationException(template.Error);
             using (var tr = db.TransactionManager.StartTransaction())
             {
                 var table = (BlockTable)tr.GetObject(db.BlockTableId, OpenMode.ForRead); if (table.Has(name)) return name;
-                var styles = (TextStyleTable)tr.GetObject(db.TextStyleTableId, OpenMode.ForRead);
-                ObjectId style = styles.Has(styleName) ? styles[styleName] : db.Textstyle;
+                var source = (BlockTableRecord)tr.GetObject(table[template.BlockName], OpenMode.ForRead);
                 table.UpgradeOpen(); var block = new BlockTableRecord { Name = name }; table.Add(block); tr.AddNewlyCreatedDBObject(block, true);
-                var frame = new Polyline { Closed = true, Color = Ink(7) };
-                frame.AddVertexAt(0, new Point2d(-1.8, .6), 0, 0, 0); frame.AddVertexAt(1, new Point2d(1.8, .6), 0, 0, 0); frame.AddVertexAt(2, new Point2d(1.8, 2.4), 0, 0, 0); frame.AddVertexAt(3, new Point2d(-1.8, 2.4), 0, 0, 0);
-                block.AppendEntity(frame); tr.AddNewlyCreatedDBObject(frame, true);
-                var hatch = new Hatch { Color = Ink(5) }; block.AppendEntity(hatch); tr.AddNewlyCreatedDBObject(hatch, true); hatch.SetHatchPattern(HatchPatternType.PreDefined, "SOLID"); hatch.AppendLoop(HatchLoopTypes.External, new ObjectIdCollection(new[] { frame.ObjectId })); hatch.EvaluateHatch(true);
-                AddText(tr, block, bridge, 0, 1.83, .38, 3.3, 7, style, true);
-                AddText(tr, block, string.Join("   ", new[] { station, road }.Where(x => !string.IsNullOrWhiteSpace(x))), 0, 1.11, .25, 3.3, 7, style, true);
-                var pole = new Line(Point3d.Origin, new Point3d(0, .6, 0)) { ColorIndex = 7 }; block.AppendEntity(pole); tr.AddNewlyCreatedDBObject(pole, true);
+                foreach (ObjectId id in source)
+                {
+                    var entity = tr.GetObject(id, OpenMode.ForRead) as Entity; if (entity == null) continue;
+                    var originalFace = entity as BlockReference;
+                    if (originalFace == null) { var copy = (Entity)entity.Clone(); block.AppendEntity(copy); tr.AddNewlyCreatedDBObject(copy, true); continue; }
+                    var faceSource = (BlockTableRecord)tr.GetObject(originalFace.BlockTableRecord, OpenMode.ForRead);
+                    var definitions = faceSource.Cast<ObjectId>().Select(x => tr.GetObject(x, OpenMode.ForRead) as AttributeDefinition).Where(x => x != null).OrderByDescending(x => x.Position.Y).ToList();
+                    if (definitions.Count != 2) throw new InvalidOperationException("Mẫu I.439 phải có hai dòng nội dung.");
+                    // Flatten the original face into the new definition. Text remains
+                    // Unicode and uses the source sign font rather than label SHX.
+                    foreach (ObjectId item in ((DrawOrderTable)tr.GetObject(faceSource.DrawOrderTableId, OpenMode.ForRead)).GetFullDrawOrder(0))
+                    {
+                        var original = tr.GetObject(item, OpenMode.ForRead) as Entity;
+                        if (original == null || original is AttributeDefinition) continue;
+                        var copy = (Entity)original.Clone(); copy.TransformBy(originalFace.BlockTransform);
+                        if (copy is Polyline || copy.Color.ColorMethod == ColorMethod.ByLayer || copy.Color.ColorMethod == ColorMethod.ByBlock) copy.Color = Ink(7);
+                        block.AppendEntity(copy); tr.AddNewlyCreatedDBObject(copy, true);
+                    }
+                    for (int i = 0; i < definitions.Count; i++)
+                    {
+                        var def = definitions[i]; var text = new DBText();
+                        text.SetDatabaseDefaults(db); text.TextStyleId = def.TextStyleId;
+                        text.Height = def.Height * originalFace.ScaleFactors.Y; text.WidthFactor = def.WidthFactor;
+                        text.Color = Ink(7); text.TextString = i == 0 ? bridge : line;
+                        var center = (def.HorizontalMode == TextHorizontalMode.TextLeft ? def.Position : def.AlignmentPoint).TransformBy(originalFace.BlockTransform);
+                        text.HorizontalMode = TextHorizontalMode.TextCenter; text.VerticalMode = TextVerticalMode.TextVerticalMid;
+                        text.AlignmentPoint = new Point3d(0, center.Y + text.Height * .35, center.Z);
+                        block.AppendEntity(text); tr.AddNewlyCreatedDBObject(text, true); text.AdjustAlignment(db);
+                        var bounds = text.GeometricExtents; double width = bounds.MaxPoint.X - bounds.MinPoint.X;
+                        if (width > 3.7) { text.WidthFactor *= 3.7 / width; text.AdjustAlignment(db); }
+                    }
+                }
                 tr.Commit(); return name;
             }
         }
@@ -138,7 +167,7 @@ namespace BHT.Bridge
         {
             int number;
             if (!int.TryParse(km, out number) || number < 0 || number > 99999) throw new ArgumentException("Số Km phải là số nguyên từ 0 đến 99999.");
-            string name = "BHT_KH_COT_KM_V0610_" + number;
+            string name = "BHT_KH_COT_KM_V0611_" + number;
             using (var tr = db.TransactionManager.StartTransaction())
             {
                 var table = (BlockTable)tr.GetObject(db.BlockTableId, OpenMode.ForRead); if (table.Has(name)) return name;
@@ -149,10 +178,10 @@ namespace BHT.Bridge
                 {
                     var entity = tr.GetObject(id, OpenMode.ForRead) as Entity; if (entity == null) continue;
                     var text = entity as DBText; if (text != null && text.TextString == "KM") { style = text.TextStyleId; continue; }
-                    var copy = (Entity)entity.Clone(); block.AppendEntity(copy); tr.AddNewlyCreatedDBObject(copy, true);
+                    var copy = (Entity)entity.Clone(); copy.TransformBy(Matrix3d.Displacement(new Vector3d(-1.75, 0, 0))); block.AppendEntity(copy); tr.AddNewlyCreatedDBObject(copy, true);
                 }
-                AddText(tr, block, "KM", .82, .34, .28, 1.3, 7, style);
-                AddText(tr, block, number.ToString(CultureInfo.InvariantCulture), .82, -.24, .48, 1.3, 7, style);
+                AddText(tr, block, "KM", -.93, .34, .28, 1.3, 7, style);
+                AddText(tr, block, number.ToString(CultureInfo.InvariantCulture), -.93, -.24, .48, 1.3, 7, style);
                 tr.Commit(); return name;
             }
         }

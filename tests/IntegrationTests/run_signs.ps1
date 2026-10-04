@@ -25,7 +25,7 @@ $interactive = @(
   '(signs-check "free-input-cancel-atomic" (equal before-free-input (bht:obj-read "OBJ-SIGN")))',
   '_.UCS', '_Z', '30',
   '(bht:kh-place-free "OBJ-SIGN")', '45', '57,-10', '61,-15', 'Xoa', '62,-16', 'Dat', '80,-30',
-  '(signs-check "free-input-rotated-UCS-angle" (equal (cadr (bht:kh-free-transform (bht:obj-read "OBJ-SIGN"))) (* pi (/ 75.0 180.0)) 1e-6))',
+  '(signs-check "free-input-rotated-UCS-angle" (equal (cadr (bht:kh-free-transform (bht:obj-read "OBJ-SIGN"))) (* pi (/ -15.0 180.0)) 1e-6))',
   '(signs-check "free-input-two-corners" (= (length (bht:kh-via-points (bht:obj-read "OBJ-SIGN"))) 2))',
   '_.UCS', '_World',
   '(setq quick-before (bht:obj-read "OBJ-SIGN"))',

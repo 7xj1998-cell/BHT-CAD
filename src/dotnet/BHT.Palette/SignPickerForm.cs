@@ -227,13 +227,13 @@ namespace BHT.Palette
             if (!bridgePanel.Visible || SelectedSign == null || SelectedSign.Code != "I.439" || bridgeName.Text.Trim() == "") return;
             var bitmap = new Bitmap(480, 240);
             using (var g = Graphics.FromImage(bitmap))
-            using (var big = new Font("Segoe UI", 25, FontStyle.Bold))
-            using (var small = new Font("Segoe UI", 16))
+            using (var big = new Font("Arial Narrow", 30, FontStyle.Bold))
+            using (var small = new Font("Arial Narrow", 25, FontStyle.Bold))
             using (var format = new StringFormat { Alignment = StringAlignment.Center, LineAlignment = StringAlignment.Center })
             {
-                g.Clear(Color.FromArgb(0, 100, 190)); g.DrawRectangle(Pens.White, 4, 4, 471, 231);
+                g.Clear(Color.FromArgb(0, 127, 255)); g.DrawRectangle(Pens.White, 4, 4, 471, 231); g.DrawRectangle(Pens.White, 9, 9, 461, 221);
                 g.DrawString(SelectedBridgeName, big, Brushes.White, new RectangleF(12, 15, 456, 115), format);
-                g.DrawString(string.Join("   ", new[] { SelectedBridgeStation, SelectedBridgeRoad }.Where(x => x != "")), small, Brushes.White, new RectangleF(12, 132, 456, 88), format);
+                g.DrawString(SignPresentation.BridgeLine(SelectedBridgeStation, SelectedBridgeRoad), small, Brushes.White, new RectangleF(12, 132, 456, 88), format);
             }
             var previous = preview.Image;
             preview.Image = bitmap;

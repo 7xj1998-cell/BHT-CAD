@@ -5,6 +5,13 @@ namespace BHT.Core
 {
     public static class SignPresentation
     {
+        public static string BridgeLine(string station, string road)
+        {
+            double metres; string value = (station ?? "").Trim();
+            if (Chainage.TryParse(value, out metres))
+                value = "KM" + Math.Floor(metres / 1000).ToString(CultureInfo.InvariantCulture) + "+" + (metres % 1000).ToString("000.###", CultureInfo.InvariantCulture);
+            return value + (value != "" && !string.IsNullOrWhiteSpace(road) ? "-" : "") + (road ?? "").Trim();
+        }
         public static string BaseCode(string code)
         {
             return (code ?? "").Split('@')[0].Trim();

@@ -7,7 +7,21 @@
 ;;; ----------------------------------------------------------------------
 
 (defun bht:obj-read (id) (bht:rec-read "OBJ" id))
-(defun bht:obj-write (id rec) (bht:rec-write "OBJ" id (bht:set rec "sua_luc" (bht:now))))
+(defun bht:obj-marker-station (rec / km hm metres changed)
+  (setq km (bht:num (bht:get rec "marker_km")) hm (if (= (bht:get rec "nhom") "COT_KM") 0 (bht:num (bht:get rec "marker_h"))))
+  (cond
+    ((and (member (bht:get rec "nhom") '("COC_TIEU" "COT_KM")) km hm (= km (fix km)) (<= 0 km 99999) (= hm (fix hm)) (<= 0 hm 9))
+      (setq metres (+ (* km 1000.0) (* hm 100.0)) changed (/= (bht:get rec "ly_trinh_km") (bht:fmt-km metres)))
+      (foreach pair (list (cons "ly_trinh_m" (bht:fnum metres 3)) (cons "ly_trinh_km" (bht:fmt-km metres))
+        '("trang_thai_km" . "NHAP_TAY") '("nguon_km" . "Số Km/H đã nhập") '("station_status" . "MANUAL") '("station_route_revision" . ""))
+        (setq rec (bht:set rec (car pair) (cdr pair)))))
+    ((= (bht:get rec "nguon_km") "Số Km/H đã nhập")
+      (setq changed T)
+      (foreach pair '(("ly_trinh_m" . "") ("ly_trinh_km" . "") ("trang_thai_km" . "CHUA_TINH") ("nguon_km" . "") ("station_status" . "NO_ROUTE") ("station_route_revision" . ""))
+        (setq rec (bht:set rec (car pair) (cdr pair))))))
+  (if changed (foreach pair '(("doan" . "") ("goi" . "") ("gan_doan_pp" . "CHUA_PHAN_DOAN") ("doan_ung_vien" . "")) (setq rec (bht:set rec (car pair) (cdr pair)))))
+  rec)
+(defun bht:obj-write (id rec) (bht:rec-write "OBJ" id (bht:set (bht:obj-marker-station rec) "sua_luc" (bht:now))))
 (defun bht:obj-ids () (bht:rec-keys "OBJ"))
 
 ;; ID tu dong KHONG dung lai so cua doi tuong da xoa (0.3.2: moc cao nhat luu META obj_seq).

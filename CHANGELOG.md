@@ -1,5 +1,12 @@
 ﻿## v0.6.10 — 2026-10-04
 
+## 0.6.11 — 2026-10-05
+
+- Sửa chọn hướng CAD bị quay ngược đầu cọc; kiểm tra UCS xoay và các thiết lập góc.
+- I.439 dùng lại khung đôi, phông Giaothong1, nền xanh và chân trụ mẫu cũ; ghép dòng KM38+723-ĐT.830 và giữ viền trắng khi in.
+- Chuyển điểm chèn cọc Km về giữa thanh đen; ẩn nhãn ngoài cọc Km và cọc tiêu chưa có lý trình.
+- Tự ghi lý trình từ Km/H khi lưu, bỏ nhập tay trùng lặp, ghi rõ nguồn và giữ các liên kết.
+
 - Sửa ảnh và mã biển R.415a/b, W.239a/b; sửa hình W.205c/W.207a và thứ tự hatch che biểu tượng.
 - Nhập tên cầu, lý trình và tên đường trong bảng chọn I.439; lưu nội dung và tự co chữ vừa khung.
 - Thêm số Km/H trên cọc tiêu dạng H9/39 và số Km trong block cọc Km, có tùy chọn bật/tắt.
