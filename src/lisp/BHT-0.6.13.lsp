@@ -1,7 +1,7 @@
 ﻿;;; BHT modular loader; Application Bundle / APPLOAD entry point.
 (vl-load-com)
-(setq *bht-version* "0.6.12")
-(setq *bht-lsp-file* (findfile "BHT-0.6.12.lsp"))
+(setq *bht-version* "0.6.13")
+(setq *bht-lsp-file* (findfile "BHT-0.6.13.lsp"))
 (if (and (not *bht-module-root*) *bht-lsp-file*) (setq *bht-module-root* (vl-filename-directory *bht-lsp-file*)))
 (if (and (not *bht-module-root*) (member (type BHTRUNTIMEROOT) '(SUBR USUBR EXRXSUBR))) (setq *bht-module-root* (BHTRUNTIMEROOT)))
 (defun bht:load-modules (root / name result)

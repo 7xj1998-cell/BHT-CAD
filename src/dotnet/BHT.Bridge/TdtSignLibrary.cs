@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
@@ -129,7 +129,7 @@ namespace BHT.Bridge
 
         public static string WrapperName(string code)
         {
-            var sb = new StringBuilder("BHT_TDT_V0610_");
+            var sb = new StringBuilder("BHT_TDT_V0613_");
             bool underscore = false;
             foreach (char c0 in (code ?? "").Trim().ToUpperInvariant())
             {
@@ -339,7 +339,8 @@ namespace BHT.Bridge
                 double height = bounds.MaxPoint.Y - bounds.MinPoint.Y;
                 if (double.IsNaN(height) || double.IsInfinity(height) || height <= 1e-8)
                     throw new InvalidOperationException("mặt biển không có kích thước bao hợp lệ");
-                double scale = StandardFaceHeight / height;
+                double width = bounds.MaxPoint.X - bounds.MinPoint.X;
+                double scale = StandardFaceHeight / (SignPresentation.BaseCode(code).StartsWith("S.", StringComparison.OrdinalIgnoreCase) ? Math.Max(width, height) : height);
                 string sourceAlias = "BHT_TDT_SRC_" + SafeToken(sourceName);
                 int suffix = 1;
                 string candidate = sourceAlias;
@@ -397,13 +398,18 @@ namespace BHT.Bridge
                 if (entity is Hatch) hatches.Add(id);
                 var nested = entity as BlockReference;
                 if (nested != null) PrepareFace(tr, nested.BlockTableRecord, seen, code);
+                bool whiteLayerFill = entity is Hatch && entity.ColorIndex == 256 && ((LayerTableRecord)tr.GetObject(entity.LayerId, OpenMode.ForRead)).Color.ColorIndex == 7;
+                if (entity.ColorIndex == 7 || whiteLayerFill) { entity.UpgradeOpen(); entity.Color = Autodesk.AutoCAD.Colors.Color.FromRgb(255,255,255); }
+                else if (entity.ColorIndex == 250) { entity.UpgradeOpen(); entity.Color = Autodesk.AutoCAD.Colors.Color.FromRgb(0,0,0); }
                 var speed = SignPresentation.Speed(code, "");
                 bool metres = SignPresentation.MetreValue(code) != "";
-                if (!speed.HasValue && !metres) continue;
+                if (!speed.HasValue && !metres && !SignPresentation.HasZoneTime(code)) continue;
                 var text = entity as DBText;
                 var mtext = entity as MText;
                 int number;
                 string value = text != null ? text.TextString : (mtext != null ? mtext.Text : "");
+                string hours = SignPresentation.ReplaceZoneTime(code, value);
+                if (hours != value) { entity.UpgradeOpen(); if (text != null) text.TextString = hours; else if (mtext != null) mtext.Contents = hours; }
                 // Only numeric labels, never code/name/dimensional annotations.
                 if (speed.HasValue && int.TryParse(value.Trim(), out number) && number >= 5 && number <= 130)
                 {
@@ -440,11 +446,17 @@ namespace BHT.Bridge
             // Moving all hatches together preserves the defective legacy TDT order.
             foreach (ObjectId id in hatches.Cast<ObjectId>().OrderBy(x => FillArea((Entity)tr.GetObject(x, OpenMode.ForRead))))
                 draw.MoveToBottom(new ObjectIdCollection(new[] { id }));
+            foreach (ObjectId id in hatches) if (RedForeground((Entity)tr.GetObject(id, OpenMode.ForRead))) draw.MoveToTop(new ObjectIdCollection(new[] { id }));
         }
 
+        private static bool RedForeground(Entity entity)
+        {
+            var ink = entity.Color; if (entity.ColorIndex != 1 && (ink.Red < 200 || ink.Green > 80 || ink.Blue > 80)) return false;
+            try { var b = entity.GeometricExtents; double a = (b.MaxPoint.X-b.MinPoint.X)*(b.MaxPoint.Y-b.MinPoint.Y); return a > 1e-8 && FillArea(entity)/a < .6; } catch { return false; }
+        }
         private static double FillArea(Entity entity)
         {
-            try { var b = entity.GeometricExtents; return (b.MaxPoint.X - b.MinPoint.X) * (b.MaxPoint.Y - b.MinPoint.Y); }
+            try { var h = entity as Hatch; if (h != null) return Math.Abs(h.Area); var b = entity.GeometricExtents; return (b.MaxPoint.X - b.MinPoint.X) * (b.MaxPoint.Y - b.MinPoint.Y); }
             catch (Autodesk.AutoCAD.Runtime.Exception) { return 0; }
         }
 
@@ -454,7 +466,7 @@ namespace BHT.Bridge
             int number;
             if (speed.HasValue && int.TryParse((defaultValue ?? "").Trim(), out number))
                 return speed.Value.ToString(CultureInfo.InvariantCulture);
-            defaultValue = SignPresentation.ReplaceMetres(code, defaultValue);
+            defaultValue = SignPresentation.ReplaceZoneTime(code, SignPresentation.ReplaceMetres(code, defaultValue));
             return string.IsNullOrWhiteSpace(defaultValue) ? (string.IsNullOrWhiteSpace(tag) ? "" : tag) : defaultValue;
         }
 
@@ -558,7 +570,7 @@ namespace BHT.Bridge
                             Shape = sign.GetAttribute("hìnhdạng"),
                             Group = groupName,
                             SourceDrawing = source,
-                            HasVector = DrawingNames.Any(x => NormalizeFile(x) == NormalizeFile(source))
+                            HasVector = SignCorrections.Supports(sign.GetAttribute("tên")) || DrawingNames.Any(x => NormalizeFile(x) == NormalizeFile(source))
                         });
                     }
                 }

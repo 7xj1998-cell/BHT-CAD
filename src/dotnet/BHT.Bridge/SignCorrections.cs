@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Globalization;
 using System.Linq;
 using System.Security.Cryptography;
@@ -32,6 +32,8 @@ namespace BHT.Bridge
         }
         public static string Ensure(Database db, string code)
         {
+            string key = SignSearch.CodeKey(SignPresentation.BaseCode(code)).ToUpperInvariant();
+            if (key == "I401" || key == "I402" || key == "IE473") return StandardPlate(db, code, key);
             XmlElement sign;
             if (!Vectors.TryGetValue(Canonical(code), out sign)) return null;
             string name = TdtSignLibrary.WrapperName(code);
@@ -81,6 +83,46 @@ namespace BHT.Bridge
                 var pole = new Line(Point3d.Origin, new Point3d(0, .6, 0)) { ColorIndex = 7 }; block.AppendEntity(pole); tr.AddNewlyCreatedDBObject(pole, true);
                 var foot = new Circle(Point3d.Origin, Vector3d.ZAxis, .06) { ColorIndex = 7 }; block.AppendEntity(foot); tr.AddNewlyCreatedDBObject(foot, true);
                 tr.Commit(); return name;
+            }
+        }
+        public static bool Supports(string code)
+        {
+            string key = SignSearch.CodeKey(SignPresentation.BaseCode(code)).ToUpperInvariant();
+            return key == "I401" || key == "I402" || key == "IE473" || Vectors.ContainsKey(Canonical(code));
+        }
+        private static Point2d[] Diamond(double half)
+        {
+            return new[] { new Point2d(-half,1.5), new Point2d(0,1.5-half), new Point2d(half,1.5), new Point2d(0,1.5+half) };
+        }
+        private static string StandardPlate(Database db, string code, string key)
+        {
+            string name = TdtSignLibrary.WrapperName(code);
+            using(var tr=db.TransactionManager.StartTransaction())
+            {
+                var table=(BlockTable)tr.GetObject(db.BlockTableId,OpenMode.ForRead); if(table.Has(name)) return name;
+                table.UpgradeOpen(); var block=new BlockTableRecord {Name=name}; table.Add(block); tr.AddNewlyCreatedDBObject(block,true);
+                if(key == "IE473")
+                {
+                    FillPlate(tr,block,new[] {new Point2d(-1.86,.6),new Point2d(1.86,.6),new Point2d(1.86,2.4),new Point2d(-1.86,2.4)},250);
+                    FillPlate(tr,block,new[] {new Point2d(-1.83,.63),new Point2d(1.83,.63),new Point2d(1.83,2.37),new Point2d(-1.83,2.37)},2);
+                    var styles=(TextStyleTable)tr.GetObject(db.TextStyleTableId,OpenMode.ForRead);
+                    ObjectId style;
+                    if(styles.Has("BHT_GT2")) style=styles["BHT_GT2"];
+                    else { styles.UpgradeOpen(); var font=new TextStyleTableRecord {Name="BHT_GT2",FileName="Giaothong2.ttf"}; style=styles.Add(font); tr.AddNewlyCreatedDBObject(font,true); }
+                    AddText(tr,block,"GIẢM TỐC ĐỘ",0,1.87,.46,3.35,250,style);
+                    AddText(tr,block,"SLOW DOWN",0,1.12,.40,3.35,250,style);
+                }
+                else
+                {
+                    FillPlate(tr,block,Diamond(.9),250);
+                    FillPlate(tr,block,Diamond(.86),7);
+                    FillPlate(tr,block,Diamond(.59),250);
+                    FillPlate(tr,block,Diamond(.55),2);
+                    if(key == "I402") FillPlate(tr,block,new[] {new Point2d(-.65,.92),new Point2d(-.58,.85),new Point2d(.65,2.08),new Point2d(.58,2.15)},250);
+                }
+                var pole=new Line(Point3d.Origin,new Point3d(0,.6,0)) {ColorIndex=7};block.AppendEntity(pole);tr.AddNewlyCreatedDBObject(pole,true);
+                var foot=new Circle(Point3d.Origin,Vector3d.ZAxis,.06) {ColorIndex=7};block.AppendEntity(foot);tr.AddNewlyCreatedDBObject(foot,true);
+                tr.Commit();return name;
             }
         }
         private static Color Ink(short color)

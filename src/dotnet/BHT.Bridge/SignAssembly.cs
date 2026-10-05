@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -22,7 +22,7 @@ namespace BHT.Bridge
             if (names.Length > 20) throw new InvalidOperationException("Một trụ hỗ trợ tối đa 20 mặt biển.");
             string key;
             using (var hash = SHA256.Create()) key = BitConverter.ToString(hash.ComputeHash(Encoding.UTF8.GetBytes(string.Join(";", names)))).Replace("-", "").Substring(0, 24);
-            string result = "BHT_ASSEMBLY_" + key;
+            string result = "BHT_ASSEMBLY_V0613_" + key;
             using (var tr = db.TransactionManager.StartTransaction())
             {
                 var table = (BlockTable)tr.GetObject(db.BlockTableId, OpenMode.ForRead);

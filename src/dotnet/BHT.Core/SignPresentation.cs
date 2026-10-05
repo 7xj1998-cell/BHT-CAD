@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Globalization;
 using System.Text.RegularExpressions;
 namespace BHT.Core
@@ -15,6 +15,27 @@ namespace BHT.Core
         public static string BaseCode(string code)
         {
             return (code ?? "").Split('@')[0].Trim();
+        }
+        public static bool HasZoneTime(string code)
+        {
+            string key = SignSearch.CodeKey(BaseCode(code)).ToUpperInvariant();
+            return key == "RE9B" || key == "RE10B";
+        }
+        public static string ZoneTime(string code)
+        {
+            if (!HasZoneTime(code)) return "";
+            if (!(code ?? "").Contains("@")) return "06:00-18:00";
+            string value = code.Substring(code.IndexOf('@') + 1).Trim();
+            var match = Regex.Match(value, @"^(\d{1,2}):([0-5]\d)\s*[-–]\s*(\d{1,2}):([0-5]\d)$");
+            if (!match.Success || int.Parse(match.Groups[1].Value) > 23 || int.Parse(match.Groups[3].Value) > 23) return "";
+            string start = int.Parse(match.Groups[1].Value).ToString("00") + ":" + match.Groups[2].Value;
+            string end = int.Parse(match.Groups[3].Value).ToString("00") + ":" + match.Groups[4].Value;
+            return start == end ? "" : start + "-" + end;
+        }
+        public static string ReplaceZoneTime(string code, string text)
+        {
+            string value = ZoneTime(code);
+            return value != "" && Regex.IsMatch(text ?? "", @"^\s*\d{1,2}:\d{2}\s*[-–]\s*\d{1,2}:\d{2}\s*$") ? value.Replace("-", " - ") : text;
         }
         public static string MetreDefault(string code)
         {
@@ -65,6 +86,7 @@ namespace BHT.Core
         public static string ValidationError(string code)
         {
             code = (code ?? "").Trim();
+            if (HasZoneTime(code)) return ZoneTime(code) == "" ? "Nhập giờ HH:mm-HH:mm từ 00:00 đến 23:59; hai giờ phải khác nhau." : "";
             if (code.Contains("@") && MetreValue(code) == "")
                 return "Giá trị mét phải lớn hơn 0, tối đa 100000 và có tối đa 3 chữ số thập phân; mã biển phải hỗ trợ giá trị mét.";
             if (Regex.IsMatch(code, @"^P\.?127", RegexOptions.IgnoreCase)

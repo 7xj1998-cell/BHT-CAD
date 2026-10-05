@@ -7,7 +7,7 @@
 (setq *PH* "C:/Users/Le Bao/BHT_TEST_V032/anh/kmz_out/BHT_PHOTO.tsv")
 (setq *MOVED* (strcat *T-DIR* "anh_da_doi/kmz_out"))
 (setq e (tload))
-(tchk "T00" "nạp BHT-5.0" (and (null e) (= *bht-version* "0.6.12")) (if e e *bht-version*))
+(tchk "T00" "nạp BHT-5.0" (and (null e) (= *bht-version* "0.6.13")) (if e e *bht-version*))
 (setq *bht-no-launch* T)
 
 ;; ---------- thuc the NGOAI BHT ----------

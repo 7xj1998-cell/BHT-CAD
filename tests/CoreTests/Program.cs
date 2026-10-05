@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
@@ -28,6 +28,11 @@ namespace BHT.CoreTests
 
         static void SignVariantsT()
         {
+            Check("ZT1", "editable hours and legacy comma code", SignPresentation.ZoneTime("R.E,9b@7:30-19:15") == "07:30-19:15");
+            Check("ZT2", "overnight zone hours", SignPresentation.ValidationError("R.E.10b@22:00-05:30") == "");
+            Check("ZT3", "reject invalid hours", SignPresentation.ValidationError("R.E.9b@24:00-18:00") != "" && SignPresentation.ValidationError("R.E.9b@07:60-18:00") != "" && SignPresentation.ValidationError("R.E.9b@06:00-06:00") != "");
+            Check("ZT4", "replace native label only", SignPresentation.ReplaceZoneTime("R.E.9b@07:30-19:15", "6:00 - 18:00") == "07:30 - 19:15" && SignPresentation.ReplaceZoneTime("R.E.9b@07:30-19:15", "ZONE") == "ZONE");
+            Check("ZT5", "reject unrelated and duplicate suffix", SignPresentation.ValidationError("I.401@06:00-18:00") != "" && SignPresentation.ValidationError("R.E.9b@06:00-18:00@19:00") != "");
             Check("SV1", "explicit speed wins", SignPresentation.ResolveCode("P.127-60", "gioihan80") == "P.127-60");
             Check("SV2", "survey speed", SignPresentation.ResolveCode("P.127", "bbtron1m25 gioihan80") == "P.127-80");
             Check("SV3", "Vietnamese accents", SignPresentation.ResolveCode("P.127", "Giới hạn tốc độ: 100 km/h") == "P.127-100");
@@ -296,7 +301,7 @@ namespace BHT.CoreTests
 
         static void Versions()
         {
-            Check("C11a", "hằng phiên bản", BhtVersion.Version == "0.6.12" && BhtVersion.AssemblyVersion == BhtVersion.Version + ".0" && BhtVersion.FileVersion == BhtVersion.AssemblyVersion);
+            Check("C11a", "hằng phiên bản", BhtVersion.Version == "0.6.13" && BhtVersion.AssemblyVersion == BhtVersion.Version + ".0" && BhtVersion.FileVersion == BhtVersion.AssemblyVersion);
             Check("C11b", "Lisp phải cùng phiên bản", BhtVersion.LispCompatible(BhtVersion.Version, "1") && BhtVersion.LispCompatible(" " + BhtVersion.Version + " ", "1")
                 && !BhtVersion.LispCompatible("5.0", "1") && !BhtVersion.LispCompatible("0.4.6-fix3", "1") && !BhtVersion.LispCompatible(BhtVersion.Version, "") && !BhtVersion.LispCompatible(BhtVersion.Version, "0"));
             var asm = typeof(BhtRecord).Assembly.GetName().Version.ToString();

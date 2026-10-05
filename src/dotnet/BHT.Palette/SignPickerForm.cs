@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
@@ -23,6 +23,8 @@ namespace BHT.Palette
         private readonly ListBox faces = new ListBox { Dock = DockStyle.Fill, IntegralHeight = false };
         private readonly Dictionary<string, TdtSignEntry> entries = new Dictionary<string, TdtSignEntry>(StringComparer.OrdinalIgnoreCase);
         private readonly string initialCode, sourceDescription;
+        private readonly TextBox zoneHours = new TextBox { Width = 238 };
+        private readonly Panel zonePanel = new Panel { Dock = DockStyle.Top, Height = 60 };
         private readonly TextBox metres = new TextBox { Width = 100 };
         private readonly Panel metresPanel = new Panel { Dock = DockStyle.Top, Height = 60 };
         private readonly Panel speedPanel = new Panel { Dock = DockStyle.Top, Height = 60 };
@@ -90,10 +92,12 @@ namespace BHT.Palette
                 item.Box.TextChanged += (s, e) => UpdateBridgePreview();
             }
             bridgePanel.Visible = false;
+            zonePanel.Controls.Add(new Label { Text = "Giờ áp dụng (HH:mm-HH:mm):", AutoSize = true });
+            zoneHours.Location = new Point(0,23); zonePanel.Controls.Add(zoneHours); zonePanel.Visible = false;
             var hint = new Label { Dock = DockStyle.Bottom, Height = 65, Text = "Ảnh là mẫu; CAD dùng giá trị thực tế bạn nhập. Tô màu áp dụng khi chèn CAD. Mặt đầu tiên là biển chính, nằm trên cùng.", ForeColor = Color.DimGray };
             sidebar.Controls.Add(faces); sidebar.Controls.Add(actions); sidebar.Controls.Add(hint);
             // Fill is controlled for the whole drawing in the Palette toolbar.
-            sidebar.Controls.Add(validation); sidebar.Controls.Add(multiPanel); sidebar.Controls.Add(bridgePanel); sidebar.Controls.Add(metresPanel); sidebar.Controls.Add(speedPanel); sidebar.Controls.Add(details); sidebar.Controls.Add(preview);
+            sidebar.Controls.Add(validation); sidebar.Controls.Add(multiPanel); sidebar.Controls.Add(bridgePanel); sidebar.Controls.Add(zonePanel); sidebar.Controls.Add(metresPanel); sidebar.Controls.Add(speedPanel); sidebar.Controls.Add(details); sidebar.Controls.Add(preview);
             foreach (string code in SignSearch.SplitCodes(faceCodes)) faces.Items.Add(code);
             multi.Checked = faces.Items.Count > 0;
             multi.CheckedChanged += (s, e) => { faces.Enabled = actions.Enabled = multi.Checked; };
@@ -134,7 +138,7 @@ namespace BHT.Palette
                 card.Controls.Add(label); card.Controls.Add(picture);
                 entries[sign.Code] = sign;
                 EventHandler choose = (s, e) => Choose(card);
-                EventHandler confirm = (s, e) => { Choose(card); if (multi.Checked) AddFace(); else if (metresPanel.Visible) { metres.Focus(); metres.SelectAll(); } else if (bridgePanel.Visible) bridgeName.Focus(); else if (!IsSpeedSign(sign)) AcceptSign(); else speed.Focus(); };
+                EventHandler confirm = (s, e) => { Choose(card); if (multi.Checked) AddFace(); else if (metresPanel.Visible) { metres.Focus(); metres.SelectAll(); } else if (zonePanel.Visible) { zoneHours.Focus(); zoneHours.SelectAll(); } else if (bridgePanel.Visible) bridgeName.Focus(); else if (!IsSpeedSign(sign)) AcceptSign(); else speed.Focus(); };
                 foreach (Control control in new Control[] { card, picture, label }.Concat(picture.Controls.Cast<Control>())) { control.Click += choose; control.DoubleClick += confirm; }
                 cards.Add(card); grid.Controls.Add(card);
             }
@@ -211,9 +215,11 @@ namespace BHT.Palette
             details.Text = sign.Code + " — " + sign.Description + "\r\n" + sign.Group;
             speed.Enabled = IsSpeedSign(sign); speedPanel.Visible = speed.Enabled;
             bridgePanel.Visible = sign.Code.Equals("I.439", StringComparison.OrdinalIgnoreCase);
-            metresPanel.Visible = SignPresentation.MetreDefault(sign.Code) != ""; validation.Text = "";
+            zonePanel.Visible = SignPresentation.HasZoneTime(sign.Code);
+            metresPanel.Visible = SignPresentation.MetreDefault(sign.Code) != ""; validation.Text = sign.HasVector ? "" : "Chưa có mẫu CAD cho mã này. Hãy gán block tùy chỉnh trong hồ sơ.";
             if (changed)
             {
+                zoneHours.Text = SignPresentation.HasZoneTime(initialCode) && SignSearch.CodeKey(SignPresentation.BaseCode(initialCode)) == SignSearch.CodeKey(sign.Code) ? SignPresentation.ZoneTime(initialCode) : "06:00-18:00";
                 metres.Text = SignPresentation.BaseCode(initialCode).Equals(sign.Code, StringComparison.OrdinalIgnoreCase) && SignPresentation.MetreValue(initialCode) != "" ? SignPresentation.MetreValue(initialCode) : SignPresentation.MetreDefault(sign.Code);
                 var value = SignPresentation.Speed(initialCode, sourceDescription) ?? SignPresentation.Speed("P.127", sourceDescription);
                 speed.Text = speed.Enabled && value.HasValue ? value.Value.ToString() : "";
@@ -244,6 +250,12 @@ namespace BHT.Palette
         private string CurrentCode()
         {
             if (SelectedSign == null) return null;
+            if (zonePanel.Visible)
+            {
+                string hours = SignPresentation.ZoneTime(SelectedSign.Code + "@" + zoneHours.Text.Trim());
+                if (hours == "") { validation.Text = "Giờ không hợp lệ; ví dụ 07:30-19:00."; zoneHours.Focus(); return null; }
+                return SelectedSign.Code + "@" + hours;
+            }
             if (metresPanel.Visible)
             {
                 string candidateMetres = SelectedSign.Code + "@" + metres.Text.Trim();

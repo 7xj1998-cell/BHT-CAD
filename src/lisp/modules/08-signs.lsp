@@ -1,4 +1,4 @@
-﻿;;; ----------------------------------------------------------------------
+;;; ----------------------------------------------------------------------
 ;;; Ky hieu (lop the hien) - INSERT layer BHT_KYHIEU + TEXT layer BHT_NHAN
 ;;;  XData "BHT_KH":
 ;;;   0.3.2: (object_id) tren ca INSERT va TEXT.
@@ -638,7 +638,7 @@
   (if (and (>= (strlen upper) (strlen prefix)) (= (substr upper 1 (strlen prefix)) prefix))
     (setq value (substr value (1+ (strlen prefix))) upper (strcase value)))
   (if (and (= group "BIEN_BAO") (setq dot (vl-string-search "@" value)))
-    (setq value (strcat (substr value 1 dot) " (" (substr value (+ dot 2)) " m)")))
+    (setq value (strcat (substr value 1 dot) " (" (substr value (+ dot 2)) (if (vl-string-search ":" value) ")" " m)"))))
   (if (= (substr upper 1 (min 2 (strlen upper))) "KM")
     (progn
       (setq value (vl-string-trim " " (substr value 3))

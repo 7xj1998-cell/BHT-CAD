@@ -1,4 +1,12 @@
-﻿## 0.6.12 — 2026-10-05
+## 0.6.13 — 2026-10-05
+
+- Giữ tỷ lệ biển phụ theo chiều lớn nhất, tránh biển ngang phình rộng khi ghép cùng biển chính.
+- Đưa hatch gạch chéo đỏ lên trên biểu tượng; giữ nền trắng và màu đen khi in các biển nhập từ TDT.
+- Sửa nền trắng/viền đen I.401–I.402 và bổ sung mẫu CAD IE.473.
+- Cho nhập giờ riêng ở R.E.9b/R.E.10b trong thư viện; lưu theo từng mặt và tạo block có giờ thực tế.
+- Bổ sung test hình học/hatch/thời gian trong AutoCAD. Test trên bản sao đã đạt; test MCP trực tiếp chưa hoàn tất.
+
+## 0.6.12 — 2026-10-05
 
 - Gom nội dung I.439 (tên cầu, lý trình trên biển, tên đường) vào Thư viện biển; bỏ ba ô nhập trùng trong hồ sơ của mọi mã biển.
 - Giữ nội dung biển đã lưu khi mở, sửa và lưu hồ sơ; mã biển/nội dung được chọn qua thư viện như trước.
