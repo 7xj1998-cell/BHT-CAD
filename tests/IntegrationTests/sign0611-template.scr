@@ -1,13 +1,16 @@
-(setvar "FILEDIA" 0)
+﻿(setvar "FILEDIA" 0)
 (setvar "LISPSYS" 1)
 (setvar "BACKGROUNDPLOT" 0)
 (vl-cmdf "_.NETLOAD" "@STAGE@/@BIN@/BHT.Bridge.dll")
 (vl-cmdf "_.NETLOAD" "@STAGE@/@BIN@/Sign0611Probe.dll")
+(vl-cmdf "_.NETLOAD" "@STAGE@/@BIN@/BHT.Palette.dll")
+(vl-cmdf "_.NETLOAD" "@STAGE@/@BIN@/PaletteEditorProbe.dll")
 (setq *bht-module-root* "@STAGE@")
-(load "@STAGE@/BHT-0.6.11.lsp")
+(load "@STAGE@/@LOADER@")
 (bht:symbol-blocks)
 (load "@STAGE@/test_SIGN0611.lsp")
 BHTSIGN0611PROBE
+BHTPALETTEEDITORPROBE
 (bht:kh-place-options "OBJ-QA0610-H" "DIRECT" "PICK" "0")
 100000,99996
 100000,99999

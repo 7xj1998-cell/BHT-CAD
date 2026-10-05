@@ -3,7 +3,7 @@
 (load "C:/Users/Le Bao/BHT_TEST_V044/t_common.lsp")
 (tbegin "R")
 (setq e (tload))
-(tchk "A01" "nạp BHT 0.6.11 từ đường dẫn có dấu" (and (null e) (= *bht-version* "0.6.11")) (if e e *bht-version*))
+(tchk "A01" "nạp BHT 0.6.12 từ đường dẫn có dấu" (and (null e) (= *bht-version* "0.6.12")) (if e e *bht-version*))
 ;; A02
 (setq r (tsafe "A02" "selftest" '(lambda () (bht:selftest))))
 (if r (tchk "A02" "BHTTEST hàm thuần" (= (cadr r) 0) (strcat (itoa (car r)) " pass, " (itoa (cadr r)) " fail")))

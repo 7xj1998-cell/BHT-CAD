@@ -1,4 +1,9 @@
-﻿## v0.6.10 — 2026-10-04
+﻿## 0.6.12 — 2026-10-05
+
+- Gom nội dung I.439 (tên cầu, lý trình trên biển, tên đường) vào Thư viện biển; bỏ ba ô nhập trùng trong hồ sơ của mọi mã biển.
+- Giữ nội dung biển đã lưu khi mở, sửa và lưu hồ sơ; mã biển/nội dung được chọn qua thư viện như trước.
+
+## v0.6.10 — 2026-10-04
 
 ## 0.6.11 — 2026-10-05
 

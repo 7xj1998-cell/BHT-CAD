@@ -16,7 +16,8 @@ namespace BHT.Palette
         private TabPage _tabObjects;
         private ListView _objList;
         private TextBox _oId, _oDesc, _oPoles, _oFaces, _oNote, _oChainage, _oInfo;
-        private TextBox _oBridgeName, _oBridgeStation, _oRoadName, _oMarkerKm, _oMarkerH;
+        private TextBox _oMarkerKm, _oMarkerH;
+        private string _bridgeName = "", _bridgeStation = "", _roadName = "";
         private CheckBox _oMarkerNumber;
         private Button _oSaveChainage, _oClearChainage, _oCalculateChainage;
         private string _storedChainage = "";
@@ -60,9 +61,6 @@ namespace BHT.Palette
             _oCode.SelectedIndexChanged += (s, e) => { if (!_codeFilter.Busy) ApplySelectedSignSuggestion(); };
             _oCodeType = new NoWheelComboBox { Dock = DockStyle.Fill, DropDownStyle = ComboBoxStyle.DropDownList };
             _oCodeType.Items.AddRange(new object[] { "CHUA_XAC_DINH", "QCVN", "NOI_BO" });
-            _oBridgeName = new TextBox { Dock = DockStyle.Fill, MaxLength = 80 };
-            _oBridgeStation = new TextBox { Dock = DockStyle.Fill, MaxLength = 80 };
-            _oRoadName = new TextBox { Dock = DockStyle.Fill, MaxLength = 80 };
             _oMarkerKm = new TextBox { Dock = DockStyle.Fill, MaxLength = 5 };
             _oMarkerH = new TextBox { Dock = DockStyle.Fill, MaxLength = 1 };
             _oMarkerNumber = new CheckBox { Text = "Ghi số Km trên ký hiệu", AutoSize = true };
@@ -138,7 +136,6 @@ namespace BHT.Palette
             row("Block tùy chỉnh", customPanel);
             signRow("Mã biển", _oCode); signRow("Loại mã", _oCodeType);
 
-            signRow("Tên cầu I.439", _oBridgeName); signRow("Lý trình biển", _oBridgeStation); signRow("Tên đường", _oRoadName);
             foreach (var item in new[] { new { Label = "", Control = (Control)_oMarkerNumber }, new { Label = "Số Km", Control = (Control)_oMarkerKm }, new { Label = "H (cọc tiêu)", Control = (Control)_oMarkerH } })
             {
                 var label = new Label { Text = item.Label, AutoSize = true }; form.Controls.Add(label); form.Controls.Add(item.Control); _markerRows.Add(label); _markerRows.Add(item.Control);
@@ -233,7 +230,7 @@ namespace BHT.Palette
             _oAllowShared.Enabled = true;
             _objectTips.SetToolTip(_oMode, "Chọn điểm và kiểm tra nhóm đối tượng trước khi lưu hồ sơ.");
             _objectTips.SetToolTip(_oAllowShared, "Mặc định mỗi điểm RTK chỉ thuộc một hồ sơ. Bật để tạo thêm hồ sơ dùng cùng điểm; BHT hỏi xác nhận và không ghi đè hồ sơ cũ.");
-            _oBridgeName.Text = _oBridgeStation.Text = _oRoadName.Text = _oMarkerKm.Text = _oMarkerH.Text = ""; _oMarkerNumber.Checked = false;
+            _bridgeName = _bridgeStation = _roadName = _oMarkerKm.Text = _oMarkerH.Text = ""; _oMarkerNumber.Checked = false;
             _oId.Text = ""; _oId.ReadOnly = false; _oCustomBlock.Text = "";
             _oGroup.SelectedIndex = Groups.All.Length - 1;
             _oCode.SelectedIndex = -1; _oCode.Text = ""; _oCodeType.SelectedIndex = 0; _oDesc.Text = ""; _oPoles.Text = ""; _oFaces.Text = ""; _oFaceCodes.Text = ""; _faceAuto = null;
@@ -306,7 +303,7 @@ namespace BHT.Palette
             _oId.Text = oid.ToUpperInvariant(); _oId.ReadOnly = true; _oCustomBlock.Text = r.Get(ObjFields.CustomBlock);
             SelectCombo(_oGroup, r.Get(ObjFields.Group));
             _oCode.Text = r.Get(ObjFields.Code); SelectCombo(_oCodeType, r.Get(ObjFields.CodeType) == "" ? "CHUA_XAC_DINH" : r.Get(ObjFields.CodeType));
-            _oBridgeName.Text = r.Get(ObjFields.BridgeName); _oBridgeStation.Text = r.Get(ObjFields.SignChainage); _oRoadName.Text = r.Get(ObjFields.RoadName);
+            _bridgeName = r.Get(ObjFields.BridgeName); _bridgeStation = r.Get(ObjFields.SignChainage); _roadName = r.Get(ObjFields.RoadName);
             _oMarkerKm.Text = r.Get(ObjFields.MarkerKm); _oMarkerH.Text = r.Get(ObjFields.MarkerH); _oMarkerNumber.Checked = _oMarkerKm.Text != "";
             _oDesc.Text = r.Get(ObjFields.Desc); _oPoles.Text = r.Get(ObjFields.PoleCount); _oFaces.Text = r.Get(ObjFields.FaceCount);
             _oFaceCodes.Items.Clear(); _oFaceCodes.Text = string.Join("; ", r.GetAll(ObjFields.Face).ToArray()); _faceAuto = null;
@@ -452,10 +449,10 @@ namespace BHT.Palette
 
         private void OpenSignPicker()
         {
-            using (var picker = new SignPickerForm(EditorSignCode(), _oDesc.Text, _oFaceCodes.Text, _oSignFill.Checked, _oBridgeName.Text, _oBridgeStation.Text, _oRoadName.Text))
+            using (var picker = new SignPickerForm(EditorSignCode(), _oDesc.Text, _oFaceCodes.Text, _oSignFill.Checked, _bridgeName, _bridgeStation, _roadName))
             {
                 if (picker.ShowDialog(this) != DialogResult.OK || picker.SelectedSign == null) return;
-                _oBridgeName.Text = picker.SelectedBridgeName; _oBridgeStation.Text = picker.SelectedBridgeStation; _oRoadName.Text = picker.SelectedBridgeRoad;
+                _bridgeName = picker.SelectedBridgeName; _bridgeStation = picker.SelectedBridgeStation; _roadName = picker.SelectedBridgeRoad;
                 var sign = picker.SelectedSign;
                 SelectCombo(_oGroup, "BIEN_BAO");
                 _oCode.Items.Clear(); _oCode.SelectedIndex = -1; _oCode.Text = picker.SelectedCode;
@@ -533,9 +530,9 @@ namespace BHT.Palette
         {
             var f = new BhtRecord()
                 .Add(ObjFields.Group, EditorGroup())
-                .Add(ObjFields.BridgeName, _oBridgeName.Text.Trim().Normalize())
-                .Add(ObjFields.SignChainage, _oBridgeStation.Text.Trim().Normalize())
-                .Add(ObjFields.RoadName, _oRoadName.Text.Trim().Normalize())
+                .Add(ObjFields.BridgeName, _bridgeName.Trim().Normalize())
+                .Add(ObjFields.SignChainage, _bridgeStation.Trim().Normalize())
+                .Add(ObjFields.RoadName, _roadName.Trim().Normalize())
                 .Add(ObjFields.MarkerKm, _oMarkerNumber.Checked ? _oMarkerKm.Text.Trim() : "")
                 .Add(ObjFields.MarkerH, _oMarkerNumber.Checked ? _oMarkerH.Text.Trim() : "")
                 .Add(ObjFields.CustomBlock, _oCustomBlock.Text.Trim())
@@ -574,7 +571,7 @@ namespace BHT.Palette
                 { StatusWarn("Nhập số Km nguyên từ 0 đến 99999; cọc tiêu cần H từ 0 đến 9."); return false; }
                 _oMarkerKm.Text = km.ToString();
             }
-            if (_oBridgeStation.Text.Trim() != "") { double chainage; if (!Chainage.TryParse(_oBridgeStation.Text, out chainage)) { StatusWarn("Lý trình trên biển không hợp lệ; ví dụ Km252+831."); return false; } }
+            if (_bridgeStation.Trim() != "") { double chainage; if (!Chainage.TryParse(_bridgeStation, out chainage)) { StatusWarn("Lý trình trên biển không hợp lệ; ví dụ Km252+831."); return false; } }
             var f = EditorFields();
             if (f.Get(ObjFields.CustomBlock) != "" && !CustomBlockExists(f.Get(ObjFields.CustomBlock)))
             { StatusWarn("Block tùy chỉnh không tồn tại trong bản vẽ hiện tại."); return false; }

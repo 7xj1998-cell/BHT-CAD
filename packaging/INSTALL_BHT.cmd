@@ -1,8 +1,8 @@
 ﻿@echo off
-rem BHT 0.6.11 installer launcher. File nay chi dung ky tu ASCII.
+rem BHT 0.6.12 installer launcher. File nay chi dung ky tu ASCII.
 setlocal
 chcp 65001 >nul
-title Cai dat BHT 0.6.11
+title Cai dat BHT 0.6.12
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0INSTALL_BHT.ps1"
 set "BHT_RC=%ERRORLEVEL%"
 echo.

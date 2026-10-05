@@ -1,4 +1,4 @@
-﻿# Cài BHT 0.6.11
+﻿# Cài BHT 0.6.12
 
 ## Cách khuyến nghị: Application Bundle
 
@@ -12,7 +12,7 @@ AutoCAD tự nhận `BHT.bundle`; không chạy `NETLOAD`. Palette mở bên tr�
 
 Trước khi cài, đóng tất cả cửa sổ AutoCAD. DLL .NET đang dùng không thể được thay thế trong phiên AutoCAD hiện tại.
 
-Nếu không muốn cài bundle, giữ `BHT-0.6.11.lsp` và ba DLL cùng thư mục `modules` trong một thư mục trên Support Path. Trong AutoCAD, `APPLOAD` duy nhất file Lisp. Lisp tự nạp DLL; sau đó gõ `BTH` hoặc `BHT`.
+Nếu không muốn cài bundle, giữ `BHT-0.6.12.lsp` và ba DLL cùng thư mục `modules` trong một thư mục trên Support Path. Trong AutoCAD, `APPLOAD` duy nhất file Lisp. Lisp tự nạp DLL; sau đó gõ `BTH` hoặc `BHT`.
 
 Từ v0.5.5 đã bỏ DCL dự phòng. Nếu Palette không mở, gõ `BHTLOAD`, kiểm tra DLL hoặc cài lại bundle và mở lại AutoCAD.
 

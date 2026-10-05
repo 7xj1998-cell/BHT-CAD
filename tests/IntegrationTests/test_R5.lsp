@@ -1,9 +1,9 @@
-﻿;;; BHT 0.6.11 - Route Model V5: StartPoint/direction/closed/revision/diagnostics + stake scanner read-only.
+﻿;;; BHT 0.6.12 - Route Model V5: StartPoint/direction/closed/revision/diagnostics + stake scanner read-only.
 (load "C:/Users/Le Bao/BHT_TEST_V044/t_common.lsp")
 (vl-load-com)
 (tbegin "R5")
 (setq e (tload))
-(tchk "R5-00" "nạp BHT-5.0" (and (null e) (= *bht-version* "0.6.11")) e)
+(tchk "R5-00" "nạp BHT-5.0" (and (null e) (= *bht-version* "0.6.12")) e)
 (setq wipe (ssget "_X") wi 0)
 (if wipe (repeat (sslength wipe) (entdel (ssname wipe wi)) (setq wi (1+ wi))))
 

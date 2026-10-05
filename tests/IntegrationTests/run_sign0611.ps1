@@ -21,7 +21,9 @@ Copy-Item -Path (Join-Path $BinDir 'BHT*.dll') -Destination $bin
 $csc = Join-Path $env:WINDIR 'Microsoft.NET\Framework64\v4.0.30319\csc.exe'
 & $csc /nologo /target:library "/out:$bin\Sign0611Probe.dll" "/r:$bin\BHT.Bridge.dll" "/r:$bin\BHT.Core.dll" "/r:$AcadDir\acdbmgd.dll" "/r:$AcadDir\accoremgd.dll" (Join-Path $PSScriptRoot 'Sign0611Probe.cs')
 if ($LASTEXITCODE -ne 0) { throw 'Probe compilation failed' }
-$scr = [IO.File]::ReadAllText((Join-Path $PSScriptRoot 'sign0611-template.scr')).Replace('@STAGE@',$stage.Replace('\','/')).Replace('@BIN@','bin').Replace('@GALLERY@','gallery.dwg').Replace('BHT-0.6.11.lsp',"BHT-$version.lsp")
+& $csc /nologo /target:library /platform:x64 "/out:$bin\PaletteEditorProbe.dll" "/r:$bin\BHT.Core.dll" "/r:$bin\BHT.Palette.dll" "/r:$AcadDir\accoremgd.dll" /r:System.Windows.Forms.dll (Join-Path $PSScriptRoot 'PaletteEditorProbe.cs')
+if ($LASTEXITCODE -ne 0) { throw 'Palette probe compilation failed' }
+$scr = [IO.File]::ReadAllText((Join-Path $PSScriptRoot 'sign0611-template.scr')).Replace('@STAGE@',$stage.Replace('\','/')).Replace('@BIN@','bin').Replace('@GALLERY@','gallery.dwg').Replace('@LOADER@',"BHT-$version.lsp")
 [IO.File]::WriteAllText((Join-Path $stage 'run.scr'), $scr + "`n", [Text.UTF8Encoding]::new($true))
 $oldOutput = $env:BHT_QA_OUTPUT; $oldPdf = $env:BHT_QA_PDF
 try {
@@ -34,4 +36,5 @@ if ($before -ne (Get-FileHash -LiteralPath $Drawing).Hash) { throw 'Source drawi
 if ($log -match '(?m)^FAIL |; error:|SIGN0610-FAIL=[1-9]' -or $log -notmatch 'SIGN0611-FINAL-FAIL=0') { throw 'CAD test failed; inspect console.log' }
 $probe = Get-Content "$stage\probe.txt"
 if ($probe -match '^FAIL' -or -not (Test-Path "$stage\gallery.pdf") -or -not (Test-Path "$stage\gallery.dwg")) { throw 'Native geometry/plot test failed' }
+if (-not (Test-Path ("$stage\probe.txt-palette.txt")) -or (Get-Content "$stage\probe.txt-palette.txt" -Raw) -notmatch '^PASS ') { throw 'Palette editor probe failed' }
 $probe; Write-Host "PASS AutoCAD QA: $stage"
