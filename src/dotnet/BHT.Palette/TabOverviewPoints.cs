@@ -120,14 +120,10 @@ namespace BHT.Palette
             f.Controls.Add(Btn("Thông tin (BHTINFO)", (s, e) => PointInfoFromLisp()));
             f.Controls.Add(Btn("Ảnh liên quan", (s, e) => PhotosForSelectedPoint()));
             f.Controls.Add(Btn("Tạo hồ sơ từ điểm", (s, e) => NewObjectFromPoints(SelectedListPointIds())));
-            f.Controls.Add(Btn("Cập nhật nhãn", (s, e) =>
-            {
-                var ids = SelectedListPointIds();
-                if (ids.Count == 0) { Status("Chọn điểm trong danh sách."); return; }
-                CallLisp("bht:api-label-sync", new[] { string.Join(",", ids.ToArray()) }, "Cập nhật nhãn " + ids.Count + " điểm", null);
-            }));
-            f.Controls.Add(Btn("Đặt dấu X (cỡ 1) + sắp lại nhãn", (s, e) =>
-                CallLisp("bht:api-point-style", new[] { "1" }, "Cập nhật dấu X và sắp nhãn", null)));
+            f.Controls.Add(_rtkUpdateLabelsButton = Btn("Cập nhật nhãn RTK", (s, e) => UpdateRtkLabels()));
+            f.Controls.Add(_rtkScaleButton = Btn("Tỷ lệ ký hiệu và nhãn RTK…", (s, e) => ChooseRtkScale()));
+            _objectTips.SetToolTip(_rtkUpdateLabelsButton, "Chọn điểm để sắp lại nhãn của các điểm đó; không chọn điểm sẽ cập nhật tất cả. Nhãn dời tay được giữ. Không đổi cỡ X hoặc cỡ chữ.");
+            _objectTips.SetToolTip(_rtkScaleButton, "Chọn riêng cỡ dấu X và cỡ nhãn RTK. Đổi cỡ và giữ vị trí nhãn; cập nhật/sắp nhãn bằng nút riêng.");
             tp.Controls.Add(_ptList);
             tp.Controls.Add(top);
             tp.Controls.Add(f);
@@ -140,6 +136,7 @@ namespace BHT.Palette
 
         private void RefreshPoints()
         {
+            UpdateRtkActionAvailability();
             _points = _svc.GetPoints().OrderBy(p => p.IdUpper, StringComparer.Ordinal).ToList();
             _owners = ObjectLogic.OwnerMap(_svc.GetObjects());
             FillPointList();
@@ -150,17 +147,29 @@ namespace BHT.Palette
             if (_ptList == null) return;
             string cls = _ptClass.SelectedIndex > 0 ? (string)_ptClass.SelectedItem : null;
             var l = TextSearch.Filter(_points, _ptSearch.Text, cls);
+            var selected = new HashSet<string>(SelectedListPointIds(), StringComparer.Ordinal);
+            var topItem = _ptList.IsHandleCreated ? _ptList.TopItem : null;
+            string topId = topItem != null ? ((SurveyPoint)topItem.Tag).IdUpper : null;
+            int topIndex = topItem != null ? topItem.Index : 0;
+            bool suppress = _suppressSel; _suppressSel = true;
             _ptList.BeginUpdate();
-            _ptList.Items.Clear();
-            foreach (var p in l)
+            try
             {
-                List<string> ow;
-                var it = new ListViewItem(new[] { p.Name, p.Description, p.Class, _owners.TryGetValue(p.IdUpper, out ow) ? string.Join(",", ow.ToArray()) : "", p.Id });
-                it.Tag = p;
-                _ptList.Items.Add(it);
+                _ptList.Items.Clear();
+                foreach (var p in l)
+                {
+                    List<string> ow;
+                    var it = new ListViewItem(new[] { p.Name, p.Description, p.Class, _owners.TryGetValue(p.IdUpper, out ow) ? string.Join(",", ow.ToArray()) : "", p.Id });
+                    it.Tag = p;
+                    _ptList.Items.Add(it);
+                    it.Selected = selected.Contains(p.IdUpper);
+                }
             }
-            _ptList.EndUpdate();
+            finally { _ptList.EndUpdate(); _suppressSel = suppress; }
+            if (_ptList.IsHandleCreated && _ptList.Items.Count > 0)
+                _ptList.TopItem = _ptList.Items.Cast<ListViewItem>().FirstOrDefault(item => ((SurveyPoint)item.Tag).IdUpper == topId) ?? _ptList.Items[Math.Min(topIndex, _ptList.Items.Count - 1)];
             _ptCount.Text = l.Count + "/" + _points.Count;
+            ShowPointDetail();
         }
 
         private List<string> SelectedListPointIds()
@@ -199,8 +208,8 @@ namespace BHT.Palette
             sb.Append("Dataset ").Append(p.Dataset).Append(", dòng ").Append(p.Row).Append(", file ").Append(p.SourceFile).Append(", không gian ").Append(p.Space).Append("\r\n");
             List<string> ow;
             sb.Append("Hồ sơ: ").Append(_owners.TryGetValue(p.IdUpper, out ow) ? string.Join(", ", ow.ToArray()) : "(chưa thuộc hồ sơ nào)").Append("\r\n");
-            var r = ObjectLogic.ParseIntLikeLisp(_svc.Meta("ghep_r", "10"));
-            double rad = r > 0 ? r : 10;
+            var r = PhotoLogic.ParseRadius(_svc.Meta("ghep_r", "10"));
+            double rad = r;
             var near = Geo.PhotosNear(p.X, p.Y, _svc.GetPhotos(), rad);
             sb.Append("Ảnh chụp trong ").Append(rad).Append(" m (chỉ gợi ý): ");
             sb.Append(near.Count == 0 ? "(không)" : string.Join(", ", near.Take(10).Select(n => n.Item + " " + LispFormat.Fnum(n.Distance, 1) + "m").ToArray()));

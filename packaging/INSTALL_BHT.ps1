@@ -1,10 +1,10 @@
-﻿# BHT 0.6.13 - bo cai Application Bundle
+﻿# BHT 0.6.53 - bo cai Application Bundle
 # File nay PHAI luu UTF-8 co BOM de Windows PowerShell 5.1 doc dung tieng Viet.
 param([switch]$ValidateOnly)
 $ErrorActionPreference = 'Stop'
 try { [Console]::OutputEncoding = [Text.Encoding]::UTF8 } catch { }
 
-$bhtVersion = '0.6.13'
+$bhtVersion = '0.6.53'
 
 function Test-BhtPackage([string]$PackageRoot) {
   $rootPath = [IO.Path]::GetFullPath($PackageRoot).TrimEnd('\') + '\'
@@ -38,6 +38,9 @@ function Test-BhtPackage([string]$PackageRoot) {
   foreach ($name in @('BHT.Core','BHT.Bridge','BHT.Palette')) {
     if ([Diagnostics.FileVersionInfo]::GetVersionInfo((Join-Path $bundle "Contents\Windows\$name.dll")).FileVersion -ne "$bhtVersion.0") { throw ('DLL khác phiên bản: ' + $name) }
   }
+  $entry=@($xml.ApplicationPackage.Components.ComponentEntry | Where-Object {$_.AppName -eq 'BHT.Lisp'})
+  if($entry.Count -ne 1 -or $entry[0].ModuleName -notin @("./Contents/Windows/BHT-$bhtVersion.lsp","./Contents/Windows/BHT-$bhtVersion.fas")){throw 'Runtime entry mismatch'}
+  if(!(Test-Path -LiteralPath (Join-Path $bundle $entry[0].ModuleName))){throw 'Missing declared runtime'}
   return $files.Count
 }
 function Install-BhtBundle([string]$Source, [string]$PluginsRoot) {
@@ -94,8 +97,10 @@ try {
 
   $target = Install-BhtBundle $source $pluginsRoot
 
-  $lsp = Join-Path $target "Contents\Windows\BHT-$bhtVersion.lsp"
-  if (-not (Test-Path -LiteralPath $lsp)) { throw "Không thấy BHT-$bhtVersion.lsp trong bundle đã cài." }
+  $installedManifest=[xml][IO.File]::ReadAllText((Join-Path $target 'PackageContents.xml'))
+  $entry=@($installedManifest.ApplicationPackage.Components.ComponentEntry | Where-Object {$_.AppName -eq 'BHT.Lisp'})[0].ModuleName
+  $lsp = Join-Path $target $entry
+  if (-not (Test-Path -LiteralPath $lsp)) { throw "Không thấy runtime BHT $bhtVersion trong bundle đã cài." }
 
   # 5.0: phông TrueType của thư viện biển TDT 9.1 (giaothong1.ttf, giaothong2.ttf - kiểu chữ
   # GiaoThong1/GiaoThong2 trong block biển). AutoCAD chỉ chắc chắn tìm thấy TTF khi phông đã

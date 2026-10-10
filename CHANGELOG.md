@@ -1,3 +1,290 @@
+﻿## 0.6.53 — 11/10/2026
+
+- Khi mở BHT mà API Lisp chưa sẵn sàng, thử nạp đúng FAS cùng phiên bản nằm cạnh DLL; kiểm tra lại API sau khi nạp hoàn tất.
+- Phân biệt lỗi thiếu/nạp Lisp với lỗi khác phiên bản thật; giữ chi tiết lỗi và hiển thị tại vùng trạng thái, tránh hộp thoại lỗi giả khi mở bảng.
+- Chờ CAD kết thúc lệnh, chặn kiểm tra trùng và bỏ kết quả cũ khi đổi/đóng bản vẽ. Mỗi lần mở bảng chỉ thử nạp một lần, có thời hạn chờ.
+- Không tự cập nhật ký hiệu trên bản vẽ khi khởi động.
+
+## 0.6.52 — 11/10/2026
+
+- Đồng bộ tỷ lệ của biển báo, bảng chỉ dẫn, bảng quảng cáo, bảng nhóm Khác và Chưa xác định theo cấu hình Tỷ lệ biển.
+- Sửa trường hợp biển địa phận nhóm Khác vẫn ở ×1 trong khi biển báo ở ×3; áp dụng cho biển đã chèn và biển mới.
+- Đổi tỷ lệ hàng loạt giữ nguyên vị trí/góc của các INSERT, không dịch chân theo tỷ lệ; không thay đổi cọc, đèn hoặc tọa độ RTK.
+- Dùng chung chỉ mục điểm khảo sát trong một lần đổi tỷ lệ, tránh đọc lại toàn bộ điểm cho từng biển.
+
+## 0.6.51 — 11/10/2026
+
+- Trụ mất mặt biển hiển thị bằng biển khung chữ nhật có nội dung “Trụ mất biển” bên trong; giữ số trụ và điểm chân.
+- Bỏ nhãn dưới chân và nhãn mặt phụ của trường hợp mất biển. Chèn / cập nhật xóa nhãn cũ, giữ vị trí/hướng đã đặt.
+- Giữ mã biển trong hồ sơ để khôi phục ký hiệu khi đổi tình trạng về Tốt.
+
+## 0.6.50 — 11/10/2026
+
+- Phát hành thay bản đóng gói kiểm tra nội bộ 0.6.49: nhãn cọc dưới ký hiệu, xoay cùng block và tự dùng hồ sơ Km/H làm mốc tuyến.
+- Đồng bộ kiểm tra hồi quy nhãn cọc với yêu cầu bố trí phía dưới.
+
+## 0.6.49 — 11/10/2026
+
+- Nhãn cọc tiêu đặt dưới biên block, xoay đúng góc của ký hiệu; giữ nội dung H/Km và cỡ chữ gọn.
+- Hồ sơ cọc tiêu/cọc Km đã nhập đủ số Km/H tự làm mốc tính lý trình khi điểm khảo sát thuộc phạm vi duy nhất một tuyến. Không cần nhập lại bằng BHTMOCKM.
+- Mốc hồ sơ được đọc trực tiếp khi tính: sửa/xóa số cọc hoặc thay đổi hình học tuyến không để lại bản sao mốc cũ. Tính hàng loạt dùng chung dữ liệu mốc trong lượt chạy.
+- Báo mâu thuẫn mốc, cọc nằm trong phạm vi nhiều tuyến; giữ mốc khai báo thủ công. BHTDSMOC và chẩn đoán tuyến hiển thị cả mốc lấy từ hồ sơ.
+- Lý trình của chính cọc lấy từ số Km/H dù chưa có tuyến; tuyến vẫn cần để tính lý trình dọc đường cho đối tượng khác.
+
+## 0.6.48 — 11/10/2026
+
+- Tăng kích thước hiển thị các nhóm đèn lên 4 lần; giữ khoảng cách tới điểm khảo sát, tọa độ RTK và hướng đặt.
+- Bỏ nhãn dưới ký hiệu đèn chiếu sáng, đèn tín hiệu và nhóm đèn cũ. Chèn / cập nhật xóa nhãn BHT đã có, không xóa chữ khảo sát.
+- Đèn do BHT quản lý được cập nhật kích thước theo giá trị tuyệt đối, không phóng to lặp. Ký hiệu đã sửa tay bằng lệnh CAD vẫn giữ tỷ lệ/biến đổi tay theo quy tắc hiện có.
+- Tiếp tục phát hành runtime FAS và DLL protected; mở CAD không tự cập nhật bản vẽ.
+
+## 0.6.47 — 10/10/2026
+
+- Bản runtime dùng Lisp biên dịch FAS; không giao module LSP hoặc mã nguồn C#.
+- Làm rối tên nội bộ Core/Bridge bằng Obfuscar có giữ public API. Palette giữ nguyên để bảo toàn các ràng buộc tên UI/reflection.
+- Bộ cài kiểm tra runtime khai báo trong manifest trước khi thay bundle; gói protected chặn IncludeSource, file nguồn/PDB/mapping và DLL khác dấu kiểm tra sau xử lý.
+- Giữ tính năng 0.6.46; không tự sửa bản vẽ khi khởi động. Chưa có chứng thư ký số, chống sao chép tuyệt đối hoặc bản ARX native.
+## 0.6.46 — 10/10/2026
+
+- Tách nhóm Đèn chiếu sáng và Đèn tín hiệu; giữ nhóm DEN cũ để không tự phân loại lại hồ sơ.
+- Thêm Chọn loại đèn ngay trong hồ sơ: 5 mẫu chiếu sáng, 2 mẫu tín hiệu. Hiện tên mẫu đã gán, kiểm tra đúng nhóm và nhắc chọn mẫu trước khi chèn.
+- Thêm tình trạng Mất mặt biển, còn trụ: vẽ trụ trống và nhãn rõ ràng, không có nền dấu hỏi; giữ mã biển cũ để khôi phục sau sửa chữa. Mô tả tru.matbb gợi ý trạng thái khi tạo hồ sơ từ RTK.
+## 0.6.45 — 10/10/2026
+
+- Bảng/biển hai trụ dùng một thanh nối hai chân và hai nhánh từ điểm khảo sát về giữa thanh, thay hai đường gấp độc lập.
+- Bỏ hai chấm đặc ở chân trong block hai trụ; giữ mốc chân ẩn để xoay/nối chính xác và giữ dấu gốc tại điểm RTK.
+- Giữ đường qua điểm trung gian đã chọn tay, bố trí CAP1 và biển một trụ. Mở bản vẽ không tự sửa ký hiệu; chọn hồ sơ rồi Chèn / cập nhật để áp dụng.
+## 0.6.44 — 10/10/2026
+
+- Bỏ tự cập nhật ký hiệu khi mở hoặc kích hoạt bản vẽ; không gọi Lisp dựng lại ký hiệu từ sự kiện Idle. Lệnh tương thích BHTSYMBOLUPGRADESCHEDULE không tạo lịch cập nhật.
+- Người dùng chủ động chọn hồ sơ rồi Chèn / cập nhật để áp dụng ký hiệu mới. Giữ bản sửa chữ S.509a của 0.6.43.
+- Đây là thay đổi giảm rủi ro khi khởi động sau báo lỗi truy cập bộ nhớ trong acdb24.dll; chưa xác nhận là nguyên nhân duy nhất của crash.
+## 0.6.43 — 10/10/2026
+
+- Sửa biển S.509a mất hai dòng CHIỀU CAO / AN TOÀN sau khi áp dụng nội dung. Bảng chữ mẫu tham khảo dùng cùng giá trị với bộ dựng biển, thay vì lấy ô trống từ DWG gốc.
+- Khôi phục hai dòng chú thích đã lưu trống khi mở bảng nội dung hoặc Chèn / cập nhật. Giữ khoảng cách thực tế và các dòng chữ tùy chỉnh không rỗng. Tạo block nội dung mới để không dùng lại block lỗi đã lưu trong bản vẽ.
+## 0.6.42 — 10/10/2026
+
+- Biển tên đường I.449 dùng chiều cao mặt biển gốc 0,65 thay vì bị phóng lên 1,8. Khung mở rộng theo tên trong khoảng 1,2–3,2; tên quá dài được giảm cỡ đều, không bóp ngang chữ.
+- Nhãn cọc H/Km giữ dạng H4/40, giảm chiều cao từ 0,35 xuống 0,22 theo tỷ lệ ký hiệu, đưa sát cọc và xoay theo ký hiệu với chiều chữ dễ đọc. Tọa độ RTK và nội dung hồ sơ không đổi.
+- Sau khi cài, khởi động lại AutoCAD, chọn hồ sơ rồi Chèn / cập nhật để áp dụng cho ký hiệu đã đặt.
+## 0.6.41 — 10/10/2026
+
+- Đường dẫn tự động cho biển/bảng nhiều trụ gấp vuông theo trục của ký hiệu, đi phía ngoài chân trụ. Mỗi điểm RTK nối tới chân tương ứng; giữ đường qua điểm trung gian đã chọn tay. Nét nối liền màu 7, bề dày in 0,09 mm.
+- Bổ sung chấm tròn đặc tại chân trụ trong block nhiều trụ và khung CAP1; vẫn giữ thông tin chân để nối và xoay đúng.
+- Tạo dấu gốc tại các điểm RTK cho bảng nhiều trụ thuộc nhóm Bảng quảng cáo/Khác/Chưa xác định, tương tự nhóm Biển báo. Dấu ở layer ký hiệu nên vẫn thấy khi ẩn layer điểm.
+
+Sau khi cài, chọn hồ sơ rồi Chèn / cập nhật để áp dụng cho biển đã đặt. Muốn đổi đường dẫn đã chọn tay sang kiểu tự động, đặt lại ký hiệu với Đường dẫn thẳng; chọn G nếu cần giữ vị trí tại tâm gốc. Tọa độ RTK không đổi.
+## 0.6.40 — 10/10/2026
+
+- Sửa lỗi eInvalidLayer ở Hiển thị / zoom tuyến khi tuyến nằm trên layer hiện hành. Chỉ bật/tan băng layer khi cần; giữ layer hiện hành và trạng thái khóa. Làm sáng sau khi kết thúc transaction và Regen.
+- Sửa Đặt tự do: thay lựa chọn Theo tuyến bằng Vuông góc với tuyến, dùng tiếp tuyến tại điểm RTK và chiều tuyến A→B; thống nhất với xoay hàng loạt. Nếu chưa liên kết tuyến, hỏi chọn tuyến. Thiếu hình học hoặc quá xa tuyến sẽ báo lỗi và giữ biển cũ, không tự trả góc 0°.
+- Lưu liên kết hướng tuyến để Chèn / cập nhật tiếp tục giữ hướng vuông góc. Giữ quy ước block thư viện và block tự chọn; vị trí RTK không thay đổi.
+## 0.6.39 — 10/10/2026
+
+- Sửa nút Tính tuyến cạnh ô lý trình: chỉ tính hồ sơ đang chọn; luôn hiện kết quả hoặc thông báo nguyên nhân thiếu dữ liệu. Không ghi đè lý trình cũ khi thiếu tuyến, thiếu mốc Km hoặc không chiếu được vị trí.
+- Thêm Kiểm tra 2 cọc Km (`BHTKM2COC`) trong Tuyến & báo cáo. Chọn hai cọc, nhập lý trình, chọn điểm cần tính: nội suy theo hình chiếu lên đoạn thẳng nối cọc trong mặt phẳng XY. Kết quả ghi rõ ƯỚC TÍNH, kèm độ lệch và khoảng cách; không tự ghi hồ sơ và không ngoại suy ngoài hai cọc.
+- Các lệnh lý trình/nhập mốc mở bảng kết quả kể cả khi thông báo ngắn. Chức năng Cập nhật lý trình ở tab Tuyến vẫn áp dụng toàn bộ hồ sơ theo tuyến tham chiếu.
+- Bao gồm quản lý tuyến, chọn/làm sáng và sửa/xóa/chọn lại tuyến của 0.6.38.
+
+Không có tim tuyến thực thì hai cọc không xác định được chiều dài đường cong. PL vẽ thử không được xem là cơ sở lý trình thiết kế. Chỉ dùng kết quả hai cọc cho đoạn đủ thẳng sau khi kiểm tra; muốn ghi vào hồ sơ dùng Ghi tay và chịu trách nhiệm xác nhận giá trị.
+## 0.6.38 — 10/10/2026
+
+- Chọn một dòng trong Dữ liệu tuyến để chọn và làm sáng hình học tương ứng trên CAD. Đổi dòng, đổi tab hoặc đóng bản vẽ sẽ bỏ làm sáng tuyến cũ. Hiển thị / zoom tuyến vẫn mở lớp ẩn và thu toàn bộ tuyến vào khung nhìn.
+- Thêm Sửa tuyến, Chọn lại tuyến và Xóa tuyến ngay dưới bảng. Sửa được ID, loại tuyến, khoảng cách tối đa và phạm vi ngoại suy. Đổi ID cập nhật cả liên kết lý trình và hướng biển.
+- Các nút điểm đầu, đảo chiều, đọc cọc, thêm/xóa mốc và chẩn đoán dùng tuyến đang chọn trong bảng.
+- Xóa chỉ bỏ khai báo và liên kết tuyến; giữ Polyline, RTK và hướng biển hiện tại. Thay Polyline giữ đường cũ nhưng bỏ mốc Km và thông tin nguồn TDT cũ để tránh tính lý trình theo sai hình học. Sửa/xóa có thể Undo.
+- Chặn tạo tuyến trùng ID và ngoại suy âm, gồm cả luồng nhập TDT. Đổi tên chỉ ghi lại hồ sơ liên quan; sửa thuộc tính không quét lại điểm RTK.
+
+## 0.6.37 — 10/10/2026
+
+- Ảnh của cả trang thư viện được nạp sẵn dưới dạng thu nhỏ: cuộn đến biển là thấy ảnh, không phải bấm vào. Giới hạn 60 mẫu/trang, giải phóng ảnh trang cũ.
+- Gom tốc độ, tải trọng, kích thước, khoảng cách, giờ và thông tin cầu vào Nội dung biển. Bỏ các ô nhập bên ngoài; hỗ trợ thông số riêng cho từng mặt. Biển không có thông số có thông báo rõ.
+- Thêm bảng Dữ liệu tuyến: danh sách tuyến đã nạp, nguồn, chiều dài, trạng thái hình học. Nhấp đúp hoặc Hiển thị / zoom tuyến để mở lớp và zoom trọn tuyến.
+- BHTHUONGBIEN xoay đầu biển vuông góc về bên trái hướng A→B hoặc chiều tuyến. Đổi A/B để đảo phía. Giữ vị trí, tỷ lệ, RTK và khả năng Undo cả nhóm; giữ cách hiểu dữ liệu hướng cũ.
+- Sửa BHTTRANGTHAI chỉ hiện tiêu đề trong báo cáo; đưa đủ các dòng thống kê vào cửa sổ kết quả.
+- Bỏ lượt làm mới Palette bị gọi hai lần. Rà soát 51 lệnh Lisp công khai: không trùng tên; giữ lệnh tương thích và công cụ nâng cao.
+
+## 0.6.36 — 2026-10-09
+
+- Giảm thời gian mở/chọn biển: chia 60 biển mỗi trang, chỉ nạp ảnh thu nhỏ đang nhìn thấy, giải phóng ảnh ngoài vùng xem; gộp tìm kiếm khi gõ nhanh.
+- Sửa lỗi Sequence contains no elements khi đóng hoặc đổi kích thước thư viện; ngừng nạp ảnh trong lúc hủy cửa sổ và đổi trang.
+- Đổi phần CAP1 thành tùy chọn Bố trí khung/trụ nâng cao trong Nội dung biển. Mặc định ẩn, vẫn giữ bố trí đã lưu trong bản vẽ cũ.
+- Thêm Nạp DWG… để chọn block riêng cho hồ sơ và thư viện 7 mẫu đèn: chiếu sáng đơn, đôi, trang trí, mặt đứng trái/phải, tín hiệu ba màu và cảnh báo vàng.
+- Năm mẫu chiếu sáng được chuẩn hóa từ thư viện CAD có sẵn; hai mẫu tín hiệu do BHT tạo. Thư viện được đóng gói để dùng độc lập, không cần cài phần mềm nguồn.
+- Chưa thay đổi cách xoay vuông góc theo đường tham chiếu; xử lý ở đợt tiếp theo.
+
+## 0.6.35 — 2026-10-09
+
+- Đã thêm lệnh BHTHUONGBIEN và nút ở tab Tuyến & báo cáo để xoay đầu biển hàng loạt theo chiều A→B của tuyến hoặc hướng chung chọn bằng hai điểm.
+- Theo tuyến dùng tiếp tuyến tại vị trí RTK và chiều đã xác nhận; hai bên đường cùng hướng A→B. Hướng chung áp dụng được trong UCS xoay.
+- Giữ vị trí, tỷ lệ XYZ, tọa độ RTK và điểm gấp khúc; cập nhật nhãn và nối đường dẫn vào chân thật của khung CAP1 sau khi xoay.
+- Lưu chế độ hướng trong hồ sơ để giữ khi cập nhật; đặt riêng một biển sẽ thay chế độ hàng loạt của biển đó. Một Undo hoàn tác cả lần xoay.
+- Giữ các thay đổi 0.6.34: 47 biển phụ, chọn đầu tuyến PL/TDT, dấu tròn đặc tại tâm X; đã gom các bản bàn giao cũ vào Old.
+
+## 0.6.34 — 2026-10-09 (gói kiểm tra nội bộ)
+
+- Đã khôi phục bộ lọc Biển phụ với đủ 47 mẫu mã S.; nhóm cao tốc giữ riêng các mẫu tương ứng.
+- Tạo tuyến từ PL thường hoặc TDT 9.1 mở ngay bước chọn điểm đầu và xác nhận/đảo mũi tên. Cập nhật tim TDT giữ điểm đầu và chiều đã chọn.
+- Đã sửa lỗi đổi đường dẫn của biển nhiều chân từ thẳng sang gấp khúc: bỏ qua entity cũ đã xóa khi ghép đường dẫn cho chân tiếp theo.
+
+- Đã thêm block tròn đặc tại tâm X của từng điểm RTK liên kết với biển báo, để nhận ra vị trí gốc sau khi ẩn điểm. Block trên layer BHT_KYHIEU, màu 7, bán kính 0,07 đơn vị trước khi nhân tỷ lệ biển.
+- Dấu giữ đúng tọa độ điểm khi di chuyển/xoay ký hiệu, đặt tại G hoặc dùng đường dẫn gấp khúc. Bỏ nền biển vẫn giữ dấu tròn đặc.
+- Đồng bộ dấu khi đổi điểm, đổi nhóm, nâng cấp bản vẽ hoặc xóa hồ sơ; không tạo dấu trùng và không sửa điểm RTK gốc. Có thể chọn dấu để mở hồ sơ biển trong Palette.
+
+## 0.6.33 — 2026-10-09
+
+- Đã đổi chế độ tắt tô màu thành bỏ riêng nền biển, giữ hatch biểu tượng, mũi tên, đường nhánh và các khoảng trắng bên trong hình để in trắng đen.
+- Đã giữ đầy đủ viền tròn, tam giác và khung biển khi bỏ nền; viền tạo từ đường bao gốc, nét khung 0,25 mm khi in.
+- Đã rà 469 DWG nguồn / 467 mẫu trong danh mục; bổ sung sửa số trong TEXT/MTEXT và attribute, gồm khoảng cách, kích thước, tải trọng, tốc độ theo làn, giờ, tần số và số điện thoại.
+- Đã thêm nhãn thông số theo đơn vị, nhận dấu phẩy thập phân, giữ đơn vị mẫu, cho nhập khoảng cách 0 và giờ qua đêm; báo lỗi khi nhập sai số, đơn vị hoặc giờ.
+- Nội dung vẫn lưu riêng từng mặt trong DWG, giữ mẫu thư viện và bố trí CAP1 2D. Các bản sao để in giữ thứ tự vẽ và vùng rỗng của biểu tượng.
+
+## 0.6.32 — 2026-10-09
+
+- Đã sửa bộ lọc biển chỉ dẫn cao tốc đang trỏ sang biển phụ; bỏ mục lọc Biển phụ trống, giữ các mẫu trong Tất cả/tìm kiếm.
+- Đã đổi tên cửa sổ thành Thư viện biển báo BHT, bỏ chữ ADSCivil trong mã ứng dụng; bộ cài dùng SignLibrary/BHT.
+- Đã thêm bảng nội dung attribute theo từng mặt, giữ riêng các mặt cùng mã; tách địa danh mẫu khỏi nội dung hồ sơ, lưu Unicode NFC và thu hẹp chữ dài theo ô mẫu.
+- Đã triển khai 10 bố trí CAP1 cho trụ/khung 2D, sơ đồ xem trước, khoảng cách mặt và chiều cao đáy; nối RTK theo chân thật của bố trí.
+- Đã giữ nội dung và bố trí trong hồ sơ/bản nháp, bảo toàn hatch và thứ tự vẽ khi clone. CAP1 chưa có tính toán kết cấu hoặc tự đối chiếu địa danh với hồ sơ ngoài.
+
+## 0.6.31 — 2026-10-08
+
+- Đã chuyển nguồn biển mặc định sang ADSCivil, đọc sáu danh mục và các DWG ngoài danh mục; giữ các biến thể có số, dấu phẩy và dấu nháy.
+- Đã sửa R.415a/b bằng CAD gốc ADSCivil. Khôi phục thứ tự vẽ để nền không che xe, vạch phân làn và dải hủy.
+- Đã kèm 1.630 tài nguyên trong bộ cài cục bộ, đối chiếu SHA-256; máy nhận không cần ARX ADSCivil hoặc TDT.
+- Đã giữ thông số biển, nhiều mặt, hai chân, chỉ nét và dữ liệu RTK khi nâng cấp. Sửa quy ước hướng đặt cho tên block ADSCivil, giữ API cũ và thêm BHTADSBLOCK.
+- Đã nghiên cứu XML/JSON và ghi hướng phát triển khung/trụ. Không tìm thấy mã nguồn C++/Lisp của phần đã biên dịch.
+
+## 0.6.30 — 2026-10-08
+
+- Tắt Tô màu tất cả biển áp dụng cả bảng quảng cáo, Khác, Chưa xác định và bảng chỉ dẫn; bỏ hatch, nền MText và bề rộng nét tô trong block riêng, giữ block màu gốc để bật lại.
+- Vẽ lại R.415a/b bằng đường cong CAD và cung tròn, đủ sáu hình xe; lưu nguồn SVG để chỉnh sửa, đổi cache hình và đặt dải hủy phía trên biểu tượng.
+- Tự cập nhật ký hiệu biển/đèn đã có khi mở bản vẽ sau khi nạp đúng lõi Lisp; giữ điểm chèn, góc xoay, tỷ lệ, chế độ đặt và RTK. Lưu bản vẽ để giữ cập nhật.
+- Thêm Xóa hồ sơ có xác nhận; dọn ký hiệu, nhãn, đường nối và liên kết ảnh của hồ sơ đã xóa; giữ RTK, ảnh gốc và hồ sơ khác.
+- Đạt 178 kiểm thử Core, 149 kiểm tra giao diện, hồi quy CAD và các ca cập nhật/xóa/tô màu. Bộ cài một file giữ thông báo hoàn tất và chặn cài lặp.
+## 0.6.29 — 2026-10-08
+
+- Đã chỉnh chiều dài trụ IE.472b để dùng hai chân và ghép nhiều mặt không giữ trụ giữa thừa; đổi cache IE.472a/b và bổ sung ca kiểm tra native cho cả hai chế độ.
+- Giữ nhãn đèn phía dưới, mẫu trạm thu phí và chọn biển modeless của 0.6.28. Bản 0.6.28 là gói kiểm tra nội bộ; bộ cài bàn giao là 0.6.29.
+- Đạt 178 kiểm thử Core, 144 kiểm tra giao diện và hồi quy CAD/Unicode/G/T/hai chân, gồm hai biển trạm thu phí khi không có TDT.
+
+## 0.6.28 — 2026-10-08
+
+- Đặt nhãn đèn chiếu sáng/tín hiệu bên dưới ký hiệu; giữ vị trí, góc quay và điểm RTK khi cập nhật.
+- Bổ sung block native IE.472a/b nền xanh, khung trắng bo góc và chữ trắng; IE.472a nhập khoảng cách mét và xem trước số thực tế, lưu riêng từng mặt.
+- Chuyển thư viện chọn biển sang modeless để tiếp tục zoom/pan CAD; giữ hồ sơ đang sửa, đóng khi đổi hồ sơ/bản vẽ và hủy lựa chọn khi Đóng/Escape.
+- Đạt 178 kiểm thử Core, 144 kiểm tra giao diện và hồi quy native AutoCAD, thư viện, Unicode, G/T, tỷ lệ, hai chân; kiểm tra IE.472a/b khi không có TDT.
+
+## 0.6.27 — 2026-10-08
+
+- Đã bỏ sáu đoạn trắng thừa sát mép phải R.415a/b, phát hiện khi xem ảnh xuất từ AutoCAD; đổi cache để cập nhật hình cũ.
+- Giữ sửa W.207a, tốc độ DP.134/R.306 và tự đếm mặt biển của 0.6.26. Bản 0.6.26 là gói kiểm tra nội bộ; bộ cài bàn giao là 0.6.27.
+- Đã đạt 176 kiểm thử Core, 139 kiểm tra giao diện và hồi quy CAD/ký hiệu/Unicode/G/T/hai chân.
+
+## 0.6.26 — 2026-10-08
+
+- Đã sửa W.207a có đủ hai nhánh đường không ưu tiên đối diện; ảnh thư viện dùng cùng đường CAD đã sửa.
+- Đã vẽ lại R.415a/b theo mẫu người dùng, làm mượt hình xe, giữ cửa kính/bánh xe và bỏ nét thừa ở mép biển.
+- Đã cho nhập tốc độ trên DP.134 và R.306, lưu giá trị riêng từng mặt, xem trước số đã nhập và kiểm tra số nguyên 5–130 km/h.
+- Đã tự đếm Số mặt biển từ danh sách, kể cả một mã chính; chọn lại một mặt xoá danh sách nhiều mặt trước đó. Số trụ/chân vẫn nhập riêng.
+- Đã đạt 176 kiểm thử Core, 139 kiểm tra giao diện và hồi quy AutoCAD 2024, gồm tô màu/chỉ nét, hai chân và đặt ký hiệu G/T.
+- Bộ cài một file EXE giữ thông báo hoàn tất và chặn cài lặp; bản cũ được lưu trong Old.
+
+## 0.6.25 — 2026-10-08
+
+- Đã vẽ số trụ và dấu chân theo Số trụ/chân cho biển báo, bảng quảng cáo, Khác và Chưa xác định; bảng tên một trụ có dấu chân.
+- Đã nối riêng từng điểm RTK đo chân vào chân tương ứng của ký hiệu nhiều trụ, thay đường nối từ điểm trung bình; giữ tọa độ đo.
+- Đã cập nhật đường nối khi đặt/xoay/đổi tỷ lệ, thêm/gỡ điểm hoặc đổi số trụ; cập nhật lặp không tạo đường trùng.
+- Đã hiện nhắc thiếu điểm chân trong hồ sơ và cảnh báo trong BHTKT; block tùy chỉnh giữ hình người dùng.
+- Đã đạt 171 kiểm thử Core, 134 kiểm tra giao diện, hồi quy CAD/ký hiệu/Unicode/G/T và kiểm tra hai trụ/hai đường nối.
+- Đã kiểm tra 7 trường hợp sao lưu/khôi phục và 39 kiểm tra bộ cài EXE độc lập.
+
+## 0.6.24 — 2026-10-08
+
+- Đã đổi nút đặt X/sắp nhãn thành Tỷ lệ ký hiệu và nhãn RTK, chọn riêng cỡ X và cỡ chữ.
+- Đã tách Cập nhật nhãn RTK để tạo nhãn thiếu và sắp lại nhãn tự động; giữ nhãn dời tay và tỷ lệ đã lưu.
+- Đã giữ dòng đầu và các điểm đang chọn khi làm mới danh sách RTK.
+- Đã đạt 171 kiểm thử Core, 131 kiểm tra giao diện và hồi quy CAD/ký hiệu/Unicode/G/T, gồm kiểm tra tỷ lệ RTK độc lập.
+- Đã kiểm tra bộ cài với 39 kiểm tra EXE độc lập và 7 kiểm tra sao lưu/khôi phục.
+
+## 0.6.23 — 2026-10-08
+
+- Đã hiện màn hình cài đặt thành công, bỏ nút Cài đặt BHT và chỉ giữ Hoàn tất để đóng.
+- Đã chặn cài lặp sau hoàn tất và bấm liên tiếp khi đang xử lý; cài lỗi vẫn cho thử lại.
+- Đã đồng bộ tên file bộ cài EXE trong hướng dẫn khi tăng phiên bản.
+
+- Đã đạt 171 kiểm thử Core, 39 kiểm tra bộ cài EXE và 7 kiểm tra cài đặt/sao lưu/khôi phục.
+
+## 0.6.22 — 2026-10-08
+
+- Đã thêm bộ cài BHT-Setup-0.6.22.exe: một file để gửi, kèm bundle và phông chữ, tự giải nén và kiểm tra dữ liệu.
+- Đã thêm giao diện cài đặt tiếng Việt, cài cho người dùng hiện tại, giữ bản cũ và báo lỗi AutoCAD đang mở.
+- Đã giữ gói ZIP có mã nguồn; giải thích CMD cần các file đi kèm và yêu cầu AutoCAD tương thích.
+
+- Đã đạt 171 kiểm thử Core, hồi quy CAD/ký hiệu/Unicode/G/T, 7 kiểm tra cài đặt và kiểm tra EXE độc lập/giao diện/toàn vẹn dữ liệu.
+
+## 0.6.21 — 2026-10-08
+
+- Đã thêm nút Tỷ lệ biển / nhãn, chọn riêng kích thước hình biển và nhãn mã; có mức gợi ý, nhập tùy chỉnh và về chuẩn 1:1.
+- Đã lưu tỷ lệ theo bản vẽ, cập nhật các biển đã chèn và áp dụng cho biển chèn sau; giữ vị trí, hướng, đường dẫn và dữ liệu RTK.
+- Đã nhóm nút theo tạo/lưu hồ sơ, chọn biển/tỷ lệ, đặt/chèn ký hiệu; đưa thêm/gỡ điểm về cạnh danh sách RTK.
+
+- Đã đạt 171 kiểm thử Core, 111 kiểm tra form, hồi quy CAD/ký hiệu/Unicode/G/T và 7 kiểm tra bộ cài.
+
+## 0.6.20 — 2026-10-07
+
+- Đã vẽ lại nét R.415a/b và ký hiệu điện W.239a bằng đường CAD sạch, bỏ răng cưa từ ảnh nguồn.
+- Đã tránh tạo đường bao trùng khi bỏ Hatch, nối đường bao cong và giữ cung tròn; số/thuộc tính trong block lồng nhau kế thừa màu trắng khi tắt tô màu.
+- Đã thêm nhãn riêng cho từng mặt biển, giữ thứ tự và các giá trị mét/tấn; dọn nhãn khi bỏ mặt, không nhân đôi khi cập nhật.
+- Đã giữ dòng đầu của danh sách sau làm mới và vị trí vùng nhập khi quay lại từ thư viện biển.
+- Đã đạt 171 kiểm thử Core, 75 kiểm tra giao diện, hồi quy CAD/ký hiệu/Unicode/G/T, hình PDF xuất trực tiếp từ CAD và 7 kiểm tra bộ cài.
+
+## 0.6.19 — 2026-10-07
+
+- Đã thêm ô Trọng lượng (tấn) cho S.505a, hiển thị 8T dưới hình xe như biển khảo sát.
+- Đã lưu giá trị theo từng mặt biển; nhận dấu phẩy thập phân, chặn giá trị sai và giữ mẫu chỉ có xe khi để trống.
+- Đã tạo mẫu CAD riêng theo trọng lượng, giữ hình xe gốc, nền trắng/viền đen và hỗ trợ bật/tắt Hatch độc lập.
+- Đã kiểm tra Core, bộ chọn biển, hình học CAD, lưu/đồng bộ hồ sơ nhiều mặt và bộ cài.
+
+## 0.6.18 — 2026-10-07
+
+- Đã sửa Tô màu tất cả biển tự bật lại do làm mới đọc giá trị cũ khi thao tác còn chờ xử lý.
+- Đã giữ lựa chọn đang chờ, khóa checkbox khi xử lý và đọc lại trạng thái bản vẽ khi hoàn tất hoặc bị từ chối.
+- Đã bỏ qua kết quả Lisp cũ sau khi đổi/gắn lại bản vẽ, tránh ghi đè thao tác mới.
+- Đã đạt 166 kiểm thử Core, 63 kiểm tra form/đồng bộ trạng thái, hồi quy ký hiệu/Unicode/G/T và 7 kiểm tra bộ cài.
+
+## 0.6.17 — 2026-10-07
+
+- Đã thêm nhấp đúp trên dòng hồ sơ để thu phóng tới vị trí RTK và bỏ nút Thu phóng dư ở vùng nhập.
+- Đã thêm G (Gốc) và T (Tuỳ chọn) khi đặt ký hiệu, ở cả bước điểm trung gian và vị trí cuối.
+- G đặt tại tâm X và bỏ đường dẫn cũ; T cho chọn vị trí trên CAD; giữ điểm RTK, hướng đã chọn và thao tác hủy.
+- Đã đạt 166 kiểm thử Core, 49 kiểm tra form, 9 tình huống G/T tương tác AutoCAD, bộ hồi quy ký hiệu/Unicode và 7 kiểm tra bộ cài.
+
+## 0.6.16 — 2026-10-07
+
+- Đã sửa form tự cuộn xuống khi tạo hồ sơ từ RTK; gom cập nhật bố trí để giảm giật, giữ vị trí cuộn khi làm mới hoặc đổi nhóm.
+- Đã bỏ tên cấu hình nội bộ khỏi thông báo trùng Cọc tiêu/Cột Km.
+- Đã thêm ô Tên trên bảng cho Bảng quảng cáo và Khác, dùng dữ liệu mô tả hiện có; ký hiệu mặc định là hình chữ nhật Hatch xanh, viền và chữ trắng.
+- Đã đổi ký hiệu Chưa xác định sang cùng mẫu bảng với chữ Chưa xác định ở chính giữa.
+- Đã kiểm tra 44 tình huống form, 21 kiểm tra hình học bảng, hồi quy ký hiệu/Unicode/chế độ không có TDT, 166 kiểm thử Core và 7 kiểm tra bộ cài.
+
+## 0.6.15 — 2026-10-07
+
+- Đã tách Lưu hồ sơ khỏi thao tác chèn/cập nhật ký hiệu; ghi lý trình tay cùng hồ sơ và chỉ lưu sau khi xác nhận hộp tuỳ chọn đặt.
+- Đã giữ nội dung chưa lưu khi làm mới/lọc, hỏi trước khi bỏ thay đổi và khôi phục bản nháp theo bản vẽ trong cùng phiên.
+- Đã thêm tìm hồ sơ không dấu, vùng danh sách có thể đổi chiều cao, tên nhóm/phía đường dễ đọc và bố trí nút cho bảng hẹp.
+- Đã sửa Palette tự ẩn khi đổi bản vẽ và cập nhật số phiên bản/đường dẫn hiện tại trong tài liệu.
+- Đã bổ sung 26 kiểm tra giao diện/luồng hồ sơ; giữ 166 kiểm thử Core và bộ hồi quy AutoCAD/bộ cài.
+
+## 0.6.14 — 2026-10-07
+
+- Giữ phần thập phân của bán kính tìm ảnh/điểm trên Palette, kể cả bán kính nhỏ hơn 1 m; giá trị không hợp lệ dùng mặc định 10 m.
+- Chặn kích thước chia chuỗi không dương trong Core và Lisp, tránh lặp vô hạn.
+- Chiếu tuyến giữ đoạn ngắn khác 0 và tính đủ chiều dài tích lũy.
+- Bỏ 5 hàm Lisp nội bộ và 1 hàm Palette không còn được gọi; rút gọn nhật ký trong mã và ghi chú phân cách trùng.
+- Đồng bộ tên cache block TDT giữa Lisp và Bridge; sửa phiên bản/đường dẫn build trong README và cập nhật kiểm thử hồi quy.
+
 ## 0.6.13 — 2026-10-05
 
 - Giữ tỷ lệ biển phụ theo chiều lớn nhất, tránh biển ngang phình rộng khi ghép cùng biển chính.

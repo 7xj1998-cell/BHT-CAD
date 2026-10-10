@@ -440,13 +440,6 @@
   n
 )
 
-;; So diem RTK dang co nhan ten.
-(defun bht:lbl-count-points (/ g n)
-  (setq g (bht:group-pairs (bht:tagged-pairs "TEXT" "BHT_NHAN" 2)) n 0)
-  (foreach it (bht:pt-all) (if (assoc (strcat (car it) "|TEN") g) (setq n (1+ n))))
-  n
-)
-
 ;; Dua nhan cua cac diem ve vi tri tu dong (bo trang thai TAY) roi bo tri lai.
 (defun bht:lbl-reset (pids / n up)
   (setq n 0 up (mapcar 'strcase pids))

@@ -1,0 +1,7 @@
+DEN_CS_DON_MB | 3D_RESOURCE\Block 2D\Den chieu sang\Cot den don.dwg | scale=1
+DEN_CS_DOI_MB | 3D_RESOURCE\Block 2D\Den chieu sang\Cot den doi.dwg | scale=1
+DEN_CS_TRANG_TRI_MB | 3D_RESOURCE\Block 2D\Den chieu sang\Cot den trang tri.dwg | scale=1
+DEN_CS_TRAI_MD | FCode\005.Cot den trai.dwg | scale=0.12
+DEN_CS_PHAI_MD | FCode\006.Cot den phai.dwg | scale=0.12
+DEN_TIN_HIEU_3_MAU | BHT native 2D | display symbol, no electrical design
+DEN_CANH_BAO_VANG | BHT native 2D | display symbol, no electrical design

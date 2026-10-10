@@ -28,6 +28,10 @@ namespace BHT.Palette
         private DateTime _suppressUntil = DateTime.MinValue;
         private readonly CommandWatcher _watcher = new CommandWatcher();
         private bool _lispOk, _lispRunning;
+        private int _lispGeneration;
+        private bool _probeRunning, _runtimeAttempted;
+        private LispRuntimeLoader _runtimeLoad;
+        private DateTime _runtimeDeadline;
         private string _lispMsg = "chưa kiểm tra";
 
         private readonly TabControl _tabs = new PaletteTheme.ThemedTabControl();
@@ -46,9 +50,10 @@ namespace BHT.Palette
             _tabs.Dock = DockStyle.Fill; _tabs.Multiline = true;
             _tabs.TabPages.Add(BuildOverviewTab());
             _tabs.TabPages.Add(BuildPointsTab());
-            _tabs.TabPages.Add(BuildPhotosTab());
             _tabs.TabPages.Add(BuildObjectsTab());
+            _tabs.TabPages.Add(BuildPhotosTab());
             _tabs.TabPages.Add(BuildRoutesTab());
+            _tabs.SelectedIndexChanged+=(s,e)=>{if(_tabs.SelectedIndex==4)HighlightSelectedRoute();else ClearRouteHighlight();};
             Controls.Add(_tabs);
             Controls.Add(_docLabel);
             Controls.Add(_status);
@@ -65,8 +70,18 @@ namespace BHT.Palette
 
         public void BindTo(Document doc)
         {
-            if (doc == _doc && _svc != null) { RefreshAll(); return; }
+            if (doc == _doc && _svc != null)
+            {
+                RefreshAll();
+                if (!_lispOk)
+                {
+                    if (!_probeRunning && _runtimeLoad == null) _runtimeAttempted = false;
+                    ProbeLisp();
+                }
+                return;
+            }
             Unbind();
+            ClearAll();
             _doc = doc;
             if (doc == null) { _docLabel.Text = "(không có bản vẽ)"; ClearAll(); return; }
             try
@@ -76,25 +91,37 @@ namespace BHT.Palette
                 _docLabel.Text = "Bản vẽ: " + SafeName(doc);
                 _lispOk = false; _lispMsg = "chưa kiểm tra";
                 RefreshAll();
+                RestoreObjectDraft(doc);
                 ProbeLisp();
             }
             catch (Exception ex) { StatusError("Lỗi gắn bản vẽ: " + ex.Message); }
         }
 
-        public void Unbind()
+        public void Unbind(bool rememberDraft = true)
         {
+            ClearRouteHighlight();
+            CloseSignPicker();
+            if (rememberDraft) RememberObjectDraft(_doc);
+            _lispGeneration++;
+            if (_runtimeLoad != null) { _runtimeLoad.Dispose(); _runtimeLoad = null; }
+            _probeRunning = false;
+            _runtimeAttempted = false;
+            _pendingSignFill = null;
             _lispRunning = false;
+            _lispOk = false;
             _selTimer.Stop();
             _probeTimer.Stop();
             _watcher.Detach();
             if (_doc != null) { try { _doc.ImpliedSelectionChanged -= OnImpliedSelectionChanged; } catch { } }
             if (_svc != null) { _svc.Dispose(); _svc = null; }
             _doc = null;
+            UpdateSignFillAvailability();
         }
 
         public void DocumentClosing(Document doc)
         {
-            if (doc != null && doc == _doc) { Unbind(); ClearAll(); _docLabel.Text = "(bản vẽ đã đóng)"; }
+            if (doc != null) _objectDrafts.Remove(doc);
+            if (doc != null && doc == _doc) { Unbind(false); ClearAll(); _docLabel.Text = "(bản vẽ đã đóng)"; }
         }
 
         private static string SafeName(Document d) { try { return System.IO.Path.GetFileName(d.Name); } catch { return "?"; } }
@@ -114,10 +141,15 @@ namespace BHT.Palette
 
         private void ClearAll()
         {
+            _photoFilterPoint = null;
+            _points.Clear(); _owners.Clear(); _photos.Clear();
             _ovText.Text = "";
             _ptList.Items.Clear(); _ptDetail.Text = "";
             _phList.Items.Clear(); ShowImage(null); _phInfo.Text = "";
+            _phObj.Items.Clear(); _phFilter.Text = "";
             _objList.Items.Clear(); ClearObjectEditor();
+            if(routeList!=null)routeList.Items.Clear();
+            _objCount.Text = "0 / 0";
         }
 
         public void RefreshAll()
@@ -134,6 +166,7 @@ namespace BHT.Palette
                 RefreshPoints();
                 RefreshPhotos();
                 RefreshObjects();
+                RefreshRouteData();
                 if (reportStatus) Status("Đã đọc dữ liệu từ bản vẽ.");
             }
             catch (Exception ex) { StatusError("Lỗi đọc dữ liệu: " + ex.Message); }
@@ -141,28 +174,66 @@ namespace BHT.Palette
 
         private void ProbeLisp()
         {
-            if (_doc == null) return;
+            if (_doc == null || _doc != AcApp.DocumentManager.MdiActiveDocument || _probeRunning) return;
+            if (_runtimeLoad != null)
+            {
+                if (DateTime.UtcNow < _runtimeDeadline) { _probeTimer.Start(); return; }
+                _runtimeLoad.Dispose(); _runtimeLoad = null;
+                _lispMsg = "Nạp lõi Lisp chưa hoàn tất hoặc đã bị hủy. Kết thúc lệnh CAD rồi mở lại BHT; xem F2 để biết chi tiết.";
+                StatusError(_lispMsg, false); RefreshOverview(); return;
+            }
             string busy;
             if (AcadDispatcher.IsBusy(_doc, out busy))
             {
                 _lispMsg = "đang chờ AutoCAD kết thúc lệnh để kiểm tra lõi Lisp";
-                _probeTimer.Stop();
-                _probeTimer.Start();
-                return;
+                _probeTimer.Stop(); _probeTimer.Start(); return;
             }
+            var probeDoc = _doc;
+            int generation = _lispGeneration;
+            _probeRunning = true;
             AcadDispatcher.RunLisp("bht:api-version", new string[0], r => UI(() =>
             {
+                if (_doc != probeDoc || generation != _lispGeneration) return;
+                _probeRunning = false;
                 _lispOk = r.Ok && r.Values.Count > 1 && BhtVersion.LispCompatible(r.Values[0], r.Values[1]);
-                string loaded = r.Values.Count > 0 ? r.Values[0] : "không rõ";
-                _oSignFill.Enabled = _lispOk;
-                _lispMsg = _lispOk
-                    ? "BHT Lisp " + loaded + " đã nạp"
-                    : "Plugin " + BhtVersion.Version + " / Lisp " + loaded + " không cùng phiên bản. Đóng tất cả AutoCAD rồi cài lại BHT " + BhtVersion.Version + ".";
-                if (_lispOk) Status(_lispMsg); else StatusError(_lispMsg);
+                UpdateSignFillAvailability();
+                if (_lispOk) _lispMsg = "BHT Lisp " + r.Values[0] + " đã nạp";
+                else if (r.Ok && r.Values.Count > 1)
+                    _lispMsg = "Plugin " + BhtVersion.Version + " / Lisp " + r.Values[0] +
+                        " (API " + r.Values[1] + ") không tương thích. Đóng tất cả AutoCAD rồi cài lại BHT " + BhtVersion.Version + ".";
+                else if (!_runtimeAttempted)
+                {
+                    _runtimeAttempted = true;
+                    _lispMsg = "Đang nạp lõi Lisp đi kèm BHT " + BhtVersion.Version + "...";
+                    Status(_lispMsg); RefreshOverview();
+                    _runtimeLoad = new LispRuntimeLoader(probeDoc, error => UI(() =>
+                    {
+                        if (_doc != probeDoc || generation != _lispGeneration) return;
+                        _runtimeLoad = null;
+                        if (!string.IsNullOrEmpty(error))
+                        {
+                            _probeTimer.Stop();
+                            _lispMsg = "Không nạp được lõi Lisp BHT: " + error + ". Xem dòng lệnh CAD (F2).";
+                            StatusError(_lispMsg, false); RefreshOverview();
+                        }
+                        else { _probeTimer.Stop(); _probeTimer.Start(); }
+                    }));
+                    try
+                    {
+                        _runtimeDeadline = DateTime.UtcNow.AddSeconds(30);
+                        _runtimeLoad.Start(); _probeTimer.Start(); return;
+                    }
+                    catch (Exception ex)
+                    {
+                        _runtimeLoad.Dispose(); _runtimeLoad = null;
+                        _lispMsg = "Không nạp được lõi Lisp BHT: " + ex.Message;
+                    }
+                }
+                else _lispMsg = "Lõi Lisp BHT chưa sẵn sàng: " + r.Error + ". Xem dòng lệnh CAD (F2).";
+                if (_lispOk) Status(_lispMsg); else StatusError(_lispMsg, false);
                 RefreshOverview();
             }));
         }
-
         // ------------------------------------------------------------------ tien ich
 
         protected void Status(string s)
@@ -277,22 +348,26 @@ namespace BHT.Palette
         }
 
         /// <summary>Goi ham Lisp; hien ket qua; lam moi du lieu khi xong (ket qua that tu Lisp, khong gia dinh).</summary>
-        private void CallLisp(string fn, string[] args, string label, Action<LispReply> after)
+        private bool CallLisp(string fn, string[] args, string label, Action<LispReply> after)
         {
-            if (_lispRunning) { Status("BHT đang xử lý thao tác trước; vui lòng chờ hoàn tất."); return; }
-            if (!NeedDoc() || !NeedLisp()) return;
+            if (_lispRunning) { Status("BHT đang xử lý thao tác trước; vui lòng chờ hoàn tất."); return false; }
+            if (!NeedDoc() || !NeedLisp()) return false;
             var commandDoc = _doc;
+            int generation = _lispGeneration;
             _lispRunning = true;
+            UpdateSignFillAvailability();
             Status(label + ": đang chạy ...");
             AcadDispatcher.RunLisp(fn, args, r => UI(() =>
             {
-                if (_doc != commandDoc) return;
+                if (_doc != commandDoc || generation != _lispGeneration) return;
                 _lispRunning = false;
+                UpdateSignFillAvailability();
                 if (r.Ok) Status(label + ": xong. " + string.Join("; ", r.Values.Take(8).ToArray()));
                 else StatusError(label + ": LỖI - " + r.Error);
                 if (after != null) after(r);
                 RefreshAll(false);
             }));
+            return true;
         }
 
         private void SendCmd(string cmd)
@@ -334,7 +409,7 @@ namespace BHT.Palette
                     string detail = r.Ok && r.Values.Count > 0 ? string.Join("\r\n", r.Values.ToArray()) : "";
                     string upper = (cmd ?? "").ToUpperInvariant();
                     bool report = upper.Contains("BHTKT") || upper.Contains("BHTTRANGTHAI")
-                        || upper.Contains("BHTXUAT") || detail.Length > 220 || r.Values.Count > 3;
+                        || upper.Contains("BHTXUAT") || upper.Contains("BHTLYTRINH") || upper.Contains("BHTKM2COC") || upper.Contains("BHTMOCKM") || detail.Length > 220 || r.Values.Count > 3;
                     // Lisp da hien cua so cho loi nay (bht:err) -> Palette chi to mau, khong hien cua so thu hai.
                     if (state != "HUY" && firstError != null)
                     {
@@ -364,7 +439,7 @@ namespace BHT.Palette
         private void OnSelTimer(object sender, EventArgs e)
         {
             _selTimer.Stop();
-            if (_doc == null || _svc == null || _suppressSel) return;
+            if (_doc == null || _svc == null || _suppressSel || _signPicker != null) return;
             try
             {
                 var res = _doc.Editor.SelectImplied();
@@ -494,7 +569,7 @@ namespace BHT.Palette
 
         protected override void Dispose(bool disposing)
         {
-            if (disposing) { Unbind(); _selTimer.Dispose(); _probeTimer.Dispose(); _objectTips.Dispose(); ShowImage(null); }
+            if (disposing) { Unbind(false); _objectDrafts.Clear(); _selTimer.Dispose(); _probeTimer.Dispose(); _objectTips.Dispose(); ShowImage(null); }
             base.Dispose(disposing);
         }
     }

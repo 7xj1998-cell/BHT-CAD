@@ -31,6 +31,7 @@ BHT_LOG*
 *.zip
 # 5.0: ban sao phong chu (TDT / AutoCAD) chi dung cuc bo, KHONG dua vao repo
 fonts_local/
+ads_library_local/
 *.ttf
 *.shx
 
@@ -41,3 +42,6 @@ fonts_local/
 *.prv
 *-latest.txt
 build-verify.txt
+
+# Local build transcripts
+/build-*.txt

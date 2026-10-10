@@ -1,4 +1,4 @@
-;;; ----------------------------------------------------------------------
+﻿;;; ----------------------------------------------------------------------
 ;;; Ky hieu (lop the hien) - INSERT layer BHT_KYHIEU + TEXT layer BHT_NHAN
 ;;;  XData "BHT_KH":
 ;;;   0.3.2: (object_id) tren ca INSERT va TEXT.
@@ -40,7 +40,7 @@
 ;; Chon block theo ma hieu ho so. Bien the a,b,c... dung chung hinh tong quat
 ;; cua cung ma; gia tri so 20/40 cua P.127 duoc giu rieng neu co trong ma.
 (defun bht:tdt-block-name (code / s out i ch a under)
-  (setq s (strcase (bht:trim code)) out "BHT_TDT_V0610_" i 1 under nil)
+  (setq s (strcase (bht:trim code)) out "BHT_TDT_V0613_" i 1 under nil)
   (while (<= i (strlen s))
     (setq ch (substr s i 1) a (ascii ch))
     (if (or (and (>= a 48) (<= a 57)) (and (>= a 65) (<= a 90)))
@@ -87,6 +87,8 @@
   (if (= k "W239AS509A") (setq k "W239A"))
   (cond
     (tdt tdt)
+    ((and (vl-string-search "@" code) (= (strcase (substr code 1 (vl-string-search "@" code))) "S.505A"))
+      (vl-exit-with-error "Không có mẫu CAD S.505a để tạo biển trọng lượng; hãy nạp thư viện TDT."))
     ((or (vl-string-search "@" code) (member (strcase code) '("S.501" "S.502" "S.509A"))) (bht:bb-metre-native code))
     ((bht:bb-family-p k "W207") "BHT_KH_BB_W207_V044")
     ((bht:bb-family-p k "W209") "BHT_KH_BB_W209_V044")
@@ -446,14 +448,16 @@
 )
 
 ;; Xoa ky hieu (INSERT + TEXT mang BHT_KH) cua 1 ho so; oid nil = xoa MOI ky hieu BHT.
-(defun bht:symbol-delete (oid / ss i ent x n)
-  (setq ss (ssget "_X" (list '(-3 ("BHT_KH")))) i 0 n 0)
-  (if ss
-    (while (< i (sslength ss))
-      (setq ent (ssname ss i) x (bht:xget ent "BHT_KH"))
-      (if (or (null oid) (and x (= (strcase (car x)) (strcase oid))))
-        (progn (entdel ent) (setq n (1+ n))))
-      (setq i (1+ i))))
+(defun bht:symbol-delete (oid / ss i ent x n app)
+  (setq n 0)
+  (foreach app '("BHT_KH" "BHT_SIGN_ORIGIN")
+    (setq ss (ssget "_X" (list (list -3 (list app)))) i 0)
+    (if ss
+      (while (< i (sslength ss))
+        (setq ent (ssname ss i) x (bht:xget ent app))
+        (if (or (null oid) (and x (= (strcase (car x)) (strcase oid))))
+          (progn (entdel ent) (setq n (1+ n))))
+        (setq i (1+ i)))))
   n
 )
 
@@ -462,6 +466,12 @@
 )
 
 (defun bht:kh-scale (/ s) (setq s (bht:num (bht:meta "kh_scale" "1"))) (if (and s (> s 0)) s 1.0))
+(defun bht:sign-scale (/ s)
+  (setq s (bht:num (bht:meta "sign_scale" "")))
+  (if (and s (> s 0)) s (bht:kh-scale)))
+(defun bht:sign-label-scale (sc / s)
+  (setq s (bht:num (bht:meta "sign_label_scale" "")))
+  (if (and s (> s 0)) s sc))
 (defun bht:kh-h (/ s)
   (setq s (bht:num (bht:meta "kh_h" "0.35")))
   (if (and s (> s 0) (not (equal s 1.5 1e-8))) s 0.35))
@@ -478,7 +488,7 @@
   (list
     (list (+ (car pos) (* sc (- (* center (cos rot)) (* y (sin rot)))))
           (+ (cadr pos) (* sc (+ (* center (sin rot)) (* y (cos rot))))) (caddr pos))
-    (* 0.15 (min height 2.46) sc)))
+    (* 0.15 (min height 2.46) (bht:sign-label-scale sc))))
 (defun bht:sign-layers (/ e d)
   (bht:layer "BHT_KYHIEU" 7)
   (if (and (setq e (tblobjname "LAYER" "BHT_KYHIEU")) (= (cdr (assoc 62 (setq d (entget e)))) 1))
@@ -492,6 +502,7 @@
   (cond ((= group "BIEN_BAO") (bht:bb-block-for code))
         ((= group "COC_TIEU") "BHT_KH_COC_TIEU")
         ((= group "COT_KM") "BHT_KH_COT_KM_V0611")
+        ((member group '("DEN_CS" "DEN_TH")) "BHT_KH_DEN")
         (T (strcat "BHT_KH_" group)))
 )
 
@@ -563,11 +574,34 @@
   (if (bht:fn-defined-p 'BHTNATIVESIGNCODE)
     (setq result (vl-catch-all-apply 'BHTNATIVESIGNCODE (list (bht:get rec "ma_hieu") (bht:get rec "mo_ta")))))
   (if (= (type result) 'STR) result (bht:get rec "ma_hieu")))
-(defun bht:kh-base-block (rec / blk custom own codes count blocks value result)
+(defun bht:kh-missing-face-p (rec)
+  (and (= (bht:get rec "nhom") "BIEN_BAO") (= (bht:get rec "tinh_trang") "Mất mặt biển, còn trụ")))
+(defun bht:kh-missing-block (rec / n i x shapes name half caption box width)
+  (setq n (max 1 (min 100 (bht:int (bht:get rec "so_tru")))) i 0 shapes nil
+        name (strcat "BHT_MISSING_FACE_V0651_" (itoa n))
+        half (max 1.2 (+ 0.3 (* 0.35 (- n 1)))))
+  ;; A framed notice uses the same foot origin and post spacing as the old symbol.
+  (repeat n
+    (setq x (* 0.7 (- i (/ (- n 1) 2.0)))
+          shapes (append shapes (list (bht:line-g (list x 0.0 0.0) (list x 0.6 0.0))
+             (append (bht:circle-g (list x 0.0 0.0) 0.06) '((60 . 1))))) i (1+ i)))
+  (setq caption (bht:text-center-color-g "Trụ mất biển" '(0.0 1.2 0.0) 0.22 7)
+        box (textbox caption)
+        width (if box (abs (- (caadr box) (caar box))) 0.0))
+  (if (> width (- (* 2.0 half) 0.24))
+    (setq caption (bht:dxf-put caption 40 (* 0.22 (/ (- (* 2.0 half) 0.24) width)))))
+  (setq shapes (append shapes
+    (bht:poly-color-g (list (list (- half) 0.6 0.0) (list half 0.6 0.0)
+                           (list half 1.8 0.0) (list (- half) 1.8 0.0)) 7)
+    (list caption)))
+  (bht:block name shapes)
+  name)
+(defun bht:kh-base-block (rec / blk custom own codes count blocks value result poles layout idx gap clearance)
   (bht:symbol-blocks)
   (setq own (bht:get rec "custom_block")
         custom (bht:meta (bht:kh-custom-key (bht:get rec "nhom")) ""))
   (cond
+    ((bht:kh-missing-face-p rec) (bht:kh-missing-block rec))
     ((and (/= own "") (tblsearch "BLOCK" own)) own)
     ((and (/= custom "") (tblsearch "BLOCK" custom)) custom)
     (T
@@ -576,27 +610,58 @@
       (if (and (= (strcase (bht:get rec "ma_hieu")) "I.439") (setq result (bht:bridge-sign-block rec))) (setq blk result))
       (if (and (= (bht:get rec "nhom") "COT_KM") (/= (bht:get rec "marker_km") "") (bht:fn-defined-p 'BHTMILESTONE))
         (setq blk (BHTMILESTONE (bht:get rec "marker_km"))))
+      (if (member (bht:get rec "nhom") '("BANG_QC" "KHAC" "CHUA_XAC_DINH"))
+        (setq blk (bht:named-board-block rec)))
       (if (null blk) (setq blk (bht:kh-default-block (bht:get rec "nhom") (bht:effective-sign-code rec))))
       (if (= (bht:get rec "nhom") "BIEN_BAO")
         (progn
-          (setq codes (bht:get-all rec "mat") count (bht:int (bht:get rec "so_mat")))
+          (setq codes (bht:get-all rec "mat") count (bht:int (bht:get rec "so_mat"))
+                layout (bht:get rec "sign_layout"))
+          (if (= layout "") (setq layout "LEGACY"))
           (if (null codes) (setq codes (list (bht:get rec "ma_hieu"))))
           (if (or (> count 20) (> (length codes) 20)) (vl-exit-with-error "Một trụ hỗ trợ tối đa 20 mặt biển."))
           (while (and (< (length codes) count) (< (length codes) 20)) (setq codes (append codes (list (car codes)))))
-          (if (and (> (length codes) 1) (not (bht:fn-defined-p 'BHTSIGNASSEMBLY)))
-            (vl-exit-with-error "Nạp BHT.Bridge.dll trước khi chèn cụm nhiều mặt biển."))
-          (if (and (> (length codes) 1) (bht:fn-defined-p 'BHTSIGNASSEMBLY))
+          (if (or (> (length codes) 1) (/= (bht:get rec "sign_content") "") (/= layout "LEGACY"))
             (progn
-              (setq blocks nil)
+              (setq blocks nil idx 0)
               (foreach value codes
-                (setq result (if (= (strcase value) "I.439") (bht:bridge-sign-block rec) nil))
+                (setq result (if (= (length codes) 1) blk
+                  (if (= (strcase value) "I.439") (bht:bridge-sign-block rec) nil)))
                 (if (null result) (setq result (bht:tdt-import-block value (bht:get rec "mo_ta"))))
                 (if (null result) (setq result (bht:kh-default-block "BIEN_BAO" value)))
-                (setq blocks (append blocks (list result))))
-              (setq result (vl-catch-all-apply 'BHTSIGNASSEMBLY (list (bht:join blocks ";"))))
+                (if (/= (bht:get rec "sign_content") "")
+                  (progn
+                    (if (not (bht:fn-defined-p 'BHTSIGNCONTENT)) (vl-exit-with-error "Nạp BHT.Bridge.dll để áp dụng nội dung biển."))
+                    (setq result (BHTSIGNCONTENT result value idx (bht:get rec "sign_content")))))
+                (setq blocks (append blocks (list result)) idx (1+ idx)))
+              (if (/= layout "LEGACY")
+                (progn
+                  (if (not (bht:fn-defined-p 'BHTSIGNLAYOUT)) (vl-exit-with-error "Nạp BHT.Bridge.dll để bố trí CAP1."))
+                  (setq gap (if (= (bht:get rec "sign_gap") "") 0.2 (bht:num (bht:get rec "sign_gap")))
+                        clearance (if (= (bht:get rec "sign_clearance") "") 0.6 (bht:num (bht:get rec "sign_clearance"))))
+                  (setq result (BHTSIGNLAYOUT (bht:join blocks ";") layout gap clearance)))
+                (progn
+                  (if (not (bht:fn-defined-p 'BHTSIGNASSEMBLY)) (vl-exit-with-error "Nạp BHT.Bridge.dll để chèn nhiều mặt."))
+                  (setq result (BHTSIGNASSEMBLY (bht:join blocks ";")))))
               (if (and (= (type result) 'STR) (tblsearch "BLOCK" result)) (setq blk result)
-                (vl-exit-with-error "Không tạo được đủ các mặt biển. Kiểm tra thư viện hoặc BHT.Bridge.dll."))))))
+                (vl-exit-with-error "Không tạo được cụm biển. Kiểm tra nội dung và bố trí CAP1."))))))
+      (if (and (member (bht:get rec "nhom") '("BIEN_BAO" "BANG_QC" "KHAC" "CHUA_XAC_DINH"))
+               (or (null layout) (= layout "LEGACY"))
+               (setq poles (bht:int (bht:get rec "so_tru"))) (/= poles 1))
+        (progn
+          (if (not (bht:fn-defined-p 'BHTSIGNPOSTS))
+            (vl-exit-with-error "Nạp BHT.Bridge.dll bản mới để vẽ đúng số trụ/chân."))
+          (setq result (vl-catch-all-apply 'BHTSIGNPOSTS (list blk poles)))
+          (if (and (= (type result) 'STR) (tblsearch "BLOCK" result)) (setq blk result)
+            (vl-exit-with-error "Không tạo được số trụ/chân đã nhập (0–100). Kiểm tra BHT.Bridge.dll."))))
       (if (tblsearch "BLOCK" blk) blk "BHT_KH_CHUA_XAC_DINH"))))
+
+(defun bht:named-board-block (rec / title)
+  (if (not (bht:fn-defined-p 'BHTNAMEDBOARD))
+    (vl-exit-with-error "Nạp BHT.Bridge.dll bản mới trước khi chèn bảng tên."))
+  (setq title (if (= (bht:get rec "nhom") "CHUA_XAC_DINH") "Chưa xác định" (vl-string-trim " " (bht:get rec "mo_ta"))))
+  (if (= title "") (setq title (bht:group-label (bht:get rec "nhom"))))
+  (BHTNAMEDBOARD title (bht:kh-label-style title)))
 
 (defun bht:bridge-sign-block (rec / name station road style)
   (if (and (/= (bht:get rec "bridge_name") "") (bht:fn-defined-p 'BHTBRIDGESIGN))
@@ -605,9 +670,14 @@
             style (bht:kh-label-style (strcat name station road)))
       (BHTBRIDGESIGN name station road style))))
 
+;; All displayed sign/board groups share the drawing sign scale.
+(defun bht:kh-sign-scale-p (rec)
+  (member (bht:get rec "nhom") '("BIEN_BAO" "BANG_CHI_DAN" "BANG_QC" "KHAC" "CHUA_XAC_DINH")))
+(defun bht:kh-fillable-p (rec) (bht:kh-sign-scale-p rec))
+
 (defun bht:kh-block (rec / blk result)
   (setq blk (bht:kh-base-block rec))
-  (if (and (= (bht:get rec "nhom") "BIEN_BAO") (= (bht:meta "sign_fill_all" "1") "0"))
+  (if (and (bht:kh-fillable-p rec) (= (bht:meta "sign_fill_all" "1") "0"))
     (progn
       (setq result (if (bht:fn-defined-p 'BHTSIGNOUTLINE)
                      (vl-catch-all-apply 'BHTSIGNOUTLINE (list blk)) nil))
@@ -616,10 +686,18 @@
         result))
     blk))
 
+(defun bht:kh-light-p (rec)
+  (member (bht:get rec "nhom") '("DEN" "DEN_CS" "DEN_TH")))
+
+;; Presentation multiplier only; never changes surveyed coordinates or source DWGs.
+(defun bht:kh-light-factor (rec) (if (bht:kh-light-p rec) 4.0 1.0))
+
 (defun bht:kh-scale-for (rec / custom f)
   (setq custom (bht:meta (bht:kh-custom-key (bht:get rec "nhom")) "")
         f (bht:num (bht:meta (bht:kh-custom-factor-key (bht:get rec "nhom")) "1")))
-  (* (bht:kh-scale) (if (and (= (bht:get rec "custom_block") "") (/= custom "") f (> f 0.0)) f 1.0))
+  (* (if (bht:kh-sign-scale-p rec) (bht:sign-scale) (bht:kh-scale))
+     (bht:kh-light-factor rec)
+     (if (and (= (bht:get rec "custom_block") "") (/= custom "") f (> f 0.0)) f 1.0))
 )
 
 (defun bht:all-zero-p (s / ok i)
@@ -638,7 +716,7 @@
   (if (and (>= (strlen upper) (strlen prefix)) (= (substr upper 1 (strlen prefix)) prefix))
     (setq value (substr value (1+ (strlen prefix))) upper (strcase value)))
   (if (and (= group "BIEN_BAO") (setq dot (vl-string-search "@" value)))
-    (setq value (strcat (substr value 1 dot) " (" (substr value (+ dot 2)) (if (vl-string-search ":" value) ")" " m)"))))
+    (setq value (strcat (substr value 1 dot) " (" (substr value (+ dot 2)) (cond ((vl-string-search ":" value) ")") ((= (strcase (substr value 1 dot)) "S.505A") "T)") (T " m)")))))
   (if (= (substr upper 1 (min 2 (strlen upper))) "KM")
     (progn
       (setq value (vl-string-trim " " (substr value 3))
@@ -651,16 +729,29 @@
     value)
 )
 
+(defun bht:kh-sign-codes (rec / codes count)
+  (setq codes (vl-remove-if '(lambda (code) (= (vl-string-trim " " code) "")) (bht:get-all rec "mat"))
+        count (bht:int (bht:get rec "so_mat")))
+  (setq count (if (numberp count) (min 20 count) 0))
+  (if (null codes) (setq codes (list (bht:effective-sign-code rec))))
+  (while (< (length codes) count) (setq codes (append codes (list (car codes)))))
+  codes)
+
 (defun bht:kh-label (oid rec / group code chainage detail)
   ;; Nhan hien thi la ten nghiep vu + ma/ly trinh; object_id chi giu trong XData.
   (setq group (bht:get rec "nhom")
         code (bht:get rec "ma_hieu")
         chainage (bht:get rec "ly_trinh_km")
+        code (if (= group "BIEN_BAO") (car (bht:kh-sign-codes rec)) code)
         detail (cond ((/= code "") (bht:kh-code-label group code))
                      ((/= chainage "") (bht:kh-code-label group chainage))
                      (T "")))
   (cond
-    ((= group "COT_KM") "")
+    ((bht:kh-missing-face-p rec) "")
+    ((or (= group "COT_KM") (bht:kh-light-p rec)) "")
+    ((and (member group '("BANG_QC" "KHAC" "CHUA_XAC_DINH"))
+          (= (bht:get rec "custom_block") "")
+          (= (bht:meta (bht:kh-custom-key group) "") "")) "")
     ((and (= group "COC_TIEU") (/= (bht:get rec "marker_km") "") (/= (bht:get rec "marker_h") ""))
       (strcat "H" (bht:get rec "marker_h") "/" (bht:get rec "marker_km")))
     ((and (= group "COC_TIEU") (= chainage "")) "")
@@ -675,8 +766,11 @@
   (setq blk (bht:kh-base-block rec)
         heading (cond ((member blk '("BHT_KH_COC_TIEU" "BHT_KH_COT_KM_V043" "BHT_KH_COT_KM_V0611")) pi)
                       ((wcmatch blk "BHT_KH_COT_KM_V0611_*") pi)
+                      ((or (wcmatch blk "BHT_BOARD_V*,BHT_LIGHT_*")
+                           (and (member (bht:get rec "nhom") '("BANG_QC" "KHAC" "CHUA_XAC_DINH"))
+                                (wcmatch blk "BHT_SUPPORT_*"))) (/ pi 2.0))
                       ((and (= (bht:get rec "nhom") "BIEN_BAO")
-                            (wcmatch blk "BHT_TDT_*,BHT_I439_*,BHT_KH_BB_*,BHT_KH_BIEN_BAO_*,BHT_SIGN_*,BHT_ASSEMBLY_*")) (/ pi 2.0))
+                            (wcmatch blk "BHT_ADS_*,BHT_TDT_*,BHT_I439_*,BHT_KH_BB_*,BHT_KH_BIEN_BAO_*,BHT_SIGN_*,BHT_ASSEMBLY_*,BHT_SUPPORT_*")) (/ pi 2.0))
                       (T 0.0)))
   (- (atan (- (cadr direction-point) (cadr target)) (- (car direction-point) (car target))) heading))
 
@@ -728,8 +822,12 @@
            (setq z (bht:num (bht:get rec "kh_free_z")))
            (setq r (bht:num (bht:get rec "kh_free_rot"))))
     (list (list x y z) r)))
-(defun bht:kh-auto-transform (rec pos sc / free)
-  (if (setq free (bht:kh-free-transform rec)) free (bht:kh-route-transform rec pos sc)))
+(defun bht:kh-auto-transform (rec pos sc / free result heading)
+  ;; Sign size is independent of its offset from the surveyed point.
+  (if (bht:kh-sign-scale-p rec) (setq sc (* (/ sc (bht:sign-scale)) (bht:kh-scale))))
+  (setq sc (/ sc (bht:kh-light-factor rec)))
+  (setq result (if (setq free (bht:kh-free-transform rec)) free (bht:kh-route-transform rec pos sc)))
+  (if (and result (setq heading (bht:kh-orientation-angle rec pos))) (list (car result) heading) result))
 (defun bht:kh-via-points (rec / out value nums)
   (setq out nil)
   (if (= (bht:get rec "kh_mode") "TU_DO")
@@ -738,7 +836,7 @@
       (if (and (= (length nums) 3) (vl-every 'numberp nums)) (setq out (append out (list nums))))))
   out)
 (defun bht:kh-free-clear (rec)
-  (vl-remove-if '(lambda (pair) (member (car pair) '("kh_mode" "kh_free_x" "kh_free_y" "kh_free_z" "kh_free_rot" "kh_via"))) rec))
+  (vl-remove-if '(lambda (pair) (member (car pair) '("kh_mode" "kh_free_x" "kh_free_y" "kh_free_z" "kh_free_rot" "kh_via" "sign_heading_mode" "sign_heading_route" "sign_heading_angle"))) rec))
 ;; Called after every input succeeds. No drawing changes during interactive picking.
 (defun bht:kh-free-apply (oid target rot via / rec d pair pt)
   (setq rec (bht:obj-read oid))
@@ -756,7 +854,18 @@
           (progn (setq d (entget (cdr pr)))
             (entmod (append d (list (bht:kh-xdata-ins oid "TU_DONG" (cdr (assoc 10 d)) (cdr (assoc 50 d)) (cdr (assoc 41 d)))))))))
       (bht:symbol-sync (list oid)))))
-(defun bht:kh-place-free (oid / rec source base angle0 rotation picked via cursor done target dir)
+(defun bht:kh-pick-target (source cursor / picked done prompt)
+  (setq done nil prompt "\nVị trí ký hiệu [Goc/Tuychon] (G = tâm X gốc, T = chọn vị trí; Enter = hủy): ")
+  (while (not done)
+    (initget "Goc Tuychon")
+    (setq picked (getpoint cursor prompt))
+    (cond
+      ((= picked "Goc") (setq picked (trans source 0 1) done T))
+      ((= picked "Tuychon") (setq prompt "\nChọn vị trí tùy ý [Goc/Tuychon] (Enter = hủy): "))
+      (T (setq done T))))
+  picked)
+
+(defun bht:kh-place-free (oid / rec source base angle0 rotation picked via cursor done target dir at-origin)
   (setq oid (strcase (bht:trim (bht:str oid))) rec (bht:obj-read oid))
   (cond
     ((null rec) (list 'LOI "Không có hồ sơ này."))
@@ -768,38 +877,54 @@
       ;; UCS angle -> WCS block rotation, without ANGBASE/ANGDIR assumptions.
       (setq dir (trans (list (cos angle0) (sin angle0) 0.0) 1 0 T) rotation (bht:kh-picked-rotation rec source (mapcar '+ source dir)))
       (while (not done)
-        (initget "Dat Xoa")
-        (setq picked (getpoint cursor "\nĐiểm trung gian hoặc [Dat ký hiệu/Xoa điểm cuối] <Dat ký hiệu>: "))
+        (initget "Dat Xoa Goc Tuychon")
+        (setq picked (getpoint cursor "\nĐiểm trung gian hoặc [Dat/Xoa/Goc/Tuychon] (G = tâm X, T = vị trí tùy ý) <Dat>: "))
         (cond
           ((or (null picked) (= picked "Dat")) (setq done T))
+          ((= picked "Goc") (setq done T at-origin T via nil))
+          ((= picked "Tuychon") (setq done T))
           ((= picked "Xoa") (if via (setq via (reverse (cdr (reverse via))))) (setq cursor (if via (trans (last via) 0 1) base)))
           ((listp picked) (setq via (append via (list (trans picked 1 0))) cursor picked))))
-      (if (setq target (getpoint cursor "\nChọn vị trí đặt ký hiệu (Enter = hủy): "))
-        (progn (setq target (trans target 1 0)) (bht:kh-free-apply oid target rotation via))
+      (if (setq target (if at-origin base (bht:kh-pick-target source cursor)))
+        (progn (setq target (trans target 1 0))
+          (if (equal target source 1e-8) (setq via nil))
+          (bht:kh-free-apply oid target rotation via))
         (list 'HUY)))))
-(defun bht:kh-place-options (oid mode direction degrees / rec source target rot via route picked dir ang cursor done)
+(defun bht:kh-place-options (oid mode direction degrees / rec source target rot via route picked dir ang cursor done at-origin rid heading result)
   (setq oid (strcase (bht:trim (bht:str oid))) rec (bht:obj-read oid))
   (cond
     ((null rec) (list 'LOI "Không có hồ sơ này."))
     ((not (member mode '("DIRECT" "ELBOW" "WAYPOINT"))) (list 'LOI "Chế độ đặt ký hiệu không hợp lệ."))
-    ((not (member direction '("HORIZONTAL" "ROUTE" "PICK" "ANGLE"))) (list 'LOI "Hướng ký hiệu không hợp lệ."))
+    ((not (member direction '("HORIZONTAL" "ROUTE" "ROUTE_PERP" "PICK" "ANGLE"))) (list 'LOI "Hướng ký hiệu không hợp lệ."))
     ((and (= direction "ANGLE") (null (bht:num degrees))) (list 'LOI "Góc nhập không hợp lệ."))
     ((null (setq source (bht:obj-position rec (bht:pt-all)))) (list 'LOI "Hồ sơ chưa có điểm RTK hợp lệ."))
+    ((and (= direction "ROUTE_PERP")
+       (progn
+         (setq rid (bht:get rec "sign_heading_route"))
+         (if (not (bht:route-read rid)) (setq rid (bht:get rec "route_id")))
+         (if (not (bht:route-read rid)) (setq rid (bht:ask-route)))
+         (setq heading (if rid (bht:kh-route-heading rec rid source) nil))
+         (null heading)))
+      (list 'LOI "Không xác định được hướng tuyến tại điểm RTK. Kiểm tra tuyến đã chọn, hình học và khoảng cách tối đa; chưa thay đổi biển."))
     (T
       (setq via nil cursor (trans source 0 1) done nil)
       (if (= mode "WAYPOINT")
         (while (not done)
-          (initget "Dat Xoa")
-          (setq picked (getpoint cursor "\nĐiểm trung gian hoặc [Dat/Xoa điểm cuối] <Dat>: "))
+          (initget "Dat Xoa Goc Tuychon")
+          (setq picked (getpoint cursor "\nĐiểm trung gian hoặc [Dat/Xoa/Goc/Tuychon] (G = tâm X, T = vị trí tùy ý) <Dat>: "))
           (cond
             ((or (null picked) (= picked "Dat")) (setq done T))
+            ((= picked "Goc") (setq done T at-origin T via nil))
+            ((= picked "Tuychon") (setq done T))
             ((= picked "Xoa") (if via (setq via (reverse (cdr (reverse via))))) (setq cursor (if via (trans (last via) 0 1) (trans source 0 1))))
             (T (setq via (append via (list (trans picked 1 0))) cursor picked)))))
-      (if (null (setq picked (getpoint cursor "\nChọn vị trí ký hiệu (Enter = hủy): "))) (list 'HUY)
+      (if (null (setq picked (if at-origin (trans source 0 1) (bht:kh-pick-target source cursor)))) (list 'HUY)
         (progn
           (setq target (trans picked 1 0) rot 0.0 ang nil)
+          (if (equal target source 1e-8) (setq via nil))
           (cond
             ((= direction "ROUTE") (setq route (bht:kh-route-transform rec source (bht:kh-scale)) rot (if route (cadr route) 0.0)))
+            ((= direction "ROUTE_PERP") (setq rot (+ heading (/ pi 2.0))))
             ((= direction "ANGLE") (setq rot (* pi (/ (bht:num degrees) 180.0))))
             ((= direction "PICK")
               (setq ang (getpoint picked "\nChọn hướng đầu ký hiệu (Enter = hủy): "))
@@ -809,7 +934,15 @@
             (progn
               (if (and (= mode "ELBOW") (not (equal (car source) (car target) 1e-8)) (not (equal (cadr source) (cadr target) 1e-8)))
                 (setq via (list (list (car source) (cadr target) (caddr source)))))
-              (bht:kh-free-apply oid target rot via))))))))
+              (setq result (bht:kh-free-apply oid target rot via))
+              (if (and (= direction "ROUTE_PERP") (= (bht:get rec "nhom") "BIEN_BAO"))
+                (progn
+                  (setq rec (bht:obj-read oid)
+                        rec (bht:set rec "sign_heading_mode" "ROUTE_PERP")
+                        rec (bht:set rec "sign_heading_route" rid)
+                        rec (bht:set rec "sign_heading_angle" ""))
+                  (bht:obj-write oid rec)))
+              result)))))))
 (defun c:BHTDATTUDO (/ *error* oid r)
   (setq *error* bht:on-error)
   (bht:ensure-model)
@@ -831,13 +964,140 @@
   (list -3 (list "BHT_KH" (cons 1000 oid) (cons 1000 "DAN")))
 )
 
+;; The visible head follows the A->B tangent, independent of the road side.
+(defun bht:kh-route-heading (rec route-id pos / route ent projected tangent param dir)
+  (if (and pos (setq route (bht:route-read route-id)) (setq ent (bht:route-ent route))
+           (setq projected (bht:route-project route ent pos))
+           (<= (cadr projected) (if (bht:num (bht:get route "max_offset")) (bht:num (bht:get route "max_offset")) 100.0)))
+    (progn
+      (setq param (vl-catch-all-apply 'vlax-curve-getParamAtDist (list ent (nth 4 projected))))
+      (if (not (vl-catch-all-error-p param))
+        (progn
+          (setq tangent (vl-catch-all-apply 'vlax-curve-getFirstDeriv (list ent param))
+                dir (if (= (bht:int (bht:get route "direction")) -1) -1.0 1.0))
+          (if (and tangent (not (vl-catch-all-error-p tangent))
+                   (> (+ (abs (car tangent)) (abs (cadr tangent))) 1e-9))
+            (bht:kh-picked-rotation rec '(0.0 0.0 0.0)
+              (list (* dir (car tangent)) (* dir (cadr tangent)) 0.0))))))))
+
+(defun bht:kh-orientation-angle (rec pos / mode bearing angle)
+  (if (= (bht:get rec "nhom") "BIEN_BAO")
+    (progn
+      (setq mode (bht:get rec "sign_heading_mode"))
+      (cond
+        ((member mode '("ROUTE" "ROUTE_PERP"))
+          (setq angle (bht:kh-route-heading rec (bht:get rec "sign_heading_route") pos))
+          (if angle (+ angle (if (= mode "ROUTE_PERP") (/ pi 2.0) 0.0))))
+        ((and (member mode '("FIXED" "FIXED_PERP")) (setq bearing (bht:num (bht:get rec "sign_heading_angle"))))
+          (+ (bht:kh-picked-rotation rec '(0.0 0.0 0.0) (list (cos bearing) (sin bearing) 0.0)) (if (= mode "FIXED_PERP") (/ pi 2.0) 0.0)))))))
+
+;; Only placed signs are rotated. All transforms, survey data and waypoints are retained.
+(defun bht:kh-heading-apply (ids mode route-id bearing / rec pos angle valid skipped index existing oid unique)
+  (setq index (bht:pt-all) existing (mapcar 'car (bht:tagged-pairs "INSERT" "BHT_KH" 1)) valid nil skipped nil)
+  (if (or (not (member mode '("ROUTE" "FIXED" "ROUTE_PERP" "FIXED_PERP"))) (and (member mode '("FIXED" "FIXED_PERP")) (not (numberp bearing)))
+          (and (member mode '("ROUTE" "ROUTE_PERP")) (not (bht:route-read route-id))))
+    (list 'LOI "Chọn tuyến hợp lệ hoặc hai điểm hướng khác nhau.")
+    (progn
+      (foreach oid ids (setq unique (bht:unique-add unique (strcase oid))))
+      (foreach oid unique
+        (setq rec (bht:obj-read oid) pos (if rec (bht:obj-position rec index) nil) angle nil)
+        (if (and rec (= (bht:get rec "nhom") "BIEN_BAO") (member oid existing)
+                 (or (member mode '("FIXED" "FIXED_PERP")) (= (bht:get rec "route_id") "") (= (strcase (bht:get rec "route_id")) (strcase route-id))))
+          (progn
+            (setq rec (bht:set (bht:set (bht:set rec "sign_heading_mode" mode) "sign_heading_route" (if (member mode '("ROUTE" "ROUTE_PERP")) route-id ""))
+                          "sign_heading_angle" (if (member mode '("FIXED" "FIXED_PERP")) (bht:fnum bearing 8) ""))
+                  angle (bht:kh-orientation-angle rec pos))
+            (if angle (progn (bht:obj-write oid rec) (setq valid (cons oid valid))))))
+        (if (null angle) (setq skipped (cons oid skipped))))
+      (if valid
+        ((lambda (/ *bht-preserve-symbol-placement* *bht-apply-sign-heading*)
+           (setq *bht-preserve-symbol-placement* T *bht-apply-sign-heading* T)
+           (bht:symbol-sync-ex valid nil))))
+      (list (cons 'rotated (length valid)) (cons 'skipped (length skipped)) (cons 'skipped_ids (bht:join (reverse skipped) ", "))))))
+
+(defun bht:kh-heading-selection (ss / i e x ids owners)
+  (setq ids nil i 0 owners (bht:pt-owner-map))
+  (if ss (repeat (sslength ss)
+    (setq e (ssname ss i) x (bht:xget e "BHT_KH"))
+    (if (null x) (setq x (bht:xget e "BHT_SIGN_ORIGIN")))
+    (if x (setq ids (bht:unique-add ids (strcase (car x))))
+      (if (setq x (bht:xget e "BHT_PT")) (foreach oid (cdr (assoc (strcase (car x)) owners)) (setq ids (bht:unique-add ids oid)))))
+    (setq i (1+ i))))
+  ids)
+
+(defun c:BHTHUONGBIEN (/ *error* mode scope route-id a b ids result started)
+  (defun *error* (msg) (if started (command-s "_.UNDO" "_End")) (bht:on-error msg))
+  (setq mode (strcase (bht:ask-string "Xoay biển vuông góc [T=Theo tuyến/H=Chọn hướng A-B]" "T")))
+  (setq mode (substr mode 1 1))
+  (cond
+    ((= mode "T") (setq route-id (bht:ask-route) mode "ROUTE_PERP"))
+    ((= mode "H")
+      (if (and (setq a (getpoint "\nChọn A của hướng chung: ")) (setq b (getpoint a "\nChọn B (đầu biển vuông góc về bên trái A -> B; đổi A/B để đảo phía): "))
+               (> (distance a b) 1e-8))
+        (setq a (trans a 1 0) b (trans b 1 0) mode "FIXED_PERP") (setq mode nil)))
+    (T (setq mode nil)))
+  (if (and mode (or (= mode "FIXED_PERP") route-id))
+    (progn
+      (setq scope (strcase (bht:ask-string "Phạm vi [A=Tất cả biển phù hợp/C=Chọn trên CAD]" "A")))
+      (setq scope (substr scope 1 1))
+      (cond ((= scope "A") (setq ids (vl-remove-if-not '(lambda (oid) (= (bht:get (bht:obj-read oid) "nhom") "BIEN_BAO")) (bht:obj-ids))))
+            ((= scope "C") (bht:msg "Chọn các ký hiệu/nhãn/dấu gốc hoặc điểm RTK của biển cần xoay.")
+              (setq ids (bht:kh-heading-selection (ssget)))))
+      (if ids
+        (progn
+          (if (= 0 (logand 8 (getvar "UNDOCTL")))
+            (progn (command-s "_.UNDO" "_Begin") (setq started T)))
+          (setq result (bht:kh-heading-apply ids mode route-id (if (= mode "FIXED_PERP") (atan (- (cadr b) (cadr a)) (- (car b) (car a))) nil)))
+          (if started (command-s "_.UNDO" "_End")) (setq started nil)
+          (if (eq (car result) 'LOI) (bht:warn (cadr result))
+            (bht:msg (strcat "Đã xoay " (itoa (cdr (assoc 'rotated result))) " biển; bỏ qua " (itoa (cdr (assoc 'skipped result)))
+              ". Vị trí/tỷ lệ biển và điểm RTK giữ nguyên."
+              (if (> (cdr (assoc 'skipped result)) 0) (strcat " ID bỏ qua: " (cdr (assoc 'skipped_ids result))) "")))))
+        (bht:msg "Không có biển được chọn; chưa đổi hướng."))))
+  (bht:log-flush) (princ))
+
+;; Independent filled disk at each survey X, also when the sign is placed at G.
+;; A two-arc wide polyline makes an exact disk (outer radius 0.07, inner radius 0).
+(defun bht:kh-origin-block ()
+  (bht:block "BHT_SIGN_ORIGIN_V0634"
+    '(((0 . "LWPOLYLINE") (100 . "AcDbEntity") (8 . "0") (62 . 0)
+       (100 . "AcDbPolyline") (90 . 2) (70 . 1) (43 . 0.07)
+       (10 -0.035 0.0) (42 . 1.0) (10 0.035 0.0) (42 . 1.0)))))
+
+(defun bht:kh-origin-sync (oid rec index anchor existing / used pid key p pt e d nd nx blk sc removed)
+  (setq used nil removed 0)
+  (if (and anchor (or (= (bht:get rec "nhom") "BIEN_BAO") (bht:kh-multiple-supports-p rec)))
+    (progn
+      (setq blk (bht:kh-origin-block) sc (cadr anchor))
+      (foreach pid (bht:get-all rec "pt")
+        (setq key (strcase pid))
+        (if (and (not (member key used)) (setq p (bht:pt-find key index)))
+          (progn
+            (setq pt (bht:pv p 'xyz)
+                  e (car (vl-remove-if-not '(lambda (item) (= (cadr (bht:xget item "BHT_SIGN_ORIGIN")) key)) existing)))
+            (if (null e) (setq e (bht:insert blk pt "BHT_KYHIEU" sc)))
+            (if e
+              (progn
+                (setq d (entget e)
+                      nd (bht:dxf-put (bht:dxf-put (bht:dxf-put (bht:dxf-put (bht:dxf-put
+                           (bht:dxf-put (bht:dxf-put (bht:dxf-put d 2 blk) 8 "BHT_KYHIEU") 10 pt)
+                           41 sc) 42 sc) 43 sc) 50 0.0) 62 7)
+                      nx (list -3 (list "BHT_SIGN_ORIGIN" (cons 1000 oid) (cons 1000 key))))
+                (if (not (bht:ent-same-p e d nd nx)) (progn (entmod (append nd (list nx))) (entupd e)))
+                (setq used (cons key used) existing (vl-remove e existing)))))))))
+  (foreach e existing (if (entget e) (progn (entdel e) (setq removed (1+ removed)))))
+  removed)
+
 ;; Dong bo mot duong dan. Tra ve so ban trung/thua da xoa.
 (defun bht:kh-leader-xy (points)
   (mapcar '(lambda (pt) (list (car pt) (cadr pt))) points))
 (defun bht:kh-leader-matches-p (d points elevation)
   (and (equal (mapcar 'cdr (vl-remove-if-not '(lambda (pair) (= (car pair) 10)) d)) (bht:kh-leader-xy points) 1e-8)
        (equal (cdr (assoc 38 d)) elevation 1e-8)))
-(defun bht:kh-leader-sync-one (oid a b ents via / e d nd n points kind)
+(defun bht:kh-leader-sync-one (oid a b ents via)
+  (bht:kh-leader-sync-source oid a b ents via nil))
+
+(defun bht:kh-leader-sync-source (oid a b ents via source / e e2 d nd n points kind nx)
   (setq e (car ents) n 0)
   (foreach e2 (cdr ents) (if (entget e2) (progn (entdel e2) (setq n (1+ n)))))
   (setq points (if (and a b) (append (list a) via (list b)) nil)
@@ -858,11 +1118,82 @@
             (mapcar '(lambda (pt) (cons 10 (list (car pt) (cadr pt)))) points))
           (list '(0 . "LINE") '(410 . "Model") '(8 . "BHT_DUONG_DAN") (cons 10 a) (cons 11 b)))))
       (setq nd (bht:dxf-put nd 8 "BHT_DUONG_DAN"))
+      (if source (setq nd (bht:dxf-put (bht:dxf-put (bht:dxf-put nd 62 7) 6 "Continuous") 370 9)))
+      (setq nx (bht:kh-leader-xdata oid))
+      (if source (setq nx (list -3 (append (cadr nx) (list (cons 1000 source))))))
       (if e
-        (if (not (equal nd d)) (progn (entmod (append nd (list (bht:kh-leader-xdata oid)))) (entupd e)))
-        (entmakex (append nd (list (bht:kh-leader-xdata oid))))))
+        (if (not (bht:ent-same-p e d nd nx)) (progn (entmod (append nd (list nx))) (entupd e)))
+        (entmakex (append nd (list nx)))))
     (if (and e (entget e)) (progn (entdel e) (setq n (1+ n)))))
   n)
+
+(defun bht:kh-multiple-supports-p (rec / count)
+  (and (member (bht:get rec "nhom") '("BIEN_BAO" "BANG_QC" "KHAC" "CHUA_XAC_DINH"))
+       (setq count (bht:int (bht:get rec "so_tru"))) (> count 1)))
+
+(defun bht:kh-foot-world (pt anchor / scale angle origin)
+  (setq origin (car anchor) scale (cadr anchor) angle (caddr anchor))
+  (list (+ (car origin) (* scale (- (* (car pt) (cos angle)) (* (cadr pt) (sin angle)))))
+        (+ (cadr origin) (* scale (+ (* (car pt) (sin angle)) (* (cadr pt) (cos angle)))))
+        (+ (caddr origin) (* scale (caddr pt)))))
+
+ ;; Route leaders behind the feet in the sign's local axes, never through the face.
+(defun bht:kh-support-via (source target anchor / a dx dy x y gap rail z)
+  (setq a (caddr anchor) dx (- (car source) (car target)) dy (- (cadr source) (cadr target))
+        x (+ (* dx (cos a)) (* dy (sin a)))
+        y (+ (* (- dx) (sin a)) (* dy (cos a))) z (caddr source)
+        gap (* 0.25 (cadr anchor)))
+  (cond ((< (abs x) 1e-8) nil)
+    ((<= y (- gap))
+      (list (list (- (car source) (* x (cos a))) (- (cadr source) (* x (sin a))) z)))
+    (T
+      (setq rail (min (- gap) (- y gap)))
+      (list
+        (list (+ (car target) (* x (cos a)) (* (- rail) (sin a)))
+              (+ (cadr target) (* x (sin a)) (* rail (cos a))) z)
+        (list (+ (car target) (* (- rail) (sin a))) (+ (cadr target) (* rail (cos a))) z)))))
+
+;; Each measured support point has its own leader, keyed by survey ID.
+(defun bht:kh-support-leaders (oid rec index blk anchor ents via / points pid p raw feet angle sorted count i target mine used removed e x key joint)
+  (setq removed 0 points nil used nil)
+  (if anchor
+    (progn
+      (foreach pid (bht:get-all rec "pt")
+        (if (and (not (assoc (strcase pid) points)) (setq p (bht:pt-find pid index)))
+          (setq points (cons (cons (strcase pid) (bht:pv p 'xyz)) points))))
+      (setq raw (if (bht:fn-defined-p 'BHTSIGNFEET) (vl-catch-all-apply 'BHTSIGNFEET (list blk)) nil) feet nil)
+      (if (vl-catch-all-error-p raw) (setq raw nil))
+      (while (>= (length raw) 3)
+        (setq feet (append feet (list (bht:kh-foot-world (list (car raw) (cadr raw) (caddr raw)) anchor))) raw (cdddr raw)))
+      (if (null feet) (setq feet (list (car anchor))))
+      (setq angle (caddr anchor))
+      (setq sorted (bht:sort-by points '(lambda (a b)
+        (< (+ (* (car (cdr a)) (cos angle)) (* (cadr (cdr a)) (sin angle)))
+           (+ (* (car (cdr b)) (cos angle)) (* (cadr (cdr b)) (sin angle)))))))
+      (setq count (length sorted) i 0 joint nil)
+      ;; Two-post boards: one crossbar and a shared midpoint for survey leaders.
+      ;; Retain explicitly chosen waypoints and layouts with more than two feet.
+      (if (and (= (length feet) 2) (wcmatch blk "BHT_SUPPORT_V0645_2_*") (null via) (> count 0))
+        (progn
+          (setq joint (mapcar '(lambda (a b) (/ (+ a b) 2.0)) (car feet) (cadr feet))
+                key "@BHT_RAIL"
+                mine (vl-remove-if-not '(lambda (item) (= (nth 2 (bht:xget item "BHT_KH")) key)) ents))
+          (setq removed (+ removed (bht:kh-leader-sync-source oid (car feet) (cadr feet) mine nil key))
+                used (cons key used))))
+      (foreach p sorted
+        (setq key (car p) target (if (= count 1)
+          (car (bht:sort-by feet '(lambda (a b) (< (distance (cdr p) a) (distance (cdr p) b)))))
+          (nth (min i (1- (length feet))) feet))
+              mine (vl-remove-if-not '(lambda (item / tag)
+                (and (entget item) (setq tag (bht:xget item "BHT_KH"))
+                     (>= (length tag) 3) (= (nth 2 tag) key))) ents))
+        (if joint (setq target joint))
+        (setq removed (+ removed (bht:kh-leader-sync-source oid (cdr p) target mine (if joint nil (if via via (bht:kh-support-via (cdr p) target anchor))) key))
+              used (cons key used) i (1+ i)))))
+  (foreach e ents
+    (setq x (bht:xget e "BHT_KH"))
+    (if (and (entget e) (not (member (nth 2 x) used))) (progn (entdel e) (setq removed (1+ removed)))))
+  removed)
 
 (defun bht:kh-xdata-ins (oid state pt rot sc)
   (list -3 (list "BHT_KH" (cons 1000 oid) (cons 1000 state) (cons 1000 (bht:fnum (car pt) 6))
@@ -873,6 +1204,35 @@
   (list -3 (list "BHT_KH" (cons 1000 oid) (cons 1000 "NHAN") (cons 1000 state)
                  (cons 1000 (bht:fnum (car pt) 6)) (cons 1000 (bht:fnum (cadr pt) 6))))
 )
+
+(defun bht:kh-extra-face-label-p (e / x)
+  (setq x (bht:xget e "BHT_KH"))
+  (and (>= (length x) 6) (= (nth 1 x) "NHAN") (wcmatch (nth 5 x) "FACE:*")))
+
+(defun bht:kh-sync-face-labels (oid rec blk anchor existing / code codes layout h rot i lbl pt e d nd nx used x tag old removed)
+  (setq old (vl-remove-if-not 'bht:kh-extra-face-label-p existing) removed 0)
+  (if anchor
+    (progn
+      (setq codes (if (bht:kh-missing-face-p rec) nil (cdr (bht:kh-sign-codes rec))) layout (bht:kh-sign-label-layout blk anchor)
+            h (cadr layout) rot (caddr anchor) i 1)
+      (foreach code codes
+        (setq tag (strcat "FACE:" (itoa i))
+              lbl (if (= code "") "Biển báo" (bht:kh-code-label "BIEN_BAO" code))
+              pt (polar (car layout) (- rot (/ pi 2.0)) (* i h 1.5))
+              e (car (vl-remove-if-not '(lambda (item) (= (nth 5 (bht:xget item "BHT_KH")) tag)) old)))
+        (if (null e) (setq e (bht:text lbl pt h "BHT_NHAN")))
+        (if e
+          (progn
+            (setq d (entget e)
+                  nd (bht:dxf-put (bht:dxf-put (bht:dxf-put (bht:dxf-put (bht:dxf-put (bht:dxf-put (bht:dxf-put d 1 (bht:cad-text lbl (bht:kh-label-style lbl))) 10 pt) 11 pt) 40 h) 50 rot) 72 1) 73 3)
+                  nd (bht:dxf-put nd 7 (bht:kh-label-style lbl))
+                  nx (bht:kh-xdata-txt oid "TU_DONG" pt)
+                  nx (list -3 (append (cadr nx) (list (cons 1000 tag)))))
+            (if (not (bht:ent-same-p e d nd nx)) (progn (entmod (append nd (list nx))) (entupd e)))
+            (setq used (cons e used))))
+        (setq i (1+ i)))))
+  (foreach e old (if (not (member e used)) (progn (entdel e) (setq removed (1+ removed)))))
+  removed)
 
 ;; Trang thai ky hieu INSERT: 'AUTO / 'TAY. autopos: vi tri tu dong hien tai (de nhan ra ky hieu 0.3.2).
 (defun bht:kh-ins-state (e autopos / d x pos)
@@ -912,19 +1272,21 @@
 ;;  create nil = chi cap nhat ky hieu da co (khong tao moi).
 ;; Ky hieu mo coi (ho so da xoa) luon bi xoa. Tra ve assoc:
 ;;  created updated unchanged removed duplicates manual nopos total
-(defun bht:symbol-sync-ex (scope create / s h ins txt dan index oids rec pos blk g e d nd nx st anchor sc rot lpos
+(defun bht:symbol-sync-ex (scope create / s h ins txt dan origins index oids rec pos blk g e d nd nx st anchor sc rot lpos heading
                                        auto tr trot layout created updated same removed dup manual nopos all lbl ok)
   (setq s (bht:kh-scale) h (bht:kh-h) created 0 updated 0 same 0 removed 0 dup 0 manual 0 nopos 0)
   (bht:sign-layers) (bht:layer "BHT_NHAN" 2) (bht:layer "BHT_DUONG_DAN" 6)
   (bht:regapp "BHT_KH")
+  (bht:regapp "BHT_SIGN_ORIGIN")
   (bht:symbol-blocks)
   (setq ins (bht:group-pairs (bht:tagged-pairs "INSERT" "BHT_KH" 1))
         txt (bht:group-pairs (bht:tagged-pairs "TEXT" "BHT_KH" 1))
         dan (bht:group-pairs (append (bht:tagged-pairs "LINE" "BHT_KH" 1) (bht:tagged-pairs "LWPOLYLINE" "BHT_KH" 1)))
+        origins (bht:group-pairs (bht:tagged-pairs "INSERT" "BHT_SIGN_ORIGIN" 1))
         all (bht:obj-ids) index (bht:pt-all)
         oids (if scope (mapcar 'strcase scope) all))
   ;; ky hieu cua ho so da xoa
-  (foreach gr (append ins txt dan)
+  (foreach gr (append ins txt dan origins)
     (if (not (member (car gr) all))
       (foreach e2 (cdr gr) (if (entget e2) (progn (entdel e2) (setq removed (1+ removed)))))))
   (foreach oid oids
@@ -939,17 +1301,21 @@
           ((setq e (car g))
            (setq d (entget e) st (bht:kh-ins-state e auto))
            (cond
-             ((and (eq st 'AUTO) auto)
+             ((and (not *bht-preserve-symbol-placement*) (eq st 'AUTO) auto)
                (setq nd (bht:dxf-put (bht:dxf-put (bht:dxf-put (bht:dxf-put (bht:dxf-put d 10 auto) 41 sc) 42 sc) 43 sc) 50 rot)
                     nd (bht:dxf-put (bht:dxf-put nd 2 blk) 8 "BHT_KYHIEU")
                     nx (bht:kh-xdata-ins oid "TU_DONG" auto rot sc)))
-             ((eq st 'AUTO)
+             ((and (not *bht-preserve-symbol-placement*) (eq st 'AUTO))
               ;; ho so khong con diem hop le: giu ky hieu tai cho
               (setq nopos (1+ nopos) nd (bht:dxf-put d 2 blk)
                     nx (bht:kh-xdata-ins oid "TU_DONG" (cdr (assoc 10 d)) (cdr (assoc 50 d)) (cdr (assoc 41 d)))))
              (T
               (setq manual (1+ manual) nd (bht:dxf-put d 2 blk)
-                    nx (bht:kh-xdata-ins oid "TAY" (cdr (assoc 10 d)) (cdr (assoc 50 d)) (cdr (assoc 41 d))))))
+                    nx (if *bht-preserve-symbol-placement* (assoc -3 (entget e '("BHT_KH"))) (bht:kh-xdata-ins oid "TAY" (cdr (assoc 10 d)) (cdr (assoc 50 d)) (cdr (assoc 41 d)))))))
+           (if (and (or (not *bht-preserve-symbol-placement*) *bht-apply-sign-heading*)
+                    (setq heading (bht:kh-orientation-angle rec pos)))
+             (setq nd (bht:dxf-put nd 50 heading)
+                   nx (bht:kh-xdata-ins oid (if (eq st 'AUTO) "TU_DONG" "TAY") (cdr (assoc 10 nd)) heading (cdr (assoc 41 nd)))))
            (if (bht:ent-same-p e d nd nx)
              (setq same (1+ same))
              (progn (entmod (append nd (list nx))) (entupd e) (setq updated (1+ updated))))
@@ -963,7 +1329,10 @@
                (entupd e)
                 (setq created (1+ created) anchor (list auto sc rot)))))
           ((null pos) (setq nopos (1+ nopos))))
-        (setq dup (+ dup (bht:kh-leader-sync-one oid pos (if anchor (car anchor) nil) (cdr (assoc oid dan)) (bht:kh-via-points rec))))
+        (setq dup (+ dup (if (bht:kh-multiple-supports-p rec)
+          (bht:kh-support-leaders oid rec index blk anchor (cdr (assoc oid dan)) (bht:kh-via-points rec))
+          (bht:kh-leader-sync-one oid pos (if anchor (car anchor) nil) (cdr (assoc oid dan)) (bht:kh-via-points rec)))))
+        (setq dup (+ dup (bht:kh-origin-sync oid rec index anchor (cdr (assoc oid origins)))))
         ;; nhan ky hieu (theo vi tri ky hieu thuc te)
         (setq lbl (bht:kh-label oid rec))
         (if (= lbl "")
@@ -973,14 +1342,15 @@
             (setq h (bht:kh-label-height rec) lbl (bht:kh-label oid rec) sc (cadr anchor) rot (caddr anchor)
                   trot (bht:kh-readable-angle rot)
                   lpos (polar (car anchor) (+ rot (/ pi 2.0)) (* 2.65 sc)))
-            (if (= (bht:get rec "nhom") "BIEN_BAO")
-              (setq layout (bht:kh-sign-label-layout blk anchor) lpos (car layout) h (cadr layout) trot rot))
-            (if (and (= (bht:get rec "nhom") "COC_TIEU") (= blk "BHT_KH_COC_TIEU"))
-              (setq lpos (polar (polar (car anchor) rot (* -1.67 sc)) (+ rot (/ pi 2.0)) (* 0.75 sc)) h (* 0.35 sc)))
-            (if (and (= (bht:get rec "nhom") "COC_TIEU") (/= (bht:get rec "marker_km") "") (/= (bht:get rec "marker_h") ""))
-              (setq lpos (polar (polar (car anchor) rot (* -1.67 sc)) (/ pi 2.0) (* 0.75 sc))))
-            (setq trot (if (and (= (bht:get rec "nhom") "COC_TIEU") (/= (bht:get rec "marker_km") "") (/= (bht:get rec "marker_h") "")) 0.0 rot)
-                  g (cdr (assoc oid txt)))
+            (if (member (bht:get rec "nhom") '("BIEN_BAO" "DEN" "DEN_CS" "DEN_TH"))
+              (progn
+                (setq layout (bht:kh-sign-label-layout blk anchor) lpos (car layout) trot rot)
+                (if (= (bht:get rec "nhom") "BIEN_BAO") (setq h (cadr layout)))))
+            ;; Marker labels follow the INSERT angle and sit below its local bounds.
+            (if (= (bht:get rec "nhom") "COC_TIEU")
+              (setq layout (bht:kh-sign-label-layout blk anchor) lpos (car layout) h (* 0.22 sc)))
+            (setq trot rot g (cdr (assoc oid txt)))
+            (if (= (bht:get rec "nhom") "BIEN_BAO") (setq g (vl-remove-if 'bht:kh-extra-face-label-p g)))
             (foreach e2 (cdr g) (entdel e2) (setq dup (1+ dup)))
             (if (setq e (car g))
               (progn
@@ -1006,6 +1376,16 @@
                     (setq nd (bht:dxf-put (bht:dxf-put (bht:dxf-put (bht:dxf-put nd 10 lpos) 11 lpos) 72 1) 73 3)))
                   (entmod (append nd
                                              (list (bht:kh-xdata-txt oid "TU_DONG" lpos)))) (entupd e))))))))))
+  (foreach oid oids
+    (setq rec (bht:obj-read oid))
+    (if (and rec (= (bht:get rec "nhom") "BIEN_BAO"))
+      (progn
+        (setq e (cdr (assoc oid (bht:tagged-pairs "INSERT" "BHT_KH" 1)))
+              d (if e (entget e) nil)
+              anchor (if d (list (cdr (assoc 10 d)) (abs (cdr (assoc 41 d))) (cdr (assoc 50 d))) nil)
+              blk (if d (cdr (assoc 2 d)) "")
+              g (cdr (assoc oid (bht:group-pairs (bht:tagged-pairs "TEXT" "BHT_KH" 1)))))
+        (setq dup (+ dup (bht:kh-sync-face-labels oid rec blk anchor g))))))
   (bht:log (strcat "Ký hiệu theo ID: tạo " (itoa created) ", cập nhật " (itoa updated) ", giữ " (itoa same)
                    ", xóa (hồ sơ đã xóa) " (itoa removed) ", xóa trùng " (itoa dup) ", vị trí tay giữ " (itoa manual)))
   (list (cons 'created created) (cons 'updated updated) (cons 'unchanged same) (cons 'removed removed)

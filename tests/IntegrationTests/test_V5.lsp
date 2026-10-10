@@ -1,11 +1,11 @@
-﻿;;; BHT 0.6.13 - phien V5: tim bien khong dau, Tinh trang, coc tieu / cot Km (khong ma bien,
+﻿;;; BHT 0.6.53 - phien V5: tim bien khong dau, Tinh trang, coc tieu / cot Km (khong ma bien,
 ;;; kiem tra trung), kieu chu nhan BHT_BIENBAO (VNRomancUpdate.shx), BHTSIGNSEARCH (Bridge). Ban ve moi.
 (load "C:/Users/Le Bao/BHT_TEST_V044/t_common.lsp")
 (vl-load-com)
 (tbegin "V5")
 (setq e (tload))
 (tchk "V5-00" "nạp BHT-5.0; *bht-version* = 5.0; thông báo APPLOAD"
-      (and (null e) (= *bht-version* "0.6.13") (= (bht:load-message) "BHT 0.6.13 đã nạp thành công."))
+      (and (null e) (= *bht-version* "0.6.53") (= (bht:load-message) "BHT 0.6.53 đã nạp thành công."))
       (if e e (list *bht-version* (bht:load-message))))
 ;; --- 1. tim bien khong dau
 (tchk "V5-01" "bỏ dấu tìm kiếm (cả đ/Đ) + chữ thường"

@@ -100,6 +100,7 @@ namespace BHT.Core
         /// <summary>bht:chunks - chia chuoi thanh cac doan &lt;= n ky tu (chuoi rong -> 1 doan rong).</summary>
         public static List<string> Chunks(string s, int n)
         {
+            if (n <= 0) throw new ArgumentOutOfRangeException("n", "Chunk size must be positive.");
             var o = new List<string>();
             s = s ?? "";
             while (s.Length > n) { o.Add(s.Substring(0, n)); s = s.Substring(n); }

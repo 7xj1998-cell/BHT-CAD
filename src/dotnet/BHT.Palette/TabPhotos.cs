@@ -92,8 +92,8 @@ namespace BHT.Palette
             IEnumerable<string> ids;
             if (_photoFilterPoint != null)
             {
-                var r = ObjectLogic.ParseIntLikeLisp(_svc == null ? "10" : _svc.Meta("ghep_r", "10"));
-                var near = Geo.PhotosNear(_photoFilterPoint.X, _photoFilterPoint.Y, _photos, r > 0 ? r : 10);
+                var r = PhotoLogic.ParseRadius(_svc == null ? "10" : _svc.Meta("ghep_r", "10"));
+                var near = Geo.PhotosNear(_photoFilterPoint.X, _photoFilterPoint.Y, _photos, r);
                 ids = near.Select(n => n.Item);
                 _phFilter.Text = "Ảnh chụp gần điểm " + _photoFilterPoint.Name + " (" + near.Count + ", chỉ gợi ý)";
             }
@@ -232,8 +232,8 @@ namespace BHT.Palette
             foreach (var s in sug) { var t = s.Split('|')[0]; if (t.StartsWith("O:")) objChoices.Add(t.Substring(2)); }
             if (shot)
             {
-                var r = ObjectLogic.ParseIntLikeLisp(_svc.Meta("ghep_r", "10"));
-                var near = Geo.PointsNear(e, n, _points, r > 0 ? r : 10, 8);
+                var r = PhotoLogic.ParseRadius(_svc.Meta("ghep_r", "10"));
+                var near = Geo.PointsNear(e, n, _points, r, 8);
                 sb.Append("Điểm RTK gần vị trí chụp (chỉ gợi ý, GPS ảnh KHÔNG thay tọa độ RTK):\r\n");
                 if (near.Count == 0) sb.Append("  (không có trong bán kính)\r\n");
                 foreach (var nb in near)

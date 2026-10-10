@@ -1,4 +1,4 @@
-﻿param([Parameter(Mandatory=$true)][string]$Version)
+param([Parameter(Mandatory=$true)][string]$Version)
 $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent $PSScriptRoot
 if ($Version -notmatch '^\d+\.\d+\.\d+$') { throw 'Use major.minor.patch, e.g. 0.5.2' }
@@ -18,11 +18,16 @@ $files += Get-Item -LiteralPath (Join-Path $root 'README.md'),(Join-Path $root '
 $utf8Bom = New-Object System.Text.UTF8Encoding($true)
 foreach ($file in $files) {
   $text = [IO.File]::ReadAllText($file.FullName)
-  $next = $text.Replace("$old.0", "$Version.0").Replace("BHT-$old.lsp", "BHT-$Version.lsp").Replace("BHT $old", "BHT $Version").Replace(('"' + $old + '"'), ('"' + $Version + '"')).Replace(("'" + $old + "'"), ("'" + $Version + "'"))
+  $next = $text.Replace("$old.0", "$Version.0").Replace("BHT-$old.lsp", "BHT-$Version.lsp").Replace("BHT-$old.fas", "BHT-$Version.fas").Replace("BHT-$old.zip", "BHT-$Version.zip").Replace("BHT-Setup-$old.exe", "BHT-Setup-$Version.exe").Replace("BHT $old", "BHT $Version").Replace(('"' + $old + '"'), ('"' + $Version + '"')).Replace(("'" + $old + "'"), ("'" + $Version + "'"))
   if ($file.FullName -eq (Join-Path $root 'README.md') -or $file.FullName -eq (Join-Path $root 'docs\HUONG_DAN.md')) {
     $next = [regex]::Replace($next, '^# BHT v\d+\.\d+\.\d+', ('# BHT v' + $Version))
     $next = [regex]::Replace($next, 'BHT-\d+\.\d+\.\d+\.zip', ('BHT-' + $Version + '.zip'))
     $next = [regex]::Replace($next, 'Bản \d+\.\d+\.\d+ gồm', ('Bản ' + $Version + ' gồm'))
+    $next = [regex]::Replace($next, 'tiêu đề hiển thị \d+\.\d+\.\d+', ('tiêu đề hiển thị ' + $Version))
+    if ($file.FullName -eq (Join-Path $root 'README.md')) {
+      $next = [regex]::Replace($next, 'RELEASE_NOTES_\d+\.\d+\.\d+\.md', ('RELEASE_NOTES_' + $Version + '.md'))
+      $next = [regex]::Replace($next, 'build\\v\d+\.\d+\.\d+\\bin', ('build\v' + $Version + '\bin'))
+    }
     $next = [regex]::Replace($next, 'Các thay đổi chính của v\d+\.\d+\.\d+', ('Các thay đổi chính của v' + $Version))
   }
   if ($next -ne $text) { [IO.File]::WriteAllText($file.FullName, $next, $utf8Bom) }

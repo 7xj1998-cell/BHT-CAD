@@ -1,5 +1,5 @@
 ﻿;;; ======================================================================
-;;; BHT-0.6.13.lsp - BHT 0.6.13 (build 2026-10-01)
+;;; BHT-0.6.53.lsp - BHT 0.6.53 (build 2026-10-07)
 ;;; Quan ly khao sat bao hieu / coc tieu / cot Km / bang va cong trinh ven
 ;;; tuyen: diem RTK, ho so doi tuong, anh TimeMark (KMZ), tuyen tham chieu,
 ;;; ly trinh, goi thau / doan tuyen, xuat CSV cho Excel.
@@ -12,105 +12,7 @@
 ;;; Muc tieu: AutoCAD 2021-2024, Civil 3D 2023 (Windows). File luu UTF-8,
 ;;; can LISPSYS = 1 (mac dinh tu AutoCAD 2021) de hien tieng Viet co dau.
 ;;;
-;;; NHAT KY THAY DOI 5.0 (chi tiet: CHANGELOG.md; tiep noi 0.4.6-fix3)
-;;;  + Tim bien khi go (khong dau, ca d/đ): BHTBLOCK -> D hoi tu khoa, tim tren
-;;;    ma + ten danh muc bien TDT (BHTSIGNSEARCH cua BHT.Bridge) hoac danh muc
-;;;    noi bo khi chua co Bridge. Palette: o Mã hiệu / Mã các mặt tim khi go.
-;;;  + Coc tieu / Cot Km khong co ma bien: Ma hieu de trong, khong bat buoc.
-;;;    Canh bao TRUNG khi tao ho so coc tieu / cot Km: cung diem RTK, cach
-;;;    <= nguong (meta trung_kc_m, mac dinh 0.5 m), cot Km trung gia tri Km.
-;;;    Chi doc - khong dich / sua diem RTK.
-;;;  + Tinh trang: 1=Tốt / 2=Bình thường / 3=Hư hỏng (van nhan chu tu do).
-;;;  + Nhan CAD mac dinh VNRomancUpdate.shx Unicode; doc kieu TCVN3 cu.
-;;;    Ho so, XData, Palette va bao cao giu Unicode.
-;;;
-;;; NHAT KY THAY DOI 0.4.6-fix3 (chi tiet: CHANGELOG.md)
-;;;  + Loi / canh bao can nguoi dung xu ly hien cua so thong bao (tieu de "BHT",
-;;;    bieu tuong loi / canh bao) VA van in ra dong lenh: bht:err / bht:warn,
-;;;    *error* cua cac lenh BHT ("BHT lỗi: ..."). Huy lenh (*Cancel*) chi in
-;;;    dong lenh. Tat bang (setq *bht-popup* nil). Khong hien cua so khi chay
-;;;    script (.scr, CMDACTIVE bit 4) hoac trong AutoCAD Core Console.
-;;;  + Palette: the doc ben phai co ten (truoc la o trong); loi phia Palette hien
-;;;    MessageBox; trang thai lenh bao that bai khi lenh bao loi (bht:api-problems).
-;;;  * Thong bao tim TDT dang la proxy giai thich ro: phien AutoCAD chua nap
-;;;    TDTSolution 9.1 -> mo AutoCAD bang bieu tuong/profile TDT 9.1 roi chay lai.
-;;;
-;;; NHAT KY THAY DOI 0.4.6-fix2 (chi tiet: CHANGELOG.md)
-;;;  * SUA LOI BHTTUYENTDT: loi "no function definition" do 0.4.6 goi mot ham
-;;;    Common Lisp khong co trong AutoLISP de kiem tra BHTTDT91ROUTE. Thay
-;;;    bang bht:fn-defined-p (type = SUBR/USUBR/
-;;;    EXRXSUBR). Neu ham BHTTDT91ROUTE chua co, Lisp tu NETLOAD BHT.Bridge.dll
-;;;    nam canh file Lisp roi moi bao loi. Bao ro khi ID/khoang cach khong hop le.
-;;;  * bht:tdt-import-block khong con loi "bad function: BHTTDTBLOCK" khi Bridge
-;;;    chua dang ky ham (vl-catch-all-apply khong bat loi nay): dung block noi bo.
-;;;  * Bridge: tim TDT bi Explode thanh nhieu doan Line/Arc noi tiep duoc noi
-;;;    thanh mot Polyline tham chieu (truoc day chi lay doan dai nhat).
-;;;  + Palette doi sang bang mau xanh la (#065F46 / #D1FAE5 / nen #047857).
-;;;  + Nut "Dau X 1u + sap nhan" doi ten thanh "Dat dau X (co 1) + sap lai nhan".
-;;;  * Tieu de Palette luon theo phien ban dang chay (khong con hien 0.4.4 do
-;;;    AutoCAD khoi phuc ten cu tu Profile.aws).
-;;;  = Du lieu, POINT RTK, thuat toan nhan/ly trinh giu nguyen nhu 0.4.6.
-;;;
-;;; NHAT KY THAY DOI 0.4.6 (chi tiet: CHANGELOG.md)
-;;;  + Palette toi mau than-xanh, chu hanh dong vang, thong tin cyan; thanh
-;;;    chon 5 the dat doc sat mep phai de tiet kiem chieu ngang.
-;;;  + Kieu diem moi BHT_RTK dung Arial Unicode width factor 0.85 cho ban ve
-;;;    moi; ten/mo ta/cao do la mot cum nhan. Ban ve legacy giu BHT_ARIAL va
-;;;    khong bi doi font hay doi vi tri nhan o lan cap nhat dau.
-;;;  + Doi chieu cau hinh scale 1:1 cua TDT 9.1 va mo hinh point style cua
-;;;    DPSurvey; van giu dau X 1 unit, khong di chuyen/lam tron POINT RTK.
-;;;
-;;; NHAT KY THAY DOI 0.4.5
-;;;  + BHTTUYENTDT goi Tdt91Interop de doc tim TDTSolution 9.1 ban thuong
-;;;    dang hoat dong: mo ForRead, Entity.Explode, tao/cap nhat Polyline rieng
-;;;    tren layer BHT_TUYEN_TDT; khong dung vlax-curve tren TDTDBALIGNMENT.
-;;;  + TdtSignLibrary doc 412 ma tu TDT Solution 2022, goi y ten bien va clone
-;;;    block vector duoc chon vao DWG; khong sua/khong dong goi tai san TDT.
-;;;  + Bien TDT scale mat 0.2, cot 0.6 unit; tu day ra ngoai tim, ve leader ve
-;;;    diem RTK. POINT RTK khong bi di chuyen hay lam tron toa do.
-;;;  + Palette xuat bao cao Excel .xlsx Unicode (tong hop + danh sach bien),
-;;;    mo bao cao dai trong hop thoai lon va rut gon nhom lenh thuong dung.
-;;;  + Van giu block tich hop/BHTBLOCK lam du phong khi TDT chua san sang.
-;;;
-;;; NHAT KY THAY DOI 0.4.3
-;;;  + BTH / BHT mo mot Palette .NET duy nhat; Lisp tu nap DLL cung thu muc.
-;;;  + DCL chi con la giao dien du phong BHTDCL, khong mo trong luong thuong.
-;;;  + File DCL tam ghi UTF-8 BOM de AutoCAD 2024 doc dung tieng Viet.
-;;;  + POINT mac dinh dau X kich thuoc 1; bo tri nhan 8 huong x 8 ban kinh.
-;;;  + BHTBLOCK nap DWG ky hieu tuy chon theo nhom, INSBASE la tam chen.
-;;;  + Nhan ky hieu hien ten nghiep vu + ma/ly trinh; ID noi bo chi o XData.
-;;;  + Block coc tieu / cot Km theo mau; Palette co mau va thong bao tai cho.
-;;;
-;;; NHAT KY THAY DOI 0.4.0
-;;;  + Ham API bht:api-* (dang ky vl-acad-defun) cho plugin .NET BHT.Palette:
-;;;    thong tin (giong BHTINFO), ky hieu, nhan, ky hieu anh, kiem tra, thu tu
-;;;    hien thi, duong dan JPG. Lisp khong phu thuoc palette; BHT van mo DCL.
-;;;  + BHTPALETTE (khi chua NETLOAD BHT.Palette.dll): huong dan nap plugin.
-;;;  = Du lieu DWG (dictionary BHT_V02 / XRecord / XData) giu nguyen dinh dang
-;;;    0.3.3; ban ve 0.3.2 / 0.3.3 mo binh thuong.
-;;;
-;;; NHAT KY THAY DOI 0.3.3
-;;;  + Nhan diem RTK: bo tri tranh chong lap (8 huong x 4 ban kinh, hop bao
-;;;    textbox, tranh nhan khac / ky hieu / ky hieu anh / diem), sap xep lai
-;;;    theo pham vi (vung chon / danh sach ID / tat ca) - BHTSAPNHAN;
-;;;    nhan bi nguoi dung doi cho duoc nhan ra (XData luu vi tri tu dong) va
-;;;    giu nguyen o lan cap nhat sau; BHTNHANTUDONG tra ve vi tri tu dong.
-;;;    Che do "uu tien ho so": an nhan phu (mo ta, cao do, ID) cua diem da
-;;;    thuoc ho so doi tuong.
-;;;  + BHTDOITUONG: diem da thuoc ho so khac -> hien ho so, cho chon xem /
-;;;    sua / them diem / tao moi dung chung (phai xac nhan); mac dinh HUY.
-;;;    Phat hien bo diem trung khop ho so da co.
-;;;  + BHTKYHIEU: cap nhat theo object_id (tao thieu, sua thay doi, chi xoa
-;;;    ky hieu cua ho so da xoa), giu vi tri / goc / ty le nguoi dung da dat.
-;;;  + BHTTHUTUVE: thu tu hien thi nhan > ky hieu/diem/ky hieu anh > raster
-;;;    BHT > anh nen IRT (chi anh nhan dien chac chan; chi dua xuong duoi).
-;;;  + Duong dan tu ky hieu anh toi raster (tuy chon). Canh bao nhap cung du
-;;;    lieu bang ca CSV va TSV. Bang dieu khien: muc bao tri du lieu cu.
-;;;  * SUA LOI (co tu 0.1): chay BHT khi dang o tab Layout thi diem / nhan /
-;;;    ky hieu bi tao trong paper space. Tu 0.3.3 luon tao trong Model;
-;;;    -IMAGE / DRAWORDER tam chuyen sang Model. BHTVEMODEL chuyen thuc the BHT
-;;;    da lo tao trong Layout ve Model (giu toa do + XData), BHTKT canh bao.
-;;;  * BHTTHUMUCANH: thu muc nguoi dung chi dinh duoc uu tien hon thu muc goc.
+;;; Nhat ky thay doi: CHANGELOG.md.
 ;;;
 ;;; Quy uoc bat buoc:
 ;;;  - CSV nguon: ten diem, Northing (Bac), Easting (Dong), Z, mo ta; khong
@@ -128,12 +30,13 @@
 
 (vl-load-com)
 
-(setq *bht-version* "0.6.13")
-(setq *bht-build* "2026-10-01")
+(setq *bht-version* "0.6.53")
+(setq *bht-build* "2026-10-07")
 
 ;; Luu duong dan ngay khi APPLOAD / Application Bundle nap Lisp. DLL dat canh
 ;; file Lisp de nguoi dung chi can APPLOAD mot lan, khong phai tu NETLOAD.
-(setq *bht-lsp-file* (findfile "BHT-0.6.13.lsp"))
+(setq *bht-lsp-file* (or (findfile "BHT-0.6.53.fas") (findfile "BHT-0.6.53.lsp")))
+(if (and (not *bht-module-root*) (member (type BHTRUNTIMEROOT) '(SUBR USUBR EXRXSUBR))) (setq *bht-module-root* (BHTRUNTIMEROOT)))
 (setq *bht-lsp-dir*
   (if *bht-lsp-file* (vl-filename-directory *bht-lsp-file*) *bht-module-root*))
 (setq *bht-palette-dll*
@@ -294,11 +197,6 @@
 (defun bht:nthcdr (n lst)
   (repeat n (setq lst (cdr lst)))
   lst
-)
-
-;; Sap xep chuoi tang dan.
-(defun bht:sort-str (lst)
-  (mapcar '(lambda (i) (nth i lst)) (vl-sort-i lst '<))
 )
 
 ;;; ----------------------------------------------------------------------
@@ -517,21 +415,15 @@
     nil)
 )
 
-(defun bht:xclear (ent app / data)
-  (if (and ent (bht:xget ent app))
-    (progn
-      (setq data (entget ent))
-      (if (entmod (append data (list (list -3 (list app)))))
-        (progn (entupd ent) T) nil))
-    nil)
-)
-
 ;; Chia chuoi dai thanh cac doan <= n ky tu (XData 1000 gioi han 255 byte).
 (defun bht:chunks (s n / out)
-  (setq out nil)
-  (while (> (strlen s) n)
-    (setq out (cons (substr s 1 n) out) s (substr s (1+ n))))
-  (reverse (cons s out))
+  (if (and (= (type n) 'INT) (> n 0))
+    (progn
+      (setq out nil)
+      (while (> (strlen s) n)
+        (setq out (cons (substr s 1 n) out) s (substr s (1+ n))))
+      (reverse (cons s out)))
+    (progn (bht:err "Kích thước chia chuỗi phải là số nguyên dương.") nil))
 )
 
 ;;; ----------------------------------------------------------------------
@@ -979,10 +871,6 @@
     nil)
 )
 
-(defun bht:layer-is-on (name / e)
-  (and (setq e (tblobjname "LAYER" name)) (> (cdr (assoc 62 (entget e))) 0))
-)
-
 ;; Thay/them 1 ma DXF trong danh sach entget.
 (defun bht:dxf-put (d code val)
   (if (assoc code d)
@@ -1031,7 +919,9 @@
     ("3" "COT_KM"        "Cột Km")
     ("4" "BANG_CHI_DAN"  "Bảng chỉ dẫn")
     ("5" "BANG_QC"       "Bảng quảng cáo")
-    ("6" "DEN"           "Đèn chiếu sáng / tín hiệu")
+    ("6" "DEN" "Đèn (hồ sơ cũ, chưa phân loại)")
+    ("9" "DEN_CS" "Đèn chiếu sáng")
+    ("10" "DEN_TH" "Đèn tín hiệu")
     ("7" "CONG_TRINH"    "Công trình ven tuyến")
     ("8" "KHAC"          "Khác")
     ("0" "CHUA_XAC_DINH" "Chưa xác định")))
@@ -1050,11 +940,11 @@
 
 ;; Quy tac: tien to mo ta (khong phan biet hoa/thuong). Thu tu quan trong.
 (setq *bht-class-rules*
-  '(("bbqc" "BANG_QC") ("bb.qc" "BANG_QC") ("bangqc" "BANG_QC") ("pano" "BANG_QC")
+  '(("tru.matbb" "BIEN_BAO") ("bbqc" "BANG_QC") ("bb.qc" "BANG_QC") ("bangqc" "BANG_QC") ("pano" "BANG_QC")
     ("cockm" "COT_KM") ("cotkm" "COT_KM") ("coc.km" "COT_KM")
     ("coctiu" "COC_TIEU") ("coctieu" "COC_TIEU") ("c.tiu" "COC_TIEU") ("c.tieu" "COC_TIEU")
     ("bangcd" "BANG_CHI_DAN") ("bb" "BIEN_BAO") ("b.cn" "BIEN_BAO")
-    ("dentinhieu" "DEN") ("dengt" "DEN") ("truden" "DEN") ("dendg" "DEN") ("đendg" "DEN")))
+    ("dentinhieu" "DEN_TH") ("dengt" "DEN_TH") ("truden" "DEN_CS") ("dendg" "DEN_CS") ("đendg" "DEN_CS")))
 
 (defun bht:classify (desc / d hit)
   (setq d (bht:trim desc) hit nil)

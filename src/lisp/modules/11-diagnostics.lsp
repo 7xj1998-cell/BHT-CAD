@@ -34,6 +34,9 @@
   (setq objs (bht:rec-all "OBJ") owners (bht:pt-owner-map) missing 0 multi 0 pend 0)
   (foreach o objs
     (setq rec (cdr o) pids (bht:get-all rec "pt"))
+    (if (and (bht:kh-multiple-supports-p rec)
+             (< (length (vl-remove-if-not '(lambda (id) (member (strcase id) ids)) pids)) (bht:int (bht:get rec "so_tru"))))
+      (bht:ck-add 1 (strcat (car o) ": chưa đủ điểm RTK đo chân cho " (bht:get rec "so_tru") " trụ/chân; thêm điểm để nối từng chân vào biển.")))
     (if (null pids) (bht:ck-add 1 (strcat "đối tượng " (car o) " không có điểm RTK")))
     (foreach p pids (if (not (member (strcase p) ids))
                       (progn (setq missing (1+ missing)) (bht:ck-add 2 (strcat (car o) " tham chiếu điểm không tồn tại " p)))))
@@ -260,7 +263,6 @@
 )
 
 ;;; ----------------------------------------------------------------------
-;;; ----------------------------------------------------------------------
 
 ;;; ----------------------------------------------------------------------
 ;;; Tu kiem tra ham thuan (khong sua ban ve) - BHTTEST
@@ -481,8 +483,8 @@
                (strcat "  Ảnh đã ghép: " (bht:stv s 'linked) " | chưa ghép: " (bht:stv s 'unlinked))
                (strcat "  Tuyến đã khai báo: " (bht:stv s 'routes))
                (strcat "  Đối tượng có lý trình: " (bht:stv s 'chainage)))
-    (princ (strcat "\n" l)))
-  (foreach l (bht:status-notes s) (princ (strcat "\n  Lưu ý: " l)))
+    (bht:msg l))
+  (foreach l (bht:status-notes s) (bht:msg (strcat "Lưu ý: " l)))
   (princ)
 )
 

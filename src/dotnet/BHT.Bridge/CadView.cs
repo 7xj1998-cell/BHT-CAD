@@ -1,4 +1,5 @@
-﻿using System;
+using System;
+using BHT.Core;
 using System.Collections.Generic;
 using Autodesk.AutoCAD.ApplicationServices;
 using Autodesk.AutoCAD.DatabaseServices;
@@ -28,6 +29,51 @@ namespace BHT.Bridge
             }
         }
 
+        public static OpResult ShowRoute(Document doc,string handle)
+        {
+                var id=IdFromHandle(doc.Database,handle);
+                if(id.IsNull)return OpResult.Fail("Không tìm thấy hình học tuyến; hãy nạp lại tuyến.");
+                Extents3d bounds;
+                using(var tr=doc.Database.TransactionManager.StartTransaction()) {
+                    var entity=tr.GetObject(id,OpenMode.ForRead) as Entity;
+                    if(entity==null)return OpResult.Fail("Tuyến không có hình học hợp lệ.");
+                    bounds=entity.GeometricExtents;
+                    var layer=(LayerTableRecord)tr.GetObject(entity.LayerId,OpenMode.ForRead);
+                    // AutoCAD rejects setting IsFrozen even to false on the current layer.
+                    if(layer.IsOff || layer.IsFrozen) {
+                        layer.UpgradeOpen();
+                        if(layer.IsOff)layer.IsOff=false;
+                        if(layer.IsFrozen)layer.IsFrozen=false;
+                    }
+                    if(!entity.Visible) {
+                        entity=(Entity)tr.GetObject(id,OpenMode.ForWrite,false,true);
+                        entity.Visible=true;
+                    }
+                    tr.Commit();
+                }
+                ZoomExtents(doc.Editor,bounds);
+                doc.Editor.Regen();doc.Editor.SetImpliedSelection(new[] {id});
+                using(var tr=doc.Database.TransactionManager.StartOpenCloseTransaction()) {
+                    ((Entity)tr.GetObject(id,OpenMode.ForRead)).Highlight();
+                }
+                return OpResult.Success("Đã hiển thị và zoom toàn tuyến.");
+        }
+
+        public static void ZoomExtents(Editor ed, Extents3d bounds)
+        {
+            using(var view=ed.GetCurrentView()) {
+                var transform=Matrix3d.PlaneToWorld(view.ViewDirection);
+                transform=Matrix3d.Displacement(view.Target-Point3d.Origin)*transform;
+                transform=Matrix3d.Rotation(-view.ViewTwist,view.ViewDirection,view.Target)*transform;
+                bounds.TransformBy(transform.Inverse());
+                double ratio=view.Width/Math.Max(view.Height,1e-9);
+                double width=Math.Max(1,bounds.MaxPoint.X-bounds.MinPoint.X),height=Math.Max(1,bounds.MaxPoint.Y-bounds.MinPoint.Y);
+                view.CenterPoint=new Point2d((bounds.MinPoint.X+bounds.MaxPoint.X)/2,(bounds.MinPoint.Y+bounds.MaxPoint.Y)/2);
+                view.Height=Math.Max(height,width/ratio)*1.15;view.Width=view.Height*ratio;
+                ed.SetCurrentView(view);
+            }
+        }
+
         public static ObjectId IdFromHandle(Database db, string handle)
         {
             try
@@ -48,6 +94,7 @@ namespace BHT.Bridge
             if ((x = BhtStore.XGet(o, "BHT_PT")) != null && x.Count > 0) return new KeyValuePair<string, string>("PT", x[0]);
             if ((x = BhtStore.XGet(o, "BHT_NHAN")) != null && x.Count > 0) return new KeyValuePair<string, string>("NHAN", x[0]);
             if ((x = BhtStore.XGet(o, "BHT_KH")) != null && x.Count > 0) return new KeyValuePair<string, string>("KH", x[0]);
+            if ((x = BhtStore.XGet(o, "BHT_SIGN_ORIGIN")) != null && x.Count > 0) return new KeyValuePair<string, string>("KH", x[0]);
             foreach (var app in new[] { "BHT_ANHPT", "BHT_ANHTEN", "BHT_ANHRS", "BHT_ANHDAN" })
                 if ((x = BhtStore.XGet(o, app)) != null && x.Count > 0) return new KeyValuePair<string, string>("ANH", x[0]);
             return null;

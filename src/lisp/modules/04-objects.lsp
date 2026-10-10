@@ -7,6 +7,13 @@
 ;;; ----------------------------------------------------------------------
 
 (defun bht:obj-read (id) (bht:rec-read "OBJ" id))
+(defun bht:obj-marker-metres (rec / km hm)
+  (setq km (bht:num (bht:get rec "marker_km"))
+        hm (if (= (bht:get rec "nhom") "COT_KM") 0 (bht:num (bht:get rec "marker_h"))))
+  (if (and (member (bht:get rec "nhom") '("COC_TIEU" "COT_KM")) km hm
+           (= km (fix km)) (<= 0 km 99999) (= hm (fix hm)) (<= 0 hm 9))
+    (+ (* km 1000.0) (* hm 100.0))))
+
 (defun bht:obj-marker-station (rec / km hm metres changed)
   (setq km (bht:num (bht:get rec "marker_km")) hm (if (= (bht:get rec "nhom") "COT_KM") 0 (bht:num (bht:get rec "marker_h"))))
   (cond
@@ -83,7 +90,7 @@
                      (cons "trang_thai_km" "CHUA_TINH")
                      (cons "tao_luc" (bht:now))))
      (if (assoc "custom_block" fields) (setq rec (bht:set rec "custom_block" (bht:get fields "custom_block"))))
-     (foreach key '("bridge_name" "sign_chainage" "road_name" "marker_km" "marker_h")
+     (foreach key '("sign_content" "sign_layout" "sign_gap" "sign_clearance" "bridge_name" "sign_chainage" "road_name" "marker_km" "marker_h")
        (if (assoc key fields) (setq rec (bht:set rec key (bht:get fields key)))))
      (setq rec (bht:set-all rec "mat" (bht:get-all fields "mat")))
      (setq rec (bht:set-all rec "pt" (mapcar 'strcase pids)))
@@ -147,6 +154,7 @@
     ((and sel (setq ent (car sel)))
      (cond
        ((bht:xget ent "BHT_KH") (setq id (car (bht:xget ent "BHT_KH"))))
+       ((bht:xget ent "BHT_SIGN_ORIGIN") (setq id (car (bht:xget ent "BHT_SIGN_ORIGIN"))))
        ((bht:xget ent "BHT_PT")
         (setq pid (strcase (car (bht:xget ent "BHT_PT")))
               lst (cdr (assoc pid (bht:pt-owner-map))))
@@ -225,7 +233,7 @@
   (setq f (append f (list (cons "loai_ma" (cond ((= code "Q") "QCVN") ((= code "N") "NOI_BO")
                                                 ((/= (bht:get rec "loai_ma") "") (bht:get rec "loai_ma"))
                                                 (T "CHUA_XAC_DINH"))))))
-  (setq f (append f (list (cons "mo_ta" (bht:ask-string "Mô tả" (bht:get rec "mo_ta"))))))
+  (setq f (append f (list (cons "mo_ta" (bht:ask-string (if (member grp '("BANG_QC" "KHAC")) "Tên trên bảng" "Mô tả") (bht:get rec "mo_ta"))))))
   (setq f (append f (list (cons "so_tru" (bht:ask-count "Số trụ/cột/chân" (bht:get rec "so_tru"))))))
   (setq nmat (bht:ask-count "Số mặt biển" (bht:get rec "so_mat")))
   (setq f (append f (list (cons "so_mat" nmat))))
@@ -356,7 +364,7 @@
     (progn
       (setq msg (strcat "BHT: " (bht:group-label (bht:group-code grp)) " mới có thể TRÙNG với: "
                         (bht:join (mapcar '(lambda (h) (strcat (car h) " (" (cadr h) ")")) hits) ", ")
-                        ". Ngưỡng " (bht:fnum (bht:dup-tolerance) 2) " m (meta trung_kc_m). Điểm RTK không bị di chuyển hay sửa."))
+                        ". Ngưỡng khoảng cách: " (bht:fnum (bht:dup-tolerance) 2) " m. Điểm RTK không bị di chuyển hay sửa."))
       (bht:warn msg)
       (if (= (strcase (bht:ask-string "Vẫn tạo hồ sơ trùng? [C=Có/K=Không, hủy]" "K")) "C")
         T

@@ -1,10 +1,10 @@
-using System;using System.IO;using System.Linq;using System.Collections.Generic;using Autodesk.AutoCAD.Runtime;using Autodesk.AutoCAD.DatabaseServices;using Autodesk.AutoCAD.Geometry;using BHT.Bridge;using BHT.Core;using AcApp=Autodesk.AutoCAD.ApplicationServices.Core.Application;
+﻿using System;using System.IO;using System.Linq;using System.Collections.Generic;using Autodesk.AutoCAD.Runtime;using Autodesk.AutoCAD.DatabaseServices;using Autodesk.AutoCAD.Geometry;using BHT.Bridge;using BHT.Core;using AcApp=Autodesk.AutoCAD.ApplicationServices.Core.Application;
 public class Sign0613Probe{
 static List<string> log=new List<string>();static void Check(string name,bool ok){log.Add((ok?"PASS ":"FAIL ")+name);}
 static IEnumerable<Entity> Entities(Transaction tr,Database db,string name){var bt=(BlockTable)tr.GetObject(db.BlockTableId,OpenMode.ForRead);return ((BlockTableRecord)tr.GetObject(bt[name],OpenMode.ForRead)).Cast<ObjectId>().Select(id=>(Entity)tr.GetObject(id,OpenMode.ForRead));}
 static List<string> Texts(Transaction tr,Database db,string name){var result=new List<string>();foreach(var e in Entities(tr,db,name)){var t=e as DBText;if(t!=null)result.Add(t.TextString);var b=e as BlockReference;if(b!=null){result.AddRange(Texts(tr,db,((BlockTableRecord)tr.GetObject(b.BlockTableRecord,OpenMode.ForRead)).Name));foreach(ObjectId id in b.AttributeCollection){var a=tr.GetObject(id,OpenMode.ForRead) as AttributeReference;if(a!=null)result.Add(a.TextString);}}}return result;}
 [CommandMethod("BHTSIGN0613PROBE")]public static void Run(){log.Clear();var doc=AcApp.DocumentManager.MdiActiveDocument;var db=doc.Database;try{
-Check("Bridge-version-0.6.13",typeof(TdtSignLibrary).Assembly.GetName().Version.ToString()=="0.6.13.0");Check("Core-version-0.6.13",typeof(SignPresentation).Assembly.GetName().Version.ToString()=="0.6.13.0");
+Check("Bridge-version-0.6.13",typeof(TdtSignLibrary).Assembly.GetName().Version.ToString()=="0.6.53.0");Check("Core-version-0.6.13",typeof(SignPresentation).Assembly.GetName().Version.ToString()=="0.6.53.0");
 var codes=new[]{"W.225","S.501@500","P.106c","R.404d","I.401","I.402","IE.473","R.E,9b@07:30-19:15","R.E,10b@22:00-05:30"};var names=new List<string>();
 foreach(var c in codes){var r=TdtSignLibrary.EnsureBlock(db,c);Check(c+"-import",r.Ok);if(!r.Ok){log.Add("DETAIL "+r.Error);continue;}names.Add(r.BlockName);
 using(var tr=db.TransactionManager.StartTransaction()){

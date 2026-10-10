@@ -81,7 +81,10 @@
   (setq id (strcase id) chk (bht:route-check-ent ent))
   (cond
     ((not (bht:valid-id id)) (list nil "ID tuyến không hợp lệ"))
+    ((bht:route-read id) (list nil "ID tuyến đã tồn tại; dùng Sửa tuyến hoặc Chọn lại tuyến."))
+    ((or (not (numberp maxoff)) (<= maxoff 0) (not (numberp extrap)) (< extrap 0)) (list nil "Khoảng cách phải dương, ngoại suy không âm."))
     ((not (car chk)) chk)
+    ((or (null (bht:curve-length ent)) (<= (bht:curve-length ent) 1e-8)) (list nil "Tuyến phải có chiều dài lớn hơn 0."))
     (T
      (setq len (bht:curve-length ent) sig (bht:route-geometry-signature ent 0.0 1))
      (setq rec (list (cons "route_id" id) (cons "handle" (cdr (assoc 5 (entget ent))))
@@ -286,9 +289,47 @@
      (bht:route-write id next)
      (list T id (bht:route-revision next) (car raw) direction))))
 
+;; Live controls from saved numbered markers. Never persist copies: editing/deleting
+;; a marker or changing route geometry takes effect on the next explicit calculation.
+;; Only a single eligible route is accepted; overlapping routes require an explicit control.
+(defun bht:route-object-controls (rec / marks conflicts skipped routes index item obj station pos candidates rr ent pr maxoff hit near source route)
+  (setq marks (bht:route-marks rec) conflicts nil skipped nil
+        routes (bht:rec-all "ROUTE") index (bht:pt-all))
+  (foreach item (bht:rec-all "OBJ")
+    (setq obj (cdr item) station (bht:obj-marker-metres obj))
+    (if (and station (setq pos (bht:obj-position obj index)))
+      (progn
+        (setq candidates nil)
+        (foreach route routes
+          (setq rr (cdr route) ent (bht:route-ent rr) maxoff (bht:num (bht:get rr "max_offset")))
+          (if (and ent (car (bht:route-check-ent ent)) maxoff
+                   (setq pr (bht:route-project rr ent pos)) (<= (cadr pr) maxoff))
+            (setq candidates (cons (list (car route) (car pr)) candidates))))
+        (if (setq hit (assoc (bht:get rec "route_id") candidates))
+          (if (/= (length candidates) 1)
+            (setq skipped (cons (car item) skipped))
+            (progn
+              (setq source (strcat "Hồ sơ " (car item))
+                    near (vl-some '(lambda (m) (if (< (abs (- (car m) (cadr hit))) 0.001) m)) marks))
+              (cond
+                ;; A station equation can legitimately have two values at the same point.
+                (near (if (and (> (abs (- station (cadr near))) 0.001)
+                               (> (abs (- station (caddr near))) 0.001))
+                        (setq conflicts (cons (strcat source " khác giá trị mốc cùng vị trí") conflicts))))
+                ((vl-some '(lambda (m) (or (< (abs (- station (cadr m))) 0.001)
+                                          (< (abs (- station (caddr m))) 0.001))) marks)
+                  (setq conflicts (cons (strcat source " trùng số Km/H ở vị trí khác") conflicts)))
+                (T (setq marks (cons (list (cadr hit) station station source "Km/H đã nhập") marks))))))))))
+  (list (vl-sort marks '(lambda (a b) (< (car a) (car b)))) conflicts skipped))
+
+(defun bht:route-controls (rec / cached)
+  (if (setq cached (assoc (bht:get rec "route_id") *bht-control-cache*))
+    (cdr cached)
+    (bht:route-object-controls rec)))
+
 ;; Ly trinh cua mot diem theo 1 tuyen.
 ;; Tra ve assoc: status station offset side route dist note ratio
-(defun bht:station-route (rec pt / ent pr maxoff km side dir chieu has-v5)
+(defun bht:station-route (rec pt / ent pr maxoff km side dir chieu has-v5 controls)
   (setq ent (bht:route-ent rec) maxoff (bht:num (bht:get rec "max_offset"))
         chieu (bht:int (bht:get rec "chieu")))
   (cond
@@ -305,9 +346,16 @@
      (list (cons 'status "XA_TUYEN") (cons 'route (bht:get rec "route_id")) (cons 'offset (cadr pr))
            (cons 'note (strcat "cách tuyến " (bht:fnum (cadr pr) 2) " m > " (bht:fnum maxoff 1) " m"))))
     (T
-     (setq km (bht:km-from-dist (bht:route-marks rec) (car pr)
-                                (bht:num (bht:get rec "ngoai_suy_m")) chieu)
+     (setq controls (bht:route-controls rec)
+           km (if (cadr controls)
+                (list "MAU_THUAN_MOC" nil nil nil (bht:join (cadr controls) "; "))
+                (bht:km-from-dist (car controls) (car pr)
+                  (bht:num (bht:get rec "ngoai_suy_m")) chieu))
            dir (caddr km))
+     (if (caddr controls)
+       (setq km (append (list (car km) (cadr km) (caddr km) (cadddr km))
+          (list (strcat (nth 4 km) ". Cọc nằm trong phạm vi nhiều tuyến, chưa dùng làm mốc: "
+             (bht:join (caddr controls) ", ") ". Kiểm tra phạm vi tuyến hoặc khai báo mốc riêng.")))))
      ;; Route V5: caddr(pr) da la phia theo direction. Route cu: giu logic station-dir.
      (setq has-v5 (/= (bht:get rec "direction") "")
            side (cond ((= (caddr pr) 0) "TREN_TUYEN")
@@ -346,12 +394,13 @@
     ((bht:station-determined st) "VALID")
     ((member st '("XA_TUYEN" "NGOAI_PHAM_VI_HINH_HOC")) "OUT_OF_RANGE")
     ((member st '("CHUA_CO_TUYEN" "TUYEN_MAT" "TUYEN_KHONG_HOP_LE" "LOI_HINH_HOC")) "NO_ROUTE")
-    ((member st '("CHUA_CO_MOC" "CHUA_XAC_DINH")) "NO_STATION_CONTROL")
+    ((member st '("CHUA_CO_MOC" "CHUA_XAC_DINH" "MAU_THUAN_MOC")) "NO_STATION_CONTROL")
     (T st)))
 
 ;; Tinh va luu ly trinh cho moi doi tuong. Tra ve (so_da_tinh so_chua_xd)
-(defun bht:station-objects (/ index rec pos r ok und st)
-  (setq index (bht:pt-all) ok 0 und 0)
+(defun bht:station-objects (/ index rec pos r ok und st *bht-control-cache*)
+  (setq index (bht:pt-all) ok 0 und 0
+        *bht-control-cache* (mapcar '(lambda (p) (cons (car p) (bht:route-object-controls (cdr p)))) (bht:rec-all "ROUTE")))
   (foreach oid (bht:obj-ids)
     (setq rec (bht:obj-read oid) pos (bht:obj-position rec index))
     (setq r (if pos (bht:station pos) (list (cons 'status "KHONG_CO_VI_TRI") (cons 'note "đối tượng không có điểm RTK"))))
@@ -369,7 +418,7 @@
           rec (bht:set rec "station_status" (bht:station-status-v5 st))
           rec (bht:set rec "nguon_km" (bht:str (cdr (assoc 'note r)))))
     (bht:obj-write oid rec)
-    (if (bht:station-determined st) (setq ok (1+ ok)) (setq und (1+ und))))
+    (if (or (bht:obj-marker-metres rec) (bht:station-determined st)) (setq ok (1+ ok)) (setq und (1+ und))))
   (list ok und)
 )
 
@@ -390,7 +439,10 @@
             (progn
               (setq res (bht:route-create id ent loai maxoff extrap nil "Polyline người dùng chọn (BHTTUYEN)"))
               (if (car res)
-                (bht:msg (strcat "BHT: đã tạo tuyến " id ". Dùng BHTMOCKM để khai báo mốc Km đã xác nhận."))
+                (progn
+                  (bht:msg (strcat "BHT: đã tạo tuyến " id ". Chọn đầu tuyến và xác nhận chiều tăng lý trình."))
+                  (bht:route-pick-start id)
+                  (bht:msg "Cọc đã nhập số Km/H tự làm mốc khi xác định được một tuyến. BHTMOCKM dùng cho mốc bổ sung hoặc điểm gãy Km."))
                 (bht:err (strcat "BHT: " (cadr res))))))))))
   (bht:log-flush)
   (princ)
@@ -450,7 +502,7 @@
             (setq id (strcase (bht:ask-string "ID tuyến BHT" (strcat "TUYEN" (itoa (1+ (length (bht:route-ids)))))))
                   maxoff (bht:num (bht:ask-string "Khoảng cách tối đa từ đối tượng tới tim (m)" "100"))
                   extrap (bht:num (bht:ask-string "Cho phép ngoại suy ngoài mốc tối đa (m, 0 = không)" "0")))))
-        (if (and (bht:valid-id id) maxoff (> maxoff 0.0) extrap)
+        (if (and (bht:valid-id id) (or existing-id (null (bht:route-read id))) maxoff (> maxoff 0.0) extrap (>= extrap 0.0))
           (progn
             (setq r (vl-catch-all-apply 'BHTTDT91ROUTE (list src-h existing-h)))
             (cond
@@ -486,11 +538,13 @@
                        (bht:route-write id rec)
                        (bht:msg (strcat "BHT: " (if existing-id "đã cập nhật" "đã tạo") " tuyến " id
                                         " từ tim TDT 9.1; Polyline tham chiếu handle " (cadr r)
-                                        ". Dùng BHTMOCKM để khai báo mốc Km.")))
+                                        "."))
+                       (if (not existing-id) (bht:route-pick-start id))
+                       (bht:msg "Cọc có số Km/H tự làm mốc khi xác định được tuyến. BHTMOCKM: mốc bổ sung; BHTROUTESTART: điểm đầu/chiều."))
                      (progn
                        (if (not existing-id) (entdel ref))
                        (bht:err (strcat "BHT: " (cadr res))))))))))
-          (bht:warn (strcat "BHT: không tạo tuyến - ID tuyến phải gồm A-Z 0-9 _ - . và khoảng cách tối đa phải > 0"
+          (bht:warn (strcat "BHT: không tạo tuyến - ID phải hợp lệ, chưa trùng; khoảng cách tối đa > 0, ngoại suy >= 0"
                            (if existing-id (strcat " (kiểm tra max_offset/ngoai_suy_m của tuyến " existing-id ")") "")
                            "."))))))
   (bht:log-flush)
@@ -591,9 +645,11 @@
   (bht:log-flush) (princ))
 
 (defun bht:ask-route (/ ids v sel)
-  (setq ids (bht:route-ids))
+  (setq ids (bht:route-ids) sel *bht-route-selected* *bht-route-selected* nil)
   (cond
     ((null ids) (bht:warn "BHT: chưa có tuyến. Dùng BHTTUYEN trước.") nil)
+    ((and sel (member sel ids))
+      sel)
     ((= (length ids) 1) (car ids))
     (T (setq v (strcase (bht:ask-string (strcat "ID tuyến (" (bht:join ids ", ") ")") (car ids))))
        (if (member v ids) v (progn (bht:warn "Không có tuyến này.") nil))))
@@ -636,9 +692,9 @@
                     out (cons head out))))))))
   (vl-remove nil out))
 
-(defun c:BHTROUTESTART (/ *error* id rec ent pt raw dir ans res preview)
+(defun bht:route-pick-start (id / *error* rec ent pt raw dir ans res preview)
   (defun *error* (msg) (bht:route-preview-clear preview) (bht:on-error msg))
-  (if (and (setq id (bht:ask-route)) (setq rec (bht:route-read id)) (setq ent (bht:route-ent rec)))
+  (if (and id (setq rec (bht:route-read id)) (setq ent (bht:route-ent rec)))
     (if (setq pt (getpoint "\nChọn điểm đầu tuyến trên/gần Polyline: "))
       (progn
         (setq pt (trans pt 1 0) raw (bht:curve-project ent pt) dir 1)
@@ -658,7 +714,13 @@
                   (bht:msg (strcat "BHT: đã lưu StartPoint/chiều tuyến " id ", revision " (itoa (caddr res))
                                    ". Nếu đã có mốc, hãy kiểm tra lại Station Control."))
                   (bht:err (strcat "BHT: " (cadr res)))))
-              (bht:msg "BHT: đã hủy, chưa thay đổi tuyến.")))))))
+              (bht:msg "BHT: chưa đổi điểm đầu/chiều. Tuyến giữ thiết lập trước bước chọn; dùng BHTROUTESTART để xác nhận lại.")))))
+      (bht:msg "BHT: đã bỏ qua chọn đầu tuyến; tuyến giữ thiết lập hiện tại. Dùng BHTROUTESTART để chọn lại.")))
+  res)
+
+(defun c:BHTROUTESTART (/ *error*)
+  (setq *error* bht:on-error)
+  (bht:route-pick-start (bht:ask-route))
   (bht:log-flush) (princ))
 
 (defun c:BHTROUTEREVERSE (/ *error* id rec ent start dir p res ans preview)
@@ -678,13 +740,13 @@
         (bht:msg "BHT: giữ nguyên chiều tuyến."))))
   (bht:log-flush) (princ))
 
-(defun bht:route-diag-lines (id / rec ent len start dir marks tdt nstale rev sig current changed closed o)
+(defun bht:route-diag-lines (id / rec ent len start dir marks tdt nstale rev sig current changed closed o controls)
   (setq rec (bht:route-read id))
   (if (null rec) (list (strcat "Không có tuyến " id))
     (progn
       (setq ent (bht:route-ent rec) len (if ent (bht:curve-length ent) nil)
             start (bht:num (bht:get rec "start_dist")) dir (if (= (bht:int (bht:get rec "direction")) -1) -1 1)
-            marks (bht:route-marks rec) rev (bht:route-revision rec) tdt 0 nstale 0
+            controls (bht:route-controls rec) marks (car controls) rev (bht:route-revision rec) tdt 0 nstale 0
             sig (bht:get rec "geometry_signature") closed (if (and ent (bht:curve-closed-p ent)) "Có" "Không"))
       (foreach m marks (if (bht:starts (strcase (nth 3 m)) "TDT") (setq tdt (1+ tdt))))
       (foreach oid (bht:obj-ids)
@@ -700,6 +762,8 @@
         (strcat "Closed: " closed "  | Length: " (if len (strcat (bht:fnum len 3) " m") "KHÔNG ĐỌC ĐƯỢC"))
         (strcat "Start distance: " (if start (bht:fnum start 3) "0.000") "  | Direction: " (if (= dir -1) "REVERSE" "FORWARD"))
         (strcat "Station source: " (bht:get rec "station_source") "  | Control points: " (itoa (length marks)))
+        (strcat "Mốc hồ sơ tự động: " (itoa (length (vl-remove-if-not '(lambda (m) (bht:starts (nth 3 m) "Hồ sơ ")) marks)))
+          " | Mâu thuẫn: " (bht:join (cadr controls) "; ") " | Cọc chưa rõ tuyến: " (bht:join (caddr controls) ", "))
         (strcat "TDT stakes: " (itoa tdt) "  | Station Control: " (bht:get rec "station_control_status"))
         (strcat "Geometry verified: " (if changed "KHÔNG - nguồn đã thay đổi" (if ent "CÓ" "KHÔNG")))
         (strcat "Hồ sơ cần cập nhật: " (itoa nstale))
@@ -742,7 +806,7 @@
   (princ)
 )
 
-(defun bht:print-marks (id / rec marks i prev ratio)
+(defun bht:print-marks (id / rec marks i prev ratio controls)
   (setq rec (bht:route-read id) marks (bht:route-marks rec) i 0 prev nil)
   (bht:msg (strcat "Tuyến " id " | loại " (bht:get rec "loai") " | handle " (bht:get rec "handle")
                    " | lệch tối đa " (bht:get rec "max_offset") " m | ngoại suy " (bht:get rec "ngoai_suy_m")
@@ -755,7 +819,14 @@
                                      (if (> (abs (- (abs ratio) 1.0)) *bht-ratio-tol*) " <- CẦN KIỂM TRA" "")) "")
                    "  nguồn: " (nth 3 m)))
     (setq prev m i (1+ i)))
-  (if (null marks) (princ "\n  (chưa có mốc - lý trình = chưa xác định)"))
+  (setq controls (bht:route-controls rec))
+  (foreach m (car controls)
+    (if (bht:starts (nth 3 m) "Hồ sơ ")
+      (princ (strcat "\n  [Tự động] d=" (bht:fnum (car m) 3) "  " (bht:fmt-km (cadr m))
+        " | " (nth 3 m) " (sửa/xóa tại hồ sơ cọc)"))))
+  (foreach note (cadr controls) (princ (strcat "\n  MÂU THUẪN: " note)))
+  (if (caddr controls) (princ (strcat "\n  Chưa gán được tuyến duy nhất cho: " (bht:join (caddr controls) ", "))))
+  (if (null (car controls)) (princ "\n  Chưa có mốc: nhập số Km/H vào hồ sơ cọc hoặc khai báo mốc bổ sung."))
 )
 
 (defun c:BHTDSMOC (/ *error* id v)
@@ -779,3 +850,170 @@
   (princ)
 )
 
+
+;; Route maintenance preserves original survey entities and invalidates derived station data.
+(defun bht:route-invalidate-objects (id detached / rec index angle zero)
+  (setq index (if detached (bht:pt-all) nil))
+  (foreach oid (bht:obj-ids)
+    (setq rec (bht:obj-read oid))
+    (if (or (= (bht:get rec "route_id") id) (= (bht:get rec "sign_heading_route") id))
+      (progn
+        (if (and detached (= (bht:get rec "sign_heading_route") id))
+          (progn
+            (setq angle (bht:kh-orientation-angle rec (bht:obj-position rec index))
+                  zero (bht:kh-picked-rotation rec '(0.0 0.0 0.0) '(1.0 0.0 0.0)))
+            (setq rec (bht:set rec "sign_heading_mode" (if angle "FIXED" ""))
+                  rec (bht:set rec "sign_heading_angle" (if angle (bht:fnum (- angle zero) 8) ""))
+                  rec (bht:set rec "sign_heading_route" ""))))
+        (if (= (bht:get rec "route_id") id)
+          (progn
+            (foreach key '("ly_trinh_m" "ly_trinh_km" "offset_m" "phia_tuyen" "loai_tuyen" "station_route_revision")
+              (setq rec (bht:set rec key "")))
+            (setq rec (bht:set rec "route_id" (if detached "" id))
+                  rec (bht:set rec "station_status" (if detached "NO_ROUTE" "STALE"))
+                  rec (bht:set rec "trang_thai_km" (if detached "CHUA_CO_TUYEN" "CAN_CAP_NHAT"))
+                  rec (bht:set rec "nguon_km" "Tuyến đã đổi; chạy Cập nhật lý trình."))))
+        (bht:obj-write oid rec)))))
+
+(defun bht:route-edit (id newid loai maxoff extrap / rec o)
+  (setq newid (strcase newid) rec (bht:route-read id))
+  (cond
+    ((null rec) (list nil "Không có tuyến."))
+    ((not (bht:valid-id newid)) (list nil "ID chỉ gồm A-Z, 0-9, dấu gạch, chấm và gạch dưới."))
+    ((and (/= id newid) (bht:route-read newid)) (list nil "ID tuyến đã tồn tại."))
+    ((or (not (member loai '("TIM_DUONG" "TIM_RANH" "KHAC"))) (not (numberp maxoff)) (<= maxoff 0) (not (numberp extrap)) (< extrap 0)) (list nil "Thông số tuyến không hợp lệ."))
+    (T
+      (setq rec (bht:route-bump (bht:set (bht:set (bht:set (bht:set rec "route_id" newid) "loai" loai) "max_offset" (bht:fnum maxoff 3)) "ngoai_suy_m" (bht:fnum extrap 3)) "Sửa thuộc tính tuyến"))
+      (bht:route-write newid rec)
+      (bht:route-invalidate-objects id nil)
+      (if (/= id newid)
+        (progn
+          (foreach oid (bht:obj-ids)
+            (setq o (bht:obj-read oid))
+            (if (or (= (bht:get o "route_id") id) (= (bht:get o "sign_heading_route") id)) (progn (if (= (bht:get o "route_id") id) (setq o (bht:set o "route_id" newid)))
+            (if (= (bht:get o "sign_heading_route") id) (setq o (bht:set o "sign_heading_route" newid)))
+            (bht:obj-write oid o))))
+          (bht:rec-delete "ROUTE" id)))
+      (list T newid))))
+
+(defun bht:route-replace (id ent / rec chk len)
+  (setq rec (bht:route-read id) chk (bht:route-check-ent ent) len (if (car chk) (bht:curve-length ent) nil))
+  (cond ((null rec) (list nil "Không có tuyến.")) ((not (car chk)) chk)
+    ((or (null len) (<= len 1e-8)) (list nil "Tuyến phải có chiều dài lớn hơn 0."))
+    ((= (bht:get rec "handle") (cdr (assoc 5 (entget ent)))) (list nil "Đây là tuyến hiện tại; dùng Chọn điểm đầu hoặc cập nhật hình học."))
+    (T
+      (bht:route-invalidate-objects id nil)
+      (setq rec (bht:set-all rec "moc" nil))
+      (foreach key '("tdt_source_handle" "tdt_source_class" "tdt_refreshed_at" "start_x" "start_y" "chieu") (setq rec (bht:set rec key "")))
+      (setq rec (bht:set rec "handle" (cdr (assoc 5 (entget ent))))
+            rec (bht:set rec "start_dist" "0.000000") rec (bht:set rec "direction" "1")
+            rec (bht:set rec "geometry_length" (bht:fnum len 6))
+            rec (bht:set rec "geometry_signature" (bht:route-geometry-signature ent 0.0 1))
+            rec (bht:set rec "station_source" "CHUA_CO_MOC") rec (bht:set rec "station_control_status" "CHUA_CO_MOC")
+            rec (bht:set rec "nguon" "Polyline chọn lại") rec (bht:route-bump rec "Thay hình học tuyến"))
+      (bht:route-write id rec) (list T id))))
+
+(defun bht:route-delete (id / rec)
+  (if (setq rec (bht:route-read id))
+    (progn (bht:route-invalidate-objects id T) (bht:rec-delete "ROUTE" id) (list T id))
+    (list nil "Không có tuyến.")))
+
+(defun c:BHTSUATUYEN (/ *error* id rec newid loai maxoff extrap result started)
+  (defun *error* (msg) (if started (command-s "_.UNDO" "_End")) (bht:on-error msg))
+  (if (setq id (bht:ask-route))
+    (progn
+      (setq rec (bht:route-read id) newid (strcase (bht:ask-string "ID tuyến" id))
+            loai (strcase (bht:ask-string "Loại [TIM_DUONG/TIM_RANH/KHAC]" (bht:get rec "loai")))
+            maxoff (bht:num (bht:ask-string "Khoảng cách tối đa (m)" (bht:get rec "max_offset")))
+            extrap (bht:num (bht:ask-string "Ngoại suy tối đa (m)" (bht:get rec "ngoai_suy_m"))))
+      (if (= 0 (logand 8 (getvar "UNDOCTL"))) (progn (command-s "_.UNDO" "_Begin") (setq started T)))
+      (setq result (bht:route-edit id newid loai maxoff extrap))
+      (if started (command-s "_.UNDO" "_End")) (setq started nil)
+      (if (car result) (bht:msg "Đã sửa tuyến. Chạy Cập nhật lý trình để tính lại hồ sơ liên quan.") (bht:warn (cadr result)))))
+  (bht:log-flush) (princ))
+
+(defun c:BHTCHONLAITUYEN (/ *error* id sel result started)
+  (defun *error* (msg) (if started (command-s "_.UNDO" "_End")) (bht:on-error msg))
+  (if (and (setq id (bht:ask-route)) (setq sel (entsel "\nChọn Polyline thay thế (giữ hình học cũ): ")))
+    (progn
+      (bht:msg "Thay hình học sẽ bỏ các mốc Km cũ của tuyến; cần chọn lại điểm đầu và nạp lại mốc.")
+      (if (= (strcase (bht:ask-string "Xác nhận thay tuyến [C=Co/K=Khong]" "K")) "C")
+        (progn
+          (if (= 0 (logand 8 (getvar "UNDOCTL"))) (progn (command-s "_.UNDO" "_Begin") (setq started T)))
+          (setq result (bht:route-replace id (car sel)))
+          (if (car result) (progn (bht:route-pick-start id) (bht:msg "Đã thay hình học. Nạp lại mốc Km và cập nhật lý trình.")) (bht:warn (cadr result)))
+          (if started (command-s "_.UNDO" "_End")) (setq started nil)))))
+  (bht:log-flush) (princ))
+
+(defun c:BHTXOATUYEN (/ *error* id result started)
+  (defun *error* (msg) (if started (command-s "_.UNDO" "_End")) (bht:on-error msg))
+  (if (setq id (bht:ask-route))
+    (progn
+      (bht:msg (strcat "Xóa khai báo tuyến " id ": giữ Polyline gốc và RTK; bỏ mốc Km/liên kết lý trình, giữ hướng biển hiện tại."))
+      (if (= (strcase (bht:ask-string "Xác nhận xóa tuyến [C=Co/K=Khong]" "K")) "C")
+        (progn
+          (if (= 0 (logand 8 (getvar "UNDOCTL"))) (progn (command-s "_.UNDO" "_Begin") (setq started T)))
+          (setq result (bht:route-delete id))
+          (if started (command-s "_.UNDO" "_End")) (setq started nil)
+          (if (car result) (bht:msg "Đã xóa khai báo tuyến; dùng Undo để khôi phục.") (bht:warn (cadr result)))))))
+  (bht:log-flush) (princ))
+
+(defun bht:station-one (oid / rec pos r st index)
+  (setq rec (bht:obj-read oid))
+  (cond ((null rec) (list 'LOI "Không tìm thấy hồ sơ đã lưu."))
+    ((bht:obj-marker-metres rec)
+      (bht:obj-write oid rec)
+      (list (strcat "Hồ sơ: " oid) (strcat "Lý trình: " (bht:fmt-km (bht:obj-marker-metres rec)))
+        "Lấy từ số Km/H đã nhập; không cần xác nhận lại bằng BHTMOCKM."))
+    ((null (bht:route-ids)) (list 'LOI "Chưa có tuyến tham chiếu. Hai cọc Km chưa đủ mô tả đường cong; dùng Kiểm tra 2 cọc Km để ước tính. Giữ nguyên lý trình cũ."))
+    (T
+      (setq index (bht:pt-all) pos (bht:obj-position rec index)
+            r (if pos (bht:station pos) (list (cons 'status "KHONG_CO_VI_TRI") (cons 'note "Hồ sơ chưa có vị trí RTK.")))
+            st (cdr (assoc 'status r)))
+      (if (not (bht:station-determined st))
+        (list 'LOI (strcat "Chưa tính được: " st ". " (bht:str (cdr (assoc 'note r))) ". Giữ nguyên lý trình cũ. Kiểm tra tuyến và mốc Km."))
+        (progn
+    (setq rec (bht:set rec "vi_tri_e" (if pos (bht:fnum (car pos) 3) ""))
+          rec (bht:set rec "vi_tri_n" (if pos (bht:fnum (cadr pos) 3) ""))
+          rec (bht:set rec "route_id" (bht:str (cdr (assoc 'route r))))
+          rec (bht:set rec "trang_thai_km" st)
+          rec (bht:set rec "ly_trinh_m" (if (bht:station-determined st) (bht:fnum (cdr (assoc 'station r)) 3) ""))
+          rec (bht:set rec "ly_trinh_km" (if (bht:station-determined st) (bht:fmt-km (cdr (assoc 'station r))) ""))
+          rec (bht:set rec "offset_m" (if (cdr (assoc 'offset r)) (bht:fnum (cdr (assoc 'offset r)) 3) ""))
+          rec (bht:set rec "phia_tuyen" (bht:str (cdr (assoc 'side r))))
+          rec (bht:set rec "loai_tuyen" (bht:str (cdr (assoc 'loai r))))
+          rec (bht:set rec "station_route_revision" (if (cdr (assoc 'revision r)) (itoa (cdr (assoc 'revision r))) ""))
+          rec (bht:set rec "station_status" (bht:station-status-v5 st))
+          rec (bht:set rec "nguon_km" (bht:str (cdr (assoc 'note r)))))
+
+          (bht:obj-write oid rec)
+          (list (strcat "Hồ sơ: " oid) (strcat "Lý trình: " (bht:get rec "ly_trinh_km"))
+            (strcat "Tuyến: " (bht:get rec "route_id") " | " st)
+            (strcat "Cách tính: " (bht:get rec "nguon_km"))))))))
+
+;; Estimate only: projection onto the XY chord between two surveyed Km marks.
+(defun bht:km-two-marks (a ka b kb p / dx dy len2 u foot)
+  (setq dx (- (car b) (car a)) dy (- (cadr b) (cadr a)) len2 (+ (* dx dx) (* dy dy)))
+  (cond ((<= len2 1e-12) (list nil "Hai cọc trùng vị trí trên bình đồ."))
+    ((equal ka kb 1e-9) (list nil "Hai cọc có cùng lý trình; cần kiểm tra lại."))
+    (T (setq u (/ (+ (* (- (car p) (car a)) dx) (* (- (cadr p) (cadr a)) dy)) len2))
+      (if (or (< u 0.0) (> u 1.0)) (list nil "Vị trí nằm ngoài khoảng hai cọc; không ngoại suy.")
+        (progn (setq foot (list (+ (car a) (* u dx)) (+ (cadr a) (* u dy))))
+          (list T (+ ka (* u (- kb ka))) (distance foot (list (car p) (cadr p))) (sqrt len2)))))))
+
+(defun c:BHTKM2COC (/ *error* a b ka kb p r)
+  (setq *error* bht:on-error)
+  (bht:msg "Ước tính theo đoạn thẳng nối hai cọc trên bình đồ; không tự ghi hồ sơ, không dùng thay chiều dài đường cong.")
+  (if (and (setq a (getpoint "\nChọn cọc Km thứ nhất (bắt NODE): "))
+           (setq ka (bht:parse-km (bht:ask-string "Lý trình cọc 1 (vd Km45+000)" "")))
+           (setq b (getpoint "\nChọn cọc Km thứ hai (bắt NODE): "))
+           (setq kb (bht:parse-km (bht:ask-string "Lý trình cọc 2 (vd Km46+000)" "")))
+           (setq p (getpoint "\nChọn vị trí cần kiểm tra: ")))
+    (progn (setq r (bht:km-two-marks (trans a 1 0) ka (trans b 1 0) kb (trans p 1 0)))
+      (if (car r)
+        (progn (bht:msg (strcat "Lý trình ƯỚC TÍNH: " (bht:fmt-km (cadr r))))
+          (bht:msg (strcat "Lệch đoạn nối cọc: " (bht:fnum (caddr r) 3) " m; khoảng cách hai cọc: " (bht:fnum (cadddr r) 3) " m."))
+          (bht:msg "Chưa ghi vào hồ sơ. Chỉ dùng khi đã kiểm tra đoạn đường đủ thẳng và giá trị cọc đúng."))
+        (bht:warn (cadr r))))
+    (bht:msg "Chưa tính: đã hủy chọn điểm hoặc lý trình cọc không hợp lệ."))
+  (princ))

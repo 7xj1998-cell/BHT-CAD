@@ -198,10 +198,6 @@
     (bht:msg "  Xem chi tiết trong thư mục BHT_LOG cạnh bản vẽ."))
 )
 
-(defun bht:dataset-register (ds path nrec res)
-  (bht:dataset-register-fmt ds path nrec res "")
-)
-
 ;; 0.3.3: ghi them dinh dang nhap (CSV / TSV) de canh bao nhap trung dinh dang.
 (defun bht:dataset-register-fmt (ds path nrec res fmt / rec old)
   (setq rec (bht:rec-read "DATASET" ds))

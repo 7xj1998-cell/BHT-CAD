@@ -1,7 +1,7 @@
-﻿;;; BHT 0.6.13 - ham dung chung cho cac phien kiem thu Core Console
+﻿;;; BHT 0.6.53 - ham dung chung cho cac phien kiem thu Core Console
 ;;; Moi kiem thu ghi 1 dong: PASS / FAIL / SKIP / BLOCKED <ma> <ten> | chi tiet
 (setq *T-DIR* "C:/Users/Le Bao/BHT_TEST_V044/")
-(setq *T-LSP* (strcat *T-DIR* "thư mục có dấu/BHT-0.6.13.lsp"))
+(setq *T-LSP* (strcat *T-DIR* "thư mục có dấu/BHT-0.6.53.lsp"))
 (setq *T-PASS* 0 *T-FAIL* 0 *T-SKIP* 0)
 (defun tlog (s) (write-line s *T-OUT*) (princ (strcat "\n" s)))
 (defun tchk (id name ok detail)
@@ -30,7 +30,7 @@
 (defun tcount (flt / ss) (setq ss (ssget "_X" flt)) (if ss (sslength ss) 0))
 ;; --- bo sung 0.3.3 ---
 (defun t-bht-ent-p (e)
-  (vl-some '(lambda (a) (bht:xget e a)) '("BHT_PT" "BHT_RTK" "BHT_NHAN" "BHT_ANHPT" "BHT_ANHTEN" "BHT_ANHRS" "BHT_KH" "BHT_ANHDAN")))
+  (vl-some '(lambda (a) (bht:xget e a)) '("BHT_PT" "BHT_RTK" "BHT_NHAN" "BHT_ANHPT" "BHT_ANHTEN" "BHT_ANHRS" "BHT_KH" "BHT_SIGN_ORIGIN" "BHT_ANHDAN")))
 (defun t-snapshot (/ e out)
   (setq e (entnext) out nil)
   (while e (if (not (t-bht-ent-p e)) (setq out (cons (entget e) out))) (setq e (entnext e)))

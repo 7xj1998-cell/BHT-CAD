@@ -10,9 +10,14 @@ using Autodesk.AutoCAD.Runtime;
 using BHT.Core;
 using CoreApp = Autodesk.AutoCAD.ApplicationServices.Core.Application;
 
+[assembly: ExtensionApplication(typeof(BHT.Bridge.SymbolUpgradeStartup))]
+[assembly: CommandClass(typeof(BHT.Bridge.SymbolUpgradeStartup))]
 [assembly: CommandClass(typeof(BHT.Bridge.BridgeCommands))]
 [assembly: CommandClass(typeof(BHT.Bridge.TdtSignLispFunctions))]
 [assembly: CommandClass(typeof(BHT.Bridge.SignAssemblyFunctions))]
+[assembly: CommandClass(typeof(BHT.Bridge.SignSupportFunctions))]
+[assembly: CommandClass(typeof(BHT.Bridge.SignLayoutFunctions))]
+[assembly: CommandClass(typeof(BHT.Bridge.SignContentFunctions))]
 [assembly: CommandClass(typeof(BHT.Bridge.SignCorrectionFunctions))]
 [assembly: CommandClass(typeof(BHT.Bridge.NativeTextService))]
 [assembly: CommandClass(typeof(BHT.Bridge.Tdt91LispFunctions))]

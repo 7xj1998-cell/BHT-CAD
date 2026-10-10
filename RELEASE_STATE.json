@@ -1,5 +1,6 @@
 {
-  "version": "0.6.13",
-  "contentHash": "068B213843F153016F8AD6DDE4F8C0388203C87823548B8D7480A1EFA56F256A",
-  "artifact": "C:\\Users\\Le Bao\\Desktop\\Lisp đang build\\BHT\\GitHub-BHT-0.6.3\\build\\release-v0.6.13\\BHT-0.6.13.zip"
+  "artifact": "C:\\Users\\Le Bao\\Desktop\\Lisp đang build\\BHT\\GitHub-BHT-0.6.3\\build\\release-v0.6.53\\BHT-0.6.53.zip",
+  "version": "0.6.53",
+  "contentHash": "DC8CE5748399BC93A8B1632EFCC29E79F2AFD9752ACCA1E63CF12E9BAB205A67",
+  "installer": "C:\\Users\\Le Bao\\Desktop\\Lisp đang build\\BHT\\GitHub-BHT-0.6.3\\build\\release-v0.6.53\\BHT-Setup-0.6.53.exe"
 }

@@ -5,7 +5,7 @@ Thư mục làm việc cố định trong kịch bản: `C:\Users\Le Bao\BHT_TES
 và `$w` trong `run_session.ps1` / `run_all.ps1` nếu chạy ở máy khác).
 
 **Không có dữ liệu thật trong repo.** Trước khi chạy cần tự chuẩn bị trong thư mục làm việc:
-`thư mục có dấu\BHT-0.6.13.lsp` (bản Lisp cần kiểm, đặt trong đường dẫn có dấu), `bin\BHT.*.dll` (kết quả build),
+`thư mục có dấu\BHT-0.6.53.lsp` (bản Lisp cần kiểm, đặt trong đường dẫn có dấu), `bin\BHT.*.dll` (kết quả build),
 `data\survey.csv` (+ các file trong data), `anh_da_doi\kmz_out\` (205 JPG + BHT_PHOTO.tsv), `irt\google_sat_18_x.jpg`,
 `irt\anh_khac.jpg`, `run\route_src.dwg`, `run\legacy_032_src.dwg` (bản sao bản vẽ làm bằng 0.3.2),
 `run\v033_A_out.dwg` (bản vẽ do bộ kiểm 0.3.3 tạo). Kịch bản chỉ làm việc trên **bản sao** bản vẽ.
@@ -13,7 +13,7 @@ và `$w` trong `run_session.ps1` / `run_all.ps1` nếu chạy ở máy khác).
 | Phiên | Nội dung |
 |---|---|
 | S0 | nạp từ đường dẫn có dấu, BHTTEST, API Lisp, xác nhận bỏ DCL và BHTLOAD khi chưa có plugin |
-| A, B, L, R, L2 | hồi quy bộ kiểm 0.3.3 trên BHT-0.6.13.lsp (nhãn, hồ sơ, ký hiệu, thứ tự, ảnh, bản vẽ 0.3.2, lưu / mở lại) |
+| A, B, L, R, L2 | hồi quy bộ kiểm 0.3.3 trên BHT-0.6.53.lsp (nhãn, hồ sơ, ký hiệu, thứ tự, ảnh, bản vẽ 0.3.2, lưu / mở lại) |
 | N, N2 | bản vẽ 0.3.3 + NETLOAD BHT.Bridge: C# đọc = Lisp, C# tạo/sửa hồ sơ Lisp đọc giống hệt, Application.Invoke, lưu / mở lại |
 | NL | bản vẽ 0.3.2 + BHT.Bridge |
 | P | NETLOAD BHT.Palette.dll trong Core Console, lệnh chính BTH |
@@ -49,3 +49,19 @@ Chạy `run_review.ps1` sau khi build DLL vào `build/v<phiên-bản>/bin`. Runn
 `test_SIGN0611.lsp` kiểm tra lý trình tự lấy từ Km/H, ẩn nhãn và điểm chèn cọc Km. `Sign0611Probe.cs` kiểm tra ba đường viền gốc, phông Giaothong1, màu trắng khi in, vị trí thanh đuôi và các góc quay. `sign0611-template.scr` chạy các thao tác chọn điểm lên/xuống/trái/phải, UCS xoay và hủy hướng có độ dài bằng không.
 
 `run_sign0611.ps1 -Drawing <bản-vẽ> -ProfileDirectory <thư-mục-profile-test> -BinDir <DLL-build>` tạo bản sao trong thư mục build, dùng profile test đã được cấu hình để nạp DLL/Lisp và giữ nguyên thiết lập bảo mật. Gói phát hành không chứa bản vẽ khảo sát hoặc kết quả DWG thử.
+
+### Tỷ lệ biển và bố cục Palette (0.6.21)
+
+run_signs.ps1 kiểm tra tỷ lệ hình/nhãn độc lập, giữ vị trí tự động/tay, nhiều nhãn, bản ghi RTK, các nhóm khác, lặp cập nhật, biển chèn sau và giá trị sai không ghi dữ liệu. run_palette_layout.ps1 kiểm tra nút trên Palette rộng 340/480 px, nhóm hành động, mở/hủy hộp tỷ lệ giữ bản nháp và cuộn, mức tùy chỉnh, đặt lại và hủy. Kết quả 0.6.21: 111 kiểm tra form đạt, 171 kiểm thử Core đạt, hồi quy CAD/ký hiệu/Unicode/G/T đạt.
+### Nhãn đèn và biển trạm thu phí (0.6.28)
+
+SignLibraryProbe kiểm tra IE.472a/b native: màu hatch xanh, chữ Unicode trắng, khung có bulge bo góc, số mét riêng, outline không sửa bản tô màu, catalog có vector và hoạt động không có TDT. PickerProbe kiểm tra nhập/sửa mét, dữ liệu từng mặt, chặn 0 và nút Đóng đóng cả cửa sổ modeless. test_SIGN kiểm tra nhãn DEN bên dưới block quay, cập nhật lặp giữ RTK, nhãn IE.472a kèm số mét.
+
+PaletteLayoutProbe kiểm tra một cửa sổ modeless, lệnh ZOOM khi thư viện mở vẫn giữ hồ sơ, nhận lựa chọn vào bản nháp, đổi hồ sơ hoặc Unbind đóng thư viện. 144 kiểm tra đạt trong Core Console/WinForms; thao tác chuột ở AutoCAD giao diện đầy đủ chưa được thử.
+
+Từ 0.6.29, các ca IE.472a/b còn kiểm tra đúng hai trụ/circle chân, không giữ trụ giữa cũ và các mặt ghép không chứa trụ/foot riêng.
+
+## Kiểm tra xoay đầu biển 0.6.35
+
+Chạy `run_heading.ps1 -BinDir <thư-mục-DLL-đã-build>` bằng AutoCAD 2024 Core Console. Kiểm tra tiếp tuyến PL thẳng/cong, chiều tuyến, hướng chung trong UCS xoay, giữ RTK/điểm chèn/tỷ lệ/điểm gấp khúc, nối chân CAP1, lựa chọn/hủy và một Undo cho cả đợt xoay. Log tại `build/v<phiên-bản>/heading.log`; yêu cầu `HEADING-FINAL-FAIL=0` và không có lỗi Lisp.
+

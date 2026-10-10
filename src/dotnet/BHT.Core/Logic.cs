@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
@@ -127,7 +127,7 @@ namespace BHT.Core
             if (fields.Has("kh_label_h")) rec.Set("kh_label_h", fields.Get("kh_label_h"));
             if (fields.Has(ObjFields.SignFill)) rec.Set(ObjFields.SignFill, fields.Get(ObjFields.SignFill) == "0" ? "0" : "1");
             if (fields.Has(ObjFields.CustomBlock)) rec.Set(ObjFields.CustomBlock, fields.Get(ObjFields.CustomBlock));
-            foreach (string key in new[] { ObjFields.BridgeName, ObjFields.SignChainage, ObjFields.RoadName, ObjFields.MarkerKm, ObjFields.MarkerH })
+            foreach (string key in new[] { ObjFields.SignContent, ObjFields.SignLayout, ObjFields.SignGap, ObjFields.SignClearance, ObjFields.BridgeName, ObjFields.SignChainage, ObjFields.RoadName, ObjFields.MarkerKm, ObjFields.MarkerH })
                 if (fields.Has(key)) rec.Set(key, fields.Get(key));
             rec.SetAll(ObjFields.Face, fields.GetAll(ObjFields.Face));
             rec.SetAll(ObjFields.Point, pids.Select(p => p.ToUpperInvariant()));
@@ -261,6 +261,13 @@ namespace BHT.Core
 
     public static class PhotoLogic
     {
+        public static double ParseRadius(string value)
+        {
+            double radius;
+            return double.TryParse((value ?? "").Trim().Replace(',', '.'), NumberStyles.Float, CultureInfo.InvariantCulture, out radius)
+                && radius > 0 && !double.IsInfinity(radius) ? radius : 10.0;
+        }
+
         private static string Slash(string dir)
         {
             if (dir == "" || dir.EndsWith("\\") || dir.EndsWith("/")) return dir;
@@ -548,6 +555,12 @@ namespace BHT.Core
             if (cur == "" || (lastAuto != null && cur == lastAuto)) return n > 0 ? n.ToString(CultureInfo.InvariantCulture) : "";
             return cur;
         }
+        public static string FaceCount(string code, string faceCodes)
+        {
+            int count = SplitCodes(faceCodes).Count;
+            if (count == 0 && !string.IsNullOrWhiteSpace(code)) count = 1;
+            return count == 0 ? "" : count.ToString(CultureInfo.InvariantCulture);
+        }
     }
 
     /// <summary>Nhom khong co ma bien (coc tieu, cot Km): Ma hieu de trong, khong bat buoc, khong tu dien.</summary>
@@ -563,7 +576,7 @@ namespace BHT.Core
     /// <summary>Tinh trang doi tuong: danh sach chon (van hien gia tri tu do cu nguyen van).</summary>
     public static class ConditionOptions
     {
-        public static readonly string[] All = { "Tốt", "Bình thường", "Hư hỏng" };
+        public static readonly string[] All = { "Tốt", "Bình thường", "Hư hỏng", "Mất mặt biển, còn trụ" };
 
         /// <summary>Gia tri hien trong o chon: rong -> rong; khop khong dau voi muc chuan -> muc chuan; khac -> giu nguyen.</summary>
         public static string Display(string stored)

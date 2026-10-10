@@ -116,7 +116,7 @@ namespace BHT.Palette
                 _ps.Save += OnSave;
                 _ps.Style = PaletteSetStyles.ShowCloseButton | PaletteSetStyles.ShowAutoHideButton
                           | PaletteSetStyles.ShowPropertiesMenu | PaletteSetStyles.Snappable;
-                _ps.MinimumSize = new Size(340, 420);
+                _ps.MinimumSize = new Size(340, 600);
                 _ps.DockEnabled = DockSides.Left | DockSides.Right;
                 _ps.KeepFocus = false;
                 _ctl = new BhtPaletteControl();
@@ -140,7 +140,6 @@ namespace BHT.Palette
                 try { _ps.Dock = DockSides.Left; _ps.Size = new Size(430, 820); } catch { }
             }
             _ctl.BindTo(AcApp.DocumentManager.MdiActiveDocument);
-            _ctl.RefreshAll();
         }
 
         private static void OnLoad(object sender, PalettePersistEventArgs e)
@@ -194,8 +193,7 @@ namespace BHT.Palette
 
         private static void OnDocActivated(object sender, DocumentCollectionEventArgs e)
         {
-            if (_ctl != null) _ctl.Unbind();
-            if (_ps != null) _ps.Visible = false;
+            if (_ctl != null) _ctl.BindTo(e.Document);
         }
 
         private static void OnDocToBeDestroyed(object sender, DocumentCollectionEventArgs e)

@@ -47,7 +47,7 @@ namespace BHT.Core
     public static class ObjFields
     {
         public const string Id = "object_id", Group = "nhom", Code = "ma_hieu", CodeType = "loai_ma", Desc = "mo_ta",
-            BridgeName = "bridge_name", SignChainage = "sign_chainage", RoadName = "road_name", MarkerKm = "marker_km", MarkerH = "marker_h", SignFill = "sign_fill", CustomBlock = "custom_block", PoleCount = "so_tru", FaceCount = "so_mat", Face = "mat", Condition = "tinh_trang", CheckState = "trang_thai_kt",
+            SignContent = "sign_content", SignLayout = "sign_layout", SignGap = "sign_gap", SignClearance = "sign_clearance", BridgeName = "bridge_name", SignChainage = "sign_chainage", RoadName = "road_name", MarkerKm = "marker_km", MarkerH = "marker_h", SignFill = "sign_fill", CustomBlock = "custom_block", PoleCount = "so_tru", FaceCount = "so_mat", Face = "mat", Condition = "tinh_trang", CheckState = "trang_thai_kt",
             Note = "ghi_chu", RoadSide = "phia_duong", Point = "pt", Photo = "anh", PhotoFile = "anh_file",
             RouteId = "route_id", ChainageM = "ly_trinh_m", ChainageKm = "ly_trinh_km", OffsetM = "offset_m",
             RouteSide = "phia_tuyen", KmState = "trang_thai_km", KmSource = "nguon_km",
@@ -55,7 +55,7 @@ namespace BHT.Core
             SegMethod = "gan_doan_pp", SegCandidates = "doan_ung_vien", CreatedAt = "tao_luc", ModifiedAt = "sua_luc";
 
         /// <summary>Cac truong nguoi dung duoc sua tu palette (giong bht:ask-fields).</summary>
-        public static readonly string[] Editable = { BridgeName, SignChainage, RoadName, MarkerKm, MarkerH, SignFill, CustomBlock, Group, Code, CodeType, Desc, PoleCount, FaceCount, Condition, CheckState, Note, RoadSide,
+        public static readonly string[] Editable = { SignContent, SignLayout, SignGap, SignClearance, BridgeName, SignChainage, RoadName, MarkerKm, MarkerH, SignFill, CustomBlock, Group, Code, CodeType, Desc, PoleCount, FaceCount, Condition, CheckState, Note, RoadSide,
             RouteId, ChainageM, ChainageKm, OffsetM, RouteSide, KmState, KmSource, StationRouteRevision, StationStatus };
     }
 
@@ -76,7 +76,9 @@ namespace BHT.Core
             new[] { "3", "COT_KM", "Cột Km" },
             new[] { "4", "BANG_CHI_DAN", "Bảng chỉ dẫn" },
             new[] { "5", "BANG_QC", "Bảng quảng cáo" },
-            new[] { "6", "DEN", "Đèn chiếu sáng / tín hiệu" },
+            new[] { "6", "DEN", "Đèn (hồ sơ cũ, chưa phân loại)" },
+            new[] { "9", "DEN_CS", "Đèn chiếu sáng" },
+            new[] { "10", "DEN_TH", "Đèn tín hiệu" },
             new[] { "7", "CONG_TRINH", "Công trình ven tuyến" },
             new[] { "8", "KHAC", "Khác" },
             new[] { "0", "CHUA_XAC_DINH", "Chưa xác định" }
@@ -141,9 +143,9 @@ namespace BHT.Core
 
     public static class BhtVersion
     {
-        public const string Version = "0.6.13";
-        public const string AssemblyVersion = "0.6.13.0";
-        public const string FileVersion = "0.6.13.0";
+        public const string Version = "0.6.53";
+        public const string AssemblyVersion = "0.6.53.0";
+        public const string FileVersion = "0.6.53.0";
         public const string LispApiLevel = "1";
         public const string DictName = "BHT_V02";
 

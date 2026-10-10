@@ -115,7 +115,7 @@ namespace BHT.Core
         {
             var result = new RouteProjection { Status = "INVALID_GEOMETRY" };
             if (points == null || points.Count < 2) return result;
-            double best2 = double.MaxValue, rawAtStart = 0.0, cumulative = 0.0;
+            double best2 = double.MaxValue, cumulative = 0.0;
             double bestCross = 0.0, bestX = 0.0, bestY = 0.0, bestRaw = 0.0;
             int bestSegment = -1;
             int count = points.Count - 1 + (closed ? 1 : 0);
@@ -123,7 +123,7 @@ namespace BHT.Core
             {
                 RoutePoint a = points[i], b = points[(i + 1) % points.Count];
                 double dx = b.X - a.X, dy = b.Y - a.Y, seg2 = dx * dx + dy * dy;
-                if (seg2 < Epsilon) continue;
+                if (seg2 == 0.0) continue;
                 double t = ((x - a.X) * dx + (y - a.Y) * dy) / seg2;
                 t = Clamp(t, 0.0, 1.0);
                 double qx = a.X + t * dx, qy = a.Y + t * dy;
@@ -137,9 +137,8 @@ namespace BHT.Core
                 cumulative += Math.Sqrt(seg2);
             }
             if (bestSegment < 0) return result;
-            rawAtStart = bestRaw;
-            double? routeDistance = ToRouteDistance(rawAtStart, cumulative, startDistance, direction, closed);
-            result.RawDistance = rawAtStart;
+            double? routeDistance = ToRouteDistance(bestRaw, cumulative, startDistance, direction, closed);
+            result.RawDistance = bestRaw;
             result.RouteDistance = routeDistance ?? 0.0;
             result.Offset = Math.Sqrt(best2);
             result.NearestX = bestX; result.NearestY = bestY; result.SegmentIndex = bestSegment;

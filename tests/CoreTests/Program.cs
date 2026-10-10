@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
@@ -28,6 +28,11 @@ namespace BHT.CoreTests
 
         static void SignVariantsT()
         {
+            Check("WT1", "truck weight canonical decimal", SignPresentation.WeightValue("S.505a@8,500") == "8.5");
+            Check("WT2", "legacy truck without weight", SignPresentation.ValidationError("S.505a") == "" && SignPresentation.WeightValue("S.505a") == "");
+            Check("WT3", "reject zero negative and malformed weight", new[] { "S.505a@0", "S.505a@-8", "S.505a@8T", "S.505a@8@9", "S.505a@NaN" }.All(c => SignPresentation.ValidationError(c) != ""));
+            Check("WT4", "weight bounds and precision", SignPresentation.WeightValue("S.505a@100000") == "100000" && SignPresentation.ValidationError("S.505a@100001") != "" && SignPresentation.ValidationError("S.505a@8.1234") != "");
+            Check("WT5", "weight isolated from metres and other vehicles", SignPresentation.MetreValue("S.505a@8") == "" && SignPresentation.ValidationError("S.505b@8") != "" && SignPresentation.BaseCode("S.505a@8") == "S.505a");
             Check("ZT1", "editable hours and legacy comma code", SignPresentation.ZoneTime("R.E,9b@7:30-19:15") == "07:30-19:15");
             Check("ZT2", "overnight zone hours", SignPresentation.ValidationError("R.E.10b@22:00-05:30") == "");
             Check("ZT3", "reject invalid hours", SignPresentation.ValidationError("R.E.9b@24:00-18:00") != "" && SignPresentation.ValidationError("R.E.9b@07:60-18:00") != "" && SignPresentation.ValidationError("R.E.9b@06:00-06:00") != "");
@@ -41,10 +46,19 @@ namespace BHT.CoreTests
             Check("SV6", "no supplied speed", SignPresentation.ResolveCode("P.127", "") == "P.127");
             Check("SV7", "reject overlong number", !SignPresentation.Speed("P.127", "gioihan8000").HasValue);
             Check("SV10", "reject invalid explicit speed instead of defaulting", SignPresentation.ValidationError("P.127-800") != "" && SignPresentation.ValidationError("P.127-abc") != "" && SignPresentation.ValidationError("P.127-") != "");
+            Check("SV31", "lane-speed variants remain separate from numeric speed input", new[] { "P.127a", "P.127b", "P.127c", "P.127D", "P.127-D", "P.127D-1", "P.127D-2" }.All(c => SignPresentation.ValidationError(c) == "" && SignPresentation.Speed(c, "gioihan80") == null));
             Check("SV11", "accept speed boundaries and surrounding spaces", SignPresentation.ValidationError(" P.127-5 ") == "" && SignPresentation.Speed(" P.127-130 ", "").Value == 130);
             Check("SV12", "explicit invalid speed cannot use description", SignPresentation.Speed("P.127-800", "gioihan80") == null && SignPresentation.ValidationError("P.127-0") != "");
             Check("SV13", "legacy separators resolve without default speed", SignPresentation.ResolveCode("P.127 - 20", "") == "P.127-20" && SignPresentation.ResolveCode("P.127/40", "") == "P.127-40" && SignPresentation.ResolveCode("P12780", "") == "P.127-80");
+            foreach (string family in new[] { "DP.134", "R.306" })
+            {
+                Check("SV26a-" + family, "keep speed sign family", SignPresentation.ResolveCode(family + "-60", "gioihan80") == family + "-60" && SignPresentation.SpeedBase(family + "-60") == family);
+                Check("SV26b-" + family, "speed bounds and invalid input", SignPresentation.Speed(family + "-5", "") == 5 && SignPresentation.Speed(family + "-130", "") == 130 && SignPresentation.ValidationError(family + "-0") != "" && SignPresentation.ValidationError(family + "-800") != "" && SignPresentation.ValidationError(family + "-abc") != "");
+            }
+            Check("FC26", "single face, duplicate faces, removal and empty selection", SignSearch.FaceCount("W.207a", "") == "1" && SignSearch.FaceCount("W.207a", "W.207a; W.207a") == "2" && SignSearch.FaceCount("W.207a", "W.207a") == "1" && SignSearch.FaceCount("", "") == "");
             Check("MV6", "reject unsupported and duplicate metre suffix", SignPresentation.ValidationError("R.415@5") != "" && SignPresentation.ValidationError("S.502@5@6") != "" && SignPresentation.ValidationError("S.509a@4,5") == "");
+            Check("TOLL1", "toll advance sign distance default and comma", SignPresentation.MetreDefault("IE.472a") == "750" && SignPresentation.MetreValue("IE.472a@500,5") == "500.5");
+            Check("TOLL2", "toll distance validation and sign isolation", SignPresentation.ValidationError("IE.472a@0") != "" && SignPresentation.ValidationError("IE.472a@500") == "" && SignPresentation.ValidationError("IE.472b@500") != "");
             Check("MV8", "W239b supports real clearance", SignPresentation.MetreValue("W.239b@5,2") == "5.2" && SignPresentation.ValidationError("W.239a@5.2") != "");
             BhtRecord presentationRecord;
             var presentationFields = new BhtRecord().Add(ObjFields.Group, "BIEN_BAO").Add(ObjFields.BridgeName, "CẦU YÊN CHÂU").Add(ObjFields.SignChainage, "Km252+831").Add(ObjFields.RoadName, "QL.6").Add(ObjFields.MarkerKm, "39").Add(ObjFields.MarkerH, "9");
@@ -129,10 +143,64 @@ namespace BHT.CoreTests
             Safe("C21", "Route Model V5 A-O", RouteModelT);
             Safe("C22", "sign variants", SignVariantsT);
             Safe("C23", "TCVN3 display", TcvnT);
+            Safe("C24", "CAP1 and face content", Cap1T);
+            Safe("C25", "actual sign parameters", ParameterT);
             string summary = "TONG BHT.CoreTests: " + pass + " PASS, " + fail + " FAIL";
             log.Add(summary); Console.WriteLine(summary);
             if (args.Length > 0) File.WriteAllLines(Path.Combine(args[0], "coretests_result.txt"), log.ToArray(), new System.Text.UTF8Encoding(false));
             return fail;
+        }
+
+        static void ParameterT()
+        {
+            var metres=SignParameter.Describe("I.441a","MTEXT","500 m");
+            Check("PARAM-UNIT","decimal comma preserves metres",metres.Normalize("350,5")=="350.5 m");
+            Check("PARAM-ZERO","zero distance allowed",metres.Normalize("0")=="0 m");
+            Check("PARAM-PRECISION-LARGE","retain every accepted decimal digit",metres.Normalize("999999999.12345678")=="999999999.12345678 m");
+            var time=SignParameter.Describe("P.127a","Time1","22:00");
+            Check("PARAM-TIME","overnight range normalized",time.Normalize("22:00-5:00")=="22:00-05:00");
+            Check("PARAM-TIME1","single hour normalized",time.Normalize("5:00")=="05:00");
+            Check("PARAM-PHONE","phone treated as text",SignParameter.Describe("I.430","HOTLINE","1900565656").Normalize("0904 123 456")=="0904 123 456");
+            Check("PARAM-CODE","road code not a numeric label",!SignParameter.IsQuantity("CT.01"));
+            var speed=SignParameter.Describe("P.127b","V1","80");
+            Check("PARAM-SPEED","per-lane speed uses integers",speed.Normalize("75")=="75");
+            var digit=SignParameter.Describe("IE.460C","HÀNG_TRĂM","5");
+            Check("PARAM-DIGIT","kilometre digit allows zero",digit.Normalize("0")=="0");
+            foreach(string s in new[]{"75.5","0","131"}) {bool rejected=false;try{speed.Normalize(s);}catch(ArgumentException){rejected=true;}Check("PARAM-SPEED-INVALID","reject speed "+s,rejected);}
+            bool badDigit=false;try{digit.Normalize("10");}catch(ArgumentException){badDigit=true;}Check("PARAM-DIGIT-INVALID","reject two-digit value",badDigit);
+            bool precision=false;try{metres.Normalize("0.000000001");}catch(ArgumentException){precision=true;}Check("PARAM-PRECISION","do not round a small distance to zero",precision);
+            foreach(string s in new[]{"-1","NaN","1 km","Infinity"}) {bool rejected=false;try{metres.Normalize(s);}catch(ArgumentException){rejected=true;}Check("PARAM-INVALID","reject number/unit "+s,rejected);}
+            foreach(string s in new[]{"24:00","12:60","abc"}) {bool rejected=false;try{time.Normalize(s);}catch(ArgumentException){rejected=true;}Check("PARAM-INVALID","reject invalid hours "+s,rejected);}
+        }
+        static void Cap1T()
+        {
+            foreach(var spec in SignLayoutSpec.All.Where(s=>s.Code!="LEGACY")) {
+                int n=spec.Faces>0 ? spec.Faces : 4;
+                var boxes=SignLayoutSpec.Arrange(spec.Code,Enumerable.Range(0,n).Select(i=>new SignPlateBox(0,0,1+i*.2,.6+i*.1)).ToList(),.2,.6);
+                Check("CAP-"+spec.Code,"all faces above clearance",boxes.Count==n && boxes.All(b=>b.Y>=.6));
+                bool separate=true;
+                for(int i=0;i<n;i++) for(int j=i+1;j<n;j++) if(!(boxes[i].Right<=boxes[j].Left || boxes[j].Right<=boxes[i].Left || boxes[i].Top<=boxes[j].Y || boxes[j].Top<=boxes[i].Y)) separate=false;
+                Check("CAP-GAP-"+spec.Code,"no overlapping plates",separate);
+            }
+            var vertical=SignLayoutSpec.Arrange("CAP1_6",new[] {new SignPlateBox(0,0,1,1),new SignPlateBox(0,0,1,2),new SignPlateBox(0,0,1,3)},.2,.6);
+            Check("CAP-ORDER","first face top",vertical[0].Y>vertical[1].Y && vertical[1].Y>vertical[2].Y);
+            Check("CAP-VALID","face count and numeric limits",SignLayoutSpec.Validate("CAP1_3",1,.2,.6)!="" && SignLayoutSpec.Validate("CAP1_9",21,.2,.6)!="" && SignLayoutSpec.Validate("CAP1_1",1,double.NaN,.6)!="" && SignLayoutSpec.Validate("CAP1_1",1,.2,double.PositiveInfinity)!="");
+            bool invalid=false; try { SignLayoutSpec.Arrange("CAP1_1",new[] {new SignPlateBox(0,0,double.PositiveInfinity,1)},.2,.6); } catch(ArgumentException) { invalid=true; }
+            Check("CAP-SIZE","reject infinite width",invalid);
+            var a=new SignContentFace {Index=0,Code="IE.456A-1"}; a.Values["[NAME]#0"]="ĐÀ NẴNG & <Huế>".Normalize(System.Text.NormalizationForm.FormD);
+            var second=new SignContentFace {Index=1,Code=a.Code}; second.Values["[NAME]#0"]="HÀ NỘI";
+            string xml=SignContent.Write(new[] {a,second});
+            Check("CONTENT-ROUNDTRIP","Unicode XML and duplicate codes independent",SignContent.ForFace(xml,0,a.Code)["[NAME]#0"]=="ĐÀ NẴNG & <Huế>" && SignContent.ForFace(xml,1,second.Code)["[NAME]#0"]=="HÀ NỘI");
+            Check("CONTENT-CODE","do not reuse fields on different sign",SignContent.ForFace(xml,0,"IE.456A-2").Count==0);
+            foreach(string bad in new[] {"<!DOCTYPE sign-content [<!ENTITY x SYSTEM 'file:///no-file'>]><sign-content/>","<sign-content><face index='-1' code='X'/></sign-content>","<sign-content><face index='0' code='X'/><face index='0' code='X'/></sign-content>","<sign-content><face index='0' code='X'><field key='a'>x</field><field key='a'>y</field></face></sign-content>","<sign-content><face index='0' code='X'><field key='a'>"+new string('a',161)+"</field></face></sign-content>"}) {
+                bool rejected=false; try {SignContent.Read(bad);} catch {rejected=true;} Check("CONTENT-INVALID","reject unsafe or malformed data",rejected);
+            }
+            BhtRecord created;
+            string error=ObjectLogic.BuildNew("CAP1",new BhtRecord().Add(ObjFields.Group,"BIEN_BAO").Add(ObjFields.SignContent,xml).Add(ObjFields.SignLayout,"CAP1_3").Add(ObjFields.SignGap,"0.2").Add(ObjFields.SignClearance,"0.6"),new[] {"P1"},false,new HashSet<string>{"P1"},new Dictionary<string,BhtRecord>(),"now",out created);
+            Check("CONTENT-STORE","create retains presentation",error==null && created.Get(ObjFields.SignContent)==xml && created.Get(ObjFields.SignLayout)=="CAP1_3");
+            var edited=ObjectLogic.ApplyEdit(created,new BhtRecord().Add(ObjFields.SignGap,"0.4"),"later");
+            Check("CONTENT-EDIT","unrelated edit retains all face content",edited.Get(ObjFields.SignGap)=="0.4" && edited.Get(ObjFields.SignContent)==xml && edited.Get(ObjFields.SignClearance)=="0.6");
+            Check("CONTENT-CODEC","long XML roundtrip",RecordCodec.Decode(RecordCodec.Encode(edited)).Get(ObjFields.SignContent)==xml);
         }
 
         static void Codec()
@@ -153,6 +221,13 @@ namespace BHT.CoreTests
             Check("C01g", "khóa '+' đơn không phải nối", RecordCodec.Decode(new[] { "a=1", "+=2" }).Count == 2);
             var exact = RecordCodec.Encode(new BhtRecord().Add("k", new string('x', 200)));
             Check("C01h", "đúng 200 ký tự = 1 đoạn", exact.Count == 1);
+            foreach (int size in new[] { 0, -1 })
+            {
+                bool rejected = false;
+                try { RecordCodec.Chunks("abc", size); }
+                catch (ArgumentOutOfRangeException) { rejected = true; }
+                Check("C01i" + size, "reject nonpositive chunk size", rejected);
+            }
         }
 
         static void RecordOps()
@@ -297,11 +372,16 @@ namespace BHT.CoreTests
             };
             var pn = Geo.PhotosNear(0, 0, ph, 10);
             Check("C10b", "ảnh gần: bỏ GPS không hợp lệ, gần trước", pn.Count == 2 && pn[0].Item == "P3" && pn[1].Item == "P1");
+            ph["P4"] = new BhtRecord().Add("gps_hop_le", "1").Add("e", "2.25").Add("n", "0");
+            var fractional = Geo.PhotosNear(0, 0, ph, PhotoLogic.ParseRadius("2,5"));
+            Check("C10c", "fractional radius includes photo beyond integer boundary", fractional.Count == 2 && fractional[1].Item == "P4");
+            Check("C10d", "fractional radius below one metre", PhotoLogic.ParseRadius("0.5") == 0.5);
+            Check("C10e", "invalid radii use default", new[] { "0", "-2", "NaN", "Infinity", "abc", "" }.All(x => PhotoLogic.ParseRadius(x) == 10));
         }
 
         static void Versions()
         {
-            Check("C11a", "hằng phiên bản", BhtVersion.Version == "0.6.13" && BhtVersion.AssemblyVersion == BhtVersion.Version + ".0" && BhtVersion.FileVersion == BhtVersion.AssemblyVersion);
+            Check("C11a", "hằng phiên bản", BhtVersion.Version == "0.6.53" && BhtVersion.AssemblyVersion == BhtVersion.Version + ".0" && BhtVersion.FileVersion == BhtVersion.AssemblyVersion);
             Check("C11b", "Lisp phải cùng phiên bản", BhtVersion.LispCompatible(BhtVersion.Version, "1") && BhtVersion.LispCompatible(" " + BhtVersion.Version + " ", "1")
                 && !BhtVersion.LispCompatible("5.0", "1") && !BhtVersion.LispCompatible("0.4.6-fix3", "1") && !BhtVersion.LispCompatible(BhtVersion.Version, "") && !BhtVersion.LispCompatible(BhtVersion.Version, "0"));
             var asm = typeof(BhtRecord).Assembly.GetName().Version.ToString();
@@ -428,7 +508,7 @@ namespace BHT.CoreTests
 
         static void ConditionT()
         {
-            Check("C19a", "danh sách Tình trạng", ConditionOptions.All.SequenceEqual(new[] { "Tốt", "Bình thường", "Hư hỏng" }));
+            Check("C19a", "danh sách Tình trạng", ConditionOptions.All.SequenceEqual(new[] { "Tốt", "Bình thường", "Hư hỏng", "Mất mặt biển, còn trụ" }));
             Check("C19b", "giá trị cũ tự do hiển thị nguyên văn; khớp không dấu -> mục chuẩn",
                 ConditionOptions.Display("tốt, nghiêng nhẹ") == "tốt, nghiêng nhẹ" && ConditionOptions.Display("hu hong") == "Hư hỏng"
                 && ConditionOptions.Display("") == "" && ConditionOptions.Display(null) == "" && ConditionOptions.IsStandard("Bình thường") && !ConditionOptions.IsStandard("gãy"));
@@ -491,6 +571,11 @@ namespace BHT.CoreTests
 
         static void RouteModelT()
         {
+            var tiny = new List<RoutePoint> { new RoutePoint(0, 0), new RoutePoint(0.00001, 0), new RoutePoint(1, 0) };
+            var tinyProjection = RouteModelLogic.Project(tiny, false, 0, 1, 0.000005, 0);
+            Check("C21P", "project onto short nonzero segment", tinyProjection.Valid && tinyProjection.SegmentIndex == 0 && Math.Abs(tinyProjection.RawDistance - 0.000005) < 1e-12);
+            var tinyEnd = RouteModelLogic.Project(tiny, false, 0, 1, 1, 0);
+            Check("C21Q", "projection distance matches complete polyline length", Math.Abs(tinyEnd.RawDistance - RouteModelLogic.Length(tiny, false)) < 1e-12);
             var open = new List<RoutePoint> { new RoutePoint(0, 0), new RoutePoint(100, 0) };
             var square = new List<RoutePoint> { new RoutePoint(0, 0), new RoutePoint(10, 0), new RoutePoint(10, 10), new RoutePoint(0, 10) };
 

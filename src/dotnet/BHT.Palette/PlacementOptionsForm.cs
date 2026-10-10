@@ -16,7 +16,7 @@ namespace BHT.Palette
         public int DirectionIndex { get { return direction.SelectedIndex; } }
         public string Degrees { get { return chosenDegrees ?? angle.Text.Trim().Replace(',', '.'); } }
         public string Mode { get { return new[] { "DIRECT", "ELBOW", "WAYPOINT" }[ModeIndex]; } }
-        public string Direction { get { return new[] { "HORIZONTAL", "ROUTE", "PICK", "ANGLE" }[DirectionIndex]; } }
+        public string Direction { get { return new[] { "HORIZONTAL", "ROUTE_PERP", "PICK", "ANGLE" }[DirectionIndex]; } }
 
         public PlacementOptionsForm(string title, int lastMode, int lastDirection, string degrees)
         {
@@ -31,7 +31,7 @@ namespace BHT.Palette
             form.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 100));
             form.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
             mode.Items.AddRange(new object[] { "Đường dẫn thẳng", "Gấp khúc tự động", "Chọn điểm trung gian" });
-            direction.Items.AddRange(new object[] { "Ngang (0°)", "Theo tuyến", "Chọn hướng trên CAD", "Nhập góc" });
+            direction.Items.AddRange(new object[] { "Ngang (0°)", "Vuông góc với tuyến", "Chọn hướng trên CAD", "Nhập góc" });
             mode.SelectedIndex = Math.Max(0, Math.Min(2, lastMode));
             direction.SelectedIndex = Math.Max(0, Math.Min(3, lastDirection));
             angle.Text = degrees;
@@ -39,7 +39,7 @@ namespace BHT.Palette
             angle.Enabled = DirectionIndex == 3;
             Action<string, Control> row = (label, control) => { form.Controls.Add(new Label { Text = label, AutoSize = true }); form.Controls.Add(control); };
             row("Đường dẫn", mode); row("Hướng ký hiệu", direction); row("Góc WCS (°)", angle);
-            var help = new Label { AutoSize = true, MaximumSize = new Size(405, 0), Text = "Bấm Đặt trên CAD, rồi chọn vị trí. Với điểm trung gian: chọn các điểm → Enter → vị trí cuối. Esc hủy; điểm RTK giữ nguyên." };
+            var help = new Label { AutoSize = true, MaximumSize = new Size(405, 0), Text = "Trên CAD: G = tâm X gốc; T = chọn vị trí tùy ý, hoặc bấm trực tiếp. Với điểm trung gian: chọn điểm → Enter → vị trí cuối. Esc hủy; điểm RTK giữ nguyên." };
             form.Controls.Add(help); form.SetColumnSpan(help, 2);
             form.Controls.Add(error); form.SetColumnSpan(error, 2);
             var buttons = new FlowLayoutPanel { AutoSize = true, FlowDirection = FlowDirection.RightToLeft, Dock = DockStyle.Fill };

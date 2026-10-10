@@ -1,7 +1,5 @@
 ﻿;;; ----------------------------------------------------------------------
 ;;; 0.4.3: API cho plugin .NET (BHT.Bridge / BHT.Palette)
-;;;  - Lisp la noi DUY NHAT chua thuat toan nhan / ky hieu / ky hieu anh /
-;;;    kiem tra / thu tu hien thi; plugin goi cac ham duoi day, KHONG viet lai.
 ;;;  - Moi ham tra ve DANH SACH CHUOI: ("OK" ...) hoac ("LOI" "ly do").
 ;;;  - Khong hoi nguoi dung, khong phu thuoc palette.
 ;;;  - Duoc dang ky bang vl-acad-defun de .NET goi qua Application.Invoke
@@ -97,8 +95,30 @@
   (bht:api-run '(lambda (value / ids)
     (if (not (member value '("0" "1"))) (list 'LOI "Giá trị tô màu không hợp lệ.")
       (progn (bht:meta-set "sign_fill_all" value)
-        (setq ids (vl-remove-if-not '(lambda (oid) (= (bht:get (bht:obj-read oid) "nhom") "BIEN_BAO")) (bht:obj-ids)))
+        (setq ids (vl-remove-if-not '(lambda (oid) (bht:kh-fillable-p (bht:obj-read oid))) (bht:obj-ids)))
         (if ids (bht:api-alist (bht:symbol-sync-ex ids nil)) (list "Không có hồ sơ biển báo BHT."))))) (list value)))
+
+(defun bht:api-object-delete (oid)
+  (bht:api-run '(lambda (oid)
+    (if (or (= (bht:trim oid) "") (not (bht:obj-read oid))) (list 'LOI "Hồ sơ không tồn tại.")
+      (if (bht:obj-delete oid) (list (strcase oid) "Đã xóa hồ sơ và ký hiệu; điểm RTK và ảnh gốc giữ nguyên.")
+        (list 'LOI "Không xóa được hồ sơ.")))) (list oid)))
+
+(defun bht:api-symbol-upgrade ()
+  (bht:api-run '(lambda (/ *bht-preserve-symbol-placement* ids r pair)
+    (cond
+      ((= (bht:meta "symbol_build" "") *bht-version*) (list "Ký hiệu đã ở phiên bản hiện tại."))
+      ((= (getvar "WRITESTAT") 0) (list 'LOI "Bản vẽ chỉ đọc; chưa cập nhật ký hiệu."))
+      ((not (bht:fn-defined-p 'BHTSIGNBOUNDS)) (list 'LOI "Lõi Bridge chưa sẵn sàng."))
+      (T
+        (foreach pair (bht:tagged-pairs "INSERT" "BHT_KH" 1) (setq ids (bht:unique-add ids (car pair))))
+        (setq ids (vl-remove-if-not '(lambda (id / rec) (setq rec (bht:obj-read id)) (or (bht:kh-fillable-p rec) (member (bht:get rec "nhom") '("DEN" "DEN_CS" "DEN_TH")))) ids))
+        (if ids
+          (progn
+            (setq *bht-preserve-symbol-placement* T r (bht:symbol-sync-ex ids nil))
+            (bht:meta-set "symbol_build" *bht-version*)
+            (cons (strcat "Đã cập nhật ký hiệu BHT " *bht-version* "; lưu bản vẽ để giữ thay đổi.") (bht:api-alist r)))
+          (list "Không có ký hiệu biển BHT cần cập nhật."))))) nil))
 
 (defun bht:api-sign-place (oid mode direction degrees)
   (bht:api-run '(lambda (oid mode direction degrees / r)
@@ -106,6 +126,30 @@
     (setq r (bht:kh-place-options oid mode direction degrees))
     (cond ((eq (car r) 'LOI) r) ((eq (car r) 'HUY) (list "Đã hủy, hồ sơ không đổi."))
           (T (bht:api-alist r)))) (list oid mode direction degrees)))
+
+(defun bht:api-sign-scale (symbol label)
+  (bht:api-run '(lambda (symbol label / s h ids rec e d st nx sc pr index *bht-preserve-symbol-placement*)
+    (setq s (bht:num (bht:replace (bht:str symbol) "," "."))
+          h (bht:num (bht:replace (bht:str label) "," ".")))
+    (if (not (and s h (>= s 0.01) (<= s 100.0) (>= h 0.01) (<= h 100.0)
+                  (equal s (bht:num (bht:fnum s 3)) 1e-10) (equal h (bht:num (bht:fnum h 3)) 1e-10)))
+      (list 'LOI "Tỷ lệ từ 0,01 đến 100, tối đa 3 chữ số thập phân.")
+      (progn
+        (bht:ensure-model)
+        (bht:meta-set "sign_scale" (bht:fnum s 3))
+        (bht:meta-set "sign_label_scale" (bht:fnum h 3))
+        (setq ids (vl-remove-if-not '(lambda (oid) (bht:kh-sign-scale-p (bht:obj-read oid))) (bht:obj-ids))
+              index (bht:pt-all))
+        (foreach pr (bht:tagged-pairs "INSERT" "BHT_KH" 1)
+          (if (member (car pr) ids)
+            (progn
+              (setq e (cdr pr) d (entget e) rec (bht:obj-read (car pr))
+                    st (bht:kh-ins-state e (car (bht:kh-auto-transform rec (bht:obj-position rec index) (bht:kh-scale-for rec))))
+                    sc (bht:kh-scale-for rec)
+                    nx (bht:kh-xdata-ins (car pr) (if (eq st 'AUTO) "TU_DONG" "TAY") (cdr (assoc 10 d)) (cdr (assoc 50 d)) sc))
+              (entmod (append (bht:dxf-put (bht:dxf-put (bht:dxf-put d 41 sc) 42 sc) 43 sc) (list nx))) (entupd e))))
+        (setq *bht-preserve-symbol-placement* T)
+        (if ids (bht:api-alist (bht:symbol-sync-ex ids nil)) (list "Đã lưu tỷ lệ; áp dụng khi chèn biển và bảng."))))) (list symbol label)))
 
 (defun bht:api-symbol-sync (ids)
   (bht:api-run '(lambda (ids / sc)
@@ -142,6 +186,24 @@
   (bht:api-run '(lambda () (bht:api-alist (bht:photo-sync))) nil)
 )
 
+;; Scale only existing RTK labels; creating/arranging labels is a separate action.
+(defun bht:api-rtk-scale (symbol label)
+  (bht:api-run '(lambda (symbol label / s factor h r count pair e d)
+    (setq s (bht:num (bht:replace (bht:str symbol) "," "."))
+          factor (bht:num (bht:replace (bht:str label) "," ".")))
+    (if (not (and s factor (>= s 0.01) (<= s 100.0) (>= factor 0.01) (<= factor 100.0)
+                  (equal s (bht:num (bht:fnum s 3)) 1e-10) (equal factor (bht:num (bht:fnum factor 3)) 1e-10)))
+      (list 'LOI "Tỷ lệ từ 0,01 đến 100, tối đa 3 chữ số thập phân.")
+      (progn
+        (setq h (* 0.5 factor) count 0)
+        (bht:meta-set "nhan_h" (bht:fnum h 6))
+        (setq r (bht:point-style-apply s nil))
+        (foreach pair (bht:tagged-pairs "TEXT" "BHT_NHAN" 2)
+          (setq e (cdr pair) d (entget e))
+          (if (not (equal (cdr (assoc 40 d)) h 1e-9))
+            (progn (entmod (bht:dxf-put d 40 h)) (entupd e) (setq count (1+ count)))))
+        (append (bht:api-alist r) (list (strcat "label_height=" (bht:fnum h 6)) (strcat "updated=" (itoa count))))))) (list symbol label)))
+
 (defun bht:api-photo-stats ()
   (bht:api-run '(lambda () (bht:api-alist (bht:photo-stats))) nil)
 )
@@ -153,6 +215,13 @@
                   (append (list (strcat "loi=" (itoa (car r))) (strcat "canh_bao=" (itoa (cadr r)))) (caddr r)))
                nil)
 )
+
+(defun bht:api-object-station (id) (bht:api-run 'bht:station-one (list id)))
+
+(defun bht:api-route-select (id)
+  (bht:api-run '(lambda (id)
+    (if (bht:route-read id) (progn (setq *bht-route-selected* id) (list id))
+      (list 'LOI "Tuyến đã bị xóa hoặc không tồn tại."))) (list id)))
 
 (defun bht:api-route-diag (id)
   (bht:api-run
@@ -181,8 +250,8 @@
 
 (setq *bht-api-functions*
   '(bht:api-version bht:api-messages bht:api-problems bht:api-info-handle bht:api-info-point bht:api-info-object bht:api-info-photo
-    bht:api-photo-path bht:api-sign-fill bht:api-sign-place bht:api-sign-free bht:api-symbol-sync bht:api-label-sync bht:api-point-style bht:api-photo-sync bht:api-photo-stats
-    bht:api-check bht:api-route-diag bht:api-draworder))
+    bht:api-photo-path bht:api-object-delete bht:api-symbol-upgrade bht:api-sign-fill bht:api-sign-scale bht:api-sign-place bht:api-sign-free bht:api-symbol-sync bht:api-label-sync bht:api-point-style bht:api-rtk-scale bht:api-photo-sync bht:api-photo-stats
+    bht:api-check bht:api-object-station bht:api-route-select bht:api-route-diag bht:api-draworder))
 
 (defun bht:api-register (/ n)
   (setq n 0)
@@ -222,6 +291,7 @@
 (if (and (getvar "LISPSYS") (= (getvar "LISPSYS") 0))
   (princ "\nBHT CANH BAO: LISPSYS=0 - tieng Viet co dau co the hien sai. Dat LISPSYS=1, khoi dong lai AutoCAD roi nap lai."))
 (bht:point-style-apply nil nil)
+;; Symbol updates are explicit; do not modify a drawing while it is opening.
 (setq *bht-palette-loaded* (bht:command-available-p "BTH"))
 (defun bht:load-message () (strcat "BHT " *bht-version* " đã nạp thành công."))
 (princ (strcat "\n" (bht:load-message)))

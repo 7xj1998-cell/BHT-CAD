@@ -22,6 +22,8 @@ namespace BHT.Bridge
         public string SourceDrawing { get; set; }
         public string Shape { get; set; }
         public bool HasVector { get; set; }
+        public string Provider { get; set; }
+        public string PreviewPath { get; set; }
         /// <summary>5.0: ten lay tu muc khac cung ma trong Bienbao.xml (vd "R.E,9a"); rong = ten goc cua muc.</summary>
         public string NameFrom { get; set; }
 
@@ -32,7 +34,7 @@ namespace BHT.Bridge
 
         public override string ToString()
         {
-            if (string.IsNullOrWhiteSpace(Description)) return Code + " — (chưa có tên trong thư viện TDT)";
+            if (string.IsNullOrWhiteSpace(Description)) return Code + " — (chưa có tên trong thư viện)";
             return Code + " — " + Description + (string.IsNullOrEmpty(NameFrom) ? "" : " (tên theo " + NameFrom + ")");
         }
     }
@@ -51,7 +53,7 @@ namespace BHT.Bridge
     /// <summary>
     /// Doc thu vien bien bao TDT da cai tren may. BHT chi tao cache trong LocalAppData
     /// va clone block duoc chon vao DWG; khong sua thu muc cai dat TDT.
-    /// Mat bien duoc chuan hoa theo extents ve chieu cao 1.8 don vi CAD.
+    /// Mat bien cao 1.8 don vi CAD; bien phu chuan hoa theo chieu lon nhat.
     /// Hatch giu thu tu tuong doi trong nguon va nam duoi cac net/text.
     /// </summary>
     public static class TdtSignLibrary
@@ -77,10 +79,18 @@ namespace BHT.Bridge
             get { lock (Gate) { if (string.Equals(Environment.GetEnvironmentVariable("BHT_SIGN_PROVIDER"), "BUILTIN", StringComparison.OrdinalIgnoreCase)) return ""; if (_root == null) _root = Environment.GetEnvironmentVariable("BHT_TDT_ROOT") ?? FindRoot(); return _root ?? ""; } }
         }
 
-        public static void ReloadCatalog() { lock (Gate) { _root = null; _catalog = null; _cache = null; } }
+        public static void ReloadCatalog() { lock (Gate) { _root = null; _catalog = null; _cache = null; BhtSignLibrary.Reload(); } }
 
         public static List<TdtSignEntry> GetCatalog()
         {
+            if (BhtSignLibrary.Root != "")
+            {
+                var ads = BhtSignLibrary.GetCatalog();
+                // Keep BHT's parameterized clearance sign when no corresponding ADS DWG exists.
+                if (!ads.Any(e => e.Code.Equals("W.239b", StringComparison.OrdinalIgnoreCase)))
+                    ads.Add(new TdtSignEntry { Code = "W.239b", Description = "Chiều cao tĩnh không thực tế", Group = "Biển nguy hiểm", HasVector = true, Provider = "BHT" });
+                return ads;
+            }
             lock (Gate)
             {
                 if (InstalledRoot == "") return BuiltInFallback(); if (_catalog != null) return new List<TdtSignEntry>(_catalog);
@@ -108,7 +118,20 @@ namespace BHT.Bridge
         public static TdtSignEntry Find(string code)
         {
             if (SignPresentation.ValidationError(code) != "") return null;
-            if (SignPresentation.Speed(code, "").HasValue) code = "P.127";
+            if (BhtSignLibrary.Root != "")
+            {
+                var ads = BhtSignLibrary.Find(code);
+                if (ads != null) return ads;
+                // Ambiguous old IE.456a/b/c names have no one-to-one ADS numbered equivalent.
+                // Use the original TDT face when installed, rather than pick another variant.
+                if (InstalledRoot != "")
+                {
+                    string legacyKey = Normalize(SignPresentation.BaseCode(code));
+                    var legacy = LoadCatalog(InstalledRoot).FirstOrDefault(e => Normalize(e.Code) == legacyKey);
+                    if (legacy != null) return legacy;
+                }
+            }
+            if (SignPresentation.Speed(code, "").HasValue) code = SignPresentation.SpeedBase(code);
             string key = Normalize(SignPresentation.BaseCode(code));
             if (key == "") return null;
             key = Normalize(SignCorrections.Canonical(code));
@@ -129,7 +152,9 @@ namespace BHT.Bridge
 
         public static string WrapperName(string code)
         {
-            var sb = new StringBuilder("BHT_TDT_V0613_");
+            string key = SignSearch.CodeKey(SignCorrections.Canonical(code)).ToUpperInvariant();
+            var sb = new StringBuilder(key == "IE472A" || key == "IE472B" ? "BHT_TDT_V0629_" : key == "R415A" || key == "R415B" ? "BHT_TDT_V0631_" : key == "W207A" || key.StartsWith("DP134") || key.StartsWith("R306") ? "BHT_TDT_V0626_" : key == "W239A" ? "BHT_TDT_V0620_" : SignPresentation.WeightValue(code) != "" ? "BHT_TDT_V0619_" : "BHT_TDT_V0613_");
+            if (BhtSignLibrary.Root != "") sb = new StringBuilder(key == "I449" ? "BHT_SIGN_V0642_" : "BHT_SIGN_V0633_");
             bool underscore = false;
             foreach (char c0 in (code ?? "").Trim().ToUpperInvariant())
             {
@@ -153,6 +178,17 @@ namespace BHT.Bridge
             if (destination == null) { result.Error = "không có bản vẽ đích"; return result; }
             result.Error = SignPresentation.ValidationError(code);
             if (result.Error != "") return result;
+            if (SignPresentation.WeightValue(code) != "")
+            {
+                try { result.BlockName = SignCorrections.TruckWeight(destination, code); result.Ok = true; result.Description = SuggestedDescription(code); }
+                catch (System.Exception ex) { result.Error = "Không tạo được biển trọng lượng: " + ex.Message; }
+                return result;
+            }
+            if (BhtSignLibrary.Root != "")
+            {
+                var ads = BhtSignLibrary.Import(destination, code);
+                if (ads != null) return ads;
+            }
             string corrected = SignCorrections.Ensure(destination, code);
             if (corrected != null) { result.Ok = true; result.BlockName = corrected; result.Description = SuggestedDescription(code); result.SourceBlock = "QCVN 41:2024 " + SignCorrections.Canonical(code); return result; }
             var entry = Find(code);
@@ -222,7 +258,7 @@ namespace BHT.Bridge
         // Clone through a private database so nested definitions are never shared with filled signs.
         public static string EnsureOutlineBlock(Database db, string sourceName)
         {
-            string name = sourceName + "_NOFILL_V062";
+            string name = sourceName + "_NOFILL_V0633";
             if (HasBlock(db, name)) return name;
             using (var scratch = new Database(true, true))
             {
@@ -236,17 +272,22 @@ namespace BHT.Bridge
                 var map = new IdMapping();
                 db.WblockCloneObjects(new ObjectIdCollection(new[] { sourceId }), scratch.BlockTableId, map, DuplicateRecordCloning.MangleName, false);
                 ObjectId privateId = map[sourceId].Value;
+                using (var native = db.TransactionManager.StartOpenCloseTransaction())
                 using (var tr = scratch.TransactionManager.StartTransaction())
                 {
                     var block = (BlockTableRecord)tr.GetObject(privateId, OpenMode.ForWrite);
                     block.Name = name;
+                    BhtSignLibrary.RestoreDrawOrder(native, tr, sourceId, privateId, map, new HashSet<ObjectId>());
+                    SignPrintPresentation.TagMissing(tr, privateId, new HashSet<ObjectId>());
                     RemoveFill(tr, privateId, new HashSet<ObjectId>());
                     tr.Commit();
                 }
                 map = new IdMapping();
                 scratch.WblockCloneObjects(new ObjectIdCollection(new[] { privateId }), db.BlockTableId, map, DuplicateRecordCloning.MangleName, false);
+                using (var native = scratch.TransactionManager.StartOpenCloseTransaction())
                 using (var tr = db.TransactionManager.StartTransaction())
                 {
+                    BhtSignLibrary.RestoreDrawOrder(native, tr, privateId, map[privateId].Value, map, new HashSet<ObjectId>());
                     var block = (BlockTableRecord)tr.GetObject(map[privateId].Value, OpenMode.ForWrite);
                     block.Name = name; tr.Commit();
                 }
@@ -258,46 +299,125 @@ namespace BHT.Bridge
         {
             if (!seen.Add(bid)) return;
             var block = (BlockTableRecord)tr.GetObject(bid, OpenMode.ForWrite);
-            var outlines = new List<Polyline>();
+            var outlines = new List<Entity>();
+            var cutoutInk = new List<Hatch>();
+            var frames = new List<Hatch>();
+            foreach(var pair in SignPrintPresentation.BorderPairs(tr,bid)) {
+                var outer=tr.GetObject(pair.Item1,OpenMode.ForRead) as Hatch;
+                var inner=tr.GetObject(pair.Item2,OpenMode.ForRead) as Hatch;
+                if(outer==null || inner==null || !outer.Normal.IsEqualTo(inner.Normal) || Math.Abs(outer.Elevation-inner.Elevation)>1e-8)continue;
+                var frame=(Hatch)outer.Clone();frame.ColorIndex=0;frame.LayerId=block.Database.LayerZero;frame.HatchStyle=HatchStyle.Normal;
+                var loop=inner.GetLoopAt(0);
+                if(inner.NumberOfLoops>1) {
+                    // Multi-loop white disks/panels are split by the native pictogram.
+                    // The border follows their complete hull, not one half of the disk.
+                    var hull=SignPrintPresentation.HullOutline(inner);var bounds=inner.GeometricExtents;
+                    var center=new Point2d((bounds.MinPoint.X+bounds.MaxPoint.X)/2,(bounds.MinPoint.Y+bounds.MaxPoint.Y)/2);
+                    double radius=(bounds.MaxPoint.X-bounds.MinPoint.X)/2;
+                    if(Math.Abs(bounds.MaxPoint.Y-bounds.MinPoint.Y-radius*2)<radius*1e-5 && hull.Count>12 && hull.All(p=>Math.Abs(p.GetDistanceTo(center)-radius)<radius*.02)) {
+                        var curves=new Curve2dCollection();curves.Add(new CircularArc2d(center,radius));var types=new IntegerCollection();types.Add((int)HatchEdgeType.CircularArc);
+                        frame.AppendLoop(HatchLoopTypes.Default,curves,types);
+                    } else {
+                        var vertices=new Point2dCollection();var bulges=new DoubleCollection();foreach(var point in hull){vertices.Add(point);bulges.Add(0);}
+                        frame.AppendLoop(HatchLoopTypes.Default,vertices,bulges);
+                    }
+                } else if(loop.IsPolyline) {
+                    var vertices=new Point2dCollection();var bulges=new DoubleCollection();
+                    foreach(BulgeVertex vertex in loop.Polyline){vertices.Add(vertex.Vertex);bulges.Add(vertex.Bulge);}
+                    frame.AppendLoop(HatchLoopTypes.Default,vertices,bulges);
+                } else {
+                    var types=new IntegerCollection();
+                    foreach(Curve2d curve in loop.Curves)types.Add((int)(curve is LineSegment2d ? HatchEdgeType.Line : curve is CircularArc2d ? HatchEdgeType.CircularArc : curve is EllipticalArc2d ? HatchEdgeType.EllipticalArc : HatchEdgeType.Spline));
+                    frame.AppendLoop(HatchLoopTypes.Default,loop.Curves,types);
+                }
+                frames.Add(frame);
+            }
+            var paper = new List<Tuple<Entity,ObjectId>>();
+            var boundaries = block.Cast<ObjectId>().Select(id => tr.GetObject(id, OpenMode.ForRead) as Curve).Where(e => e != null && e.Visible).ToList();
             foreach (ObjectId id in block)
             {
                 var e = tr.GetObject(id, OpenMode.ForRead) as Entity;
+                if(SignPrintPresentation.NeedsPaper(e)) {
+                    var b=e.GeometricExtents;var mask=new Solid(new Point3d(b.MinPoint.X,b.MinPoint.Y,b.MinPoint.Z),new Point3d(b.MaxPoint.X,b.MinPoint.Y,b.MinPoint.Z),new Point3d(b.MinPoint.X,b.MaxPoint.Y,b.MinPoint.Z),new Point3d(b.MaxPoint.X,b.MaxPoint.Y,b.MinPoint.Z));
+                    mask.Color=Autodesk.AutoCAD.Colors.Color.FromRgb(255,255,255);paper.Add(Tuple.Create((Entity)mask,id));
+                }
                 e.UpgradeOpen(); e.ColorIndex = 0; e.LayerId = block.Database.LayerZero;
+                if ((e is Hatch || e is Solid) && SignPrintPresentation.Role(e) != SignPrintPresentation.Background)
+                {
+                    if (SignPrintPresentation.Role(e) == SignPrintPresentation.Void || SignPrintPresentation.Role(e) == SignPrintPresentation.Paper || SignPrintPresentation.Role(e) == SignPrintPresentation.Backing) e.Color = Autodesk.AutoCAD.Colors.Color.FromRgb(255,255,255);
+                    continue;
+                }
+                var stroke = e as Polyline;
+                if(stroke != null && stroke.Closed) { stroke.ConstantWidth=0; for(int vertex=0;vertex<stroke.NumberOfVertices;vertex++) {stroke.SetStartWidthAt(vertex,0);stroke.SetEndWidthAt(vertex,0);} }
+                var note = e as MText; if(note != null) { note.BackgroundFill=false; note.Contents=System.Text.RegularExpressions.Regex.Replace(note.Contents,@"\[Cc]\d+;", ""); }
                 var nested = e as BlockReference;
-                if (nested != null) RemoveFill(tr, nested.BlockTableRecord, seen);
+                if (nested != null)
+                {
+                    foreach (ObjectId aid in nested.AttributeCollection)
+                    {
+                        var attribute = (AttributeReference)tr.GetObject(aid, OpenMode.ForWrite);
+                        attribute.ColorIndex = 0; attribute.LayerId = block.Database.LayerZero;
+                    }
+                    RemoveFill(tr, nested.BlockTableRecord, seen);
+                }
                 var hatch = e as Hatch;
                 var solid = e as Solid;
                 if (hatch == null && solid == null) continue;
                 if (hatch != null)
                 {
+                    if(SignPrintPresentation.HasInkHoles(hatch)) {
+                        // The native blue disk uses an inner hatch loop as its white arrow.
+                        // Keep that exact geometry as filled ink when the disk is hidden.
+                        for(int inner=1;inner<hatch.NumberOfLoops;inner++) {
+                            var hole=hatch.GetLoopAt(inner);if(!hole.IsPolyline)throw new InvalidOperationException("Không đọc được đường bao biểu tượng rỗng.");
+                            var ink=new Hatch { Normal=hatch.Normal,Elevation=hatch.Elevation,ColorIndex=0,LayerId=block.Database.LayerZero };
+                            ink.SetHatchPattern(HatchPatternType.PreDefined,"SOLID");
+                            var vertices=new Point2dCollection();var bulges=new DoubleCollection();
+                            foreach(BulgeVertex vertex in hole.Polyline){vertices.Add(vertex.Vertex);bulges.Add(vertex.Bulge);}
+                            ink.AppendLoop(HatchLoopTypes.External,vertices,bulges);cutoutInk.Add(ink);
+                        }
+                    }
                     for (int n = 0; n < hatch.NumberOfLoops; n++)
                     {
                         var loop = hatch.GetLoopAt(n);
                         if (!loop.IsPolyline)
                         {
+                            var edge = new Polyline { Closed = true, Normal = hatch.Normal, Elevation = hatch.Elevation, ColorIndex = 0, LayerId = hatch.LayerId };
                             foreach (Curve2d curve in loop.Curves)
                             {
-                                var edge = new Polyline { Normal = hatch.Normal, Elevation = hatch.Elevation, ColorIndex = hatch.ColorIndex, LayerId = hatch.LayerId };
-                                var points = curve.GetSamplePoints(curve is LineSegment2d ? 2 : curve is CircularArc2d ? 9 : 65);
-                                if (curve is CircularArc2d)
+                                var arc = curve as CircularArc2d;
+                                if (arc != null && (arc.StartPoint - arc.EndPoint).Length < 1e-8)
                                 {
-                                    for (int v = 0; v < points.Length - 2; v += 2)
+                                    var center = new Point3d(arc.Center.X, arc.Center.Y, hatch.Elevation);
+                                    var existing=boundaries.FirstOrDefault(c => SameCircle(c, center, arc.Radius));
+                                    if (existing==null)outlines.Add(new Circle(center, hatch.Normal, arc.Radius) { ColorIndex = 0, LayerId = hatch.LayerId, LineWeight=LineWeight.LineWeight025 });
+                                    else {existing.UpgradeOpen();existing.LineWeight=LineWeight.LineWeight025;}
+                                    continue;
+                                }
+                                var points = curve.GetSamplePoints(curve is LineSegment2d ? 2 : arc != null ? 9 : 129);
+                                int step = arc != null ? 2 : 1;
+                                for (int v = 0; v < points.Length - 1; v += step)
+                                {
+                                    double bulge = 0;
+                                    if (arc != null)
                                     {
                                         var chord = points[v + 2] - points[v]; var mid = points[v + 1] - points[v];
-                                        double bulge = -2 * (chord.X * mid.Y - chord.Y * mid.X) / chord.LengthSqrd;
-                                        edge.AddVertexAt(edge.NumberOfVertices, points[v], bulge, 0, 0);
+                                        bulge = -2 * (chord.X * mid.Y - chord.Y * mid.X) / chord.LengthSqrd;
                                     }
-                                    edge.AddVertexAt(edge.NumberOfVertices, points[points.Length - 1], 0, 0, 0);
+                                    edge.AddVertexAt(edge.NumberOfVertices, points[v], bulge, 0, 0);
                                 }
-                                else foreach (var point in points) edge.AddVertexAt(edge.NumberOfVertices, point, 0, 0, 0);
-                                outlines.Add(edge);
                             }
+                            var existingEdge=boundaries.OfType<Polyline>().FirstOrDefault(p=>SameBoundary(p,edge));
+                            if(edge.NumberOfVertices>1 && existingEdge==null){edge.LineWeight=LineWeight.LineWeight025;outlines.Add(edge);}
+                            else {if(existingEdge!=null){existingEdge.UpgradeOpen();existingEdge.LineWeight=LineWeight.LineWeight025;}edge.Dispose();}
                             continue;
                         }
                         var line = new Polyline { Closed = true, Normal = hatch.Normal, Elevation = hatch.Elevation, ColorIndex = hatch.ColorIndex, LayerId = hatch.LayerId };
                         for (int v = 0; v < loop.Polyline.Count; v++)
                         { var point = loop.Polyline[v]; line.AddVertexAt(v, point.Vertex, point.Bulge, 0, 0); }
-                        outlines.Add(line);
+                        var existingLine=boundaries.OfType<Polyline>().FirstOrDefault(p=>SameBoundary(p,line));
+                        if(existingLine==null){line.LineWeight=LineWeight.LineWeight025;outlines.Add(line);}
+                        else {existingLine.UpgradeOpen();existingLine.LineWeight=LineWeight.LineWeight025;line.Dispose();}
                     }
                 }
                 if (solid != null)
@@ -307,11 +427,65 @@ namespace BHT.Bridge
                     foreach (int v in order)
                     { var point = solid.GetPointAt((short)v).Convert2d(new Plane(Point3d.Origin, solid.Normal)); line.AddVertexAt(line.NumberOfVertices, point, 0, 0, 0); }
                     line.Elevation = solid.GetPointAt(0).GetAsVector().DotProduct(solid.Normal);
-                    outlines.Add(line);
+                    var existingLine=boundaries.OfType<Polyline>().FirstOrDefault(p=>SameBoundary(p,line));
+                    if(existingLine==null){line.LineWeight=LineWeight.LineWeight025;outlines.Add(line);}
+                    else {existingLine.UpgradeOpen();existingLine.LineWeight=LineWeight.LineWeight025;line.Dispose();}
                 }
                 e.UpgradeOpen(); e.Visible = false;
             }
             foreach (var line in outlines) { block.AppendEntity(line); tr.AddNewlyCreatedDBObject(line, true); }
+            foreach(var ink in cutoutInk){block.AppendEntity(ink);tr.AddNewlyCreatedDBObject(ink,true);ink.EvaluateHatch(true);SignPrintPresentation.MarkDerivedInk(tr,ink.ObjectId);}
+            foreach(var frame in frames){block.AppendEntity(frame);tr.AddNewlyCreatedDBObject(frame,true);frame.EvaluateHatch(true);SignPrintPresentation.MarkFrame(tr,frame.ObjectId);}
+            foreach(var mask in paper) {
+                block.AppendEntity(mask.Item1);tr.AddNewlyCreatedDBObject(mask.Item1,true);SignPrintPresentation.MarkPaper(tr,mask.Item1.ObjectId);
+                var draw=(DrawOrderTable)tr.GetObject(block.DrawOrderTableId,OpenMode.ForWrite);draw.MoveBelow(new ObjectIdCollection(new[]{mask.Item1.ObjectId}),mask.Item2);
+            }
+            // Some native white speed disks precede the equally white lane arrows.
+            // In monochrome the disks must cover those arrows, below rings and values.
+            var printOrder=(DrawOrderTable)tr.GetObject(block.DrawOrderTableId,OpenMode.ForWrite);
+            var entities=printOrder.GetFullDrawOrder(0).Cast<ObjectId>().Select(id=>(Entity)tr.GetObject(id,OpenMode.ForRead)).ToList();
+            foreach(var disk in entities.Where(e=>SignPrintPresentation.Role(e)==SignPrintPresentation.Backing)) {
+                var b=disk.GeometricExtents;double height=b.MaxPoint.Y-b.MinPoint.Y;
+                var arrow=entities.LastOrDefault(e=>e is Hatch && SignPrintPresentation.Role(e)==SignPrintPresentation.Ink
+                    && e.GeometricExtents.MaxPoint.Y-e.GeometricExtents.MinPoint.Y>height*1.5
+                    && e.GeometricExtents.MaxPoint.X>b.MinPoint.X && e.GeometricExtents.MinPoint.X<b.MaxPoint.X);
+                if(arrow!=null)printOrder.MoveAbove(new ObjectIdCollection(new[]{disk.ObjectId}),arrow.ObjectId);
+            }
+        }
+
+        private static bool SameCircle(Curve curve, Point3d center, double radius)
+        {
+            if (!curve.Closed) return false;
+            try
+            {
+                for (int i = 0; i < 8; i++)
+                {
+                    double angle = i * Math.PI / 4;
+                    var point = center + new Vector3d(radius * Math.Cos(angle), radius * Math.Sin(angle), 0);
+                    if (point.DistanceTo(curve.GetClosestPointTo(point, false)) > 1e-7) return false;
+                }
+                return true;
+            }
+            catch (Autodesk.AutoCAD.Runtime.Exception) { return false; }
+        }
+
+        private static bool SameBoundary(Polyline first, Polyline second)
+        {
+            if (!first.Closed || !second.Closed || Math.Abs(first.Elevation - second.Elevation) > 1e-7) return false;
+            try
+            {
+                var a = first.GeometricExtents; var b = second.GeometricExtents;
+                if (a.MinPoint.DistanceTo(b.MinPoint) > 1e-7 || a.MaxPoint.DistanceTo(b.MaxPoint) > 1e-7) return false;
+                // Hatch can reverse a loop or split a circular edge into several arcs.
+                foreach (var pair in new[] { new[] { first, second }, new[] { second, first } })
+                    for (int i = 0; i < pair[0].NumberOfVertices * 2; i++)
+                    {
+                        var point = pair[0].GetPointAtParameter(i * .5);
+                        if (point.DistanceTo(pair[1].GetClosestPointTo(point, false)) > 1e-7) return false;
+                    }
+                return true;
+            }
+            catch (Autodesk.AutoCAD.Runtime.Exception) { return false; }
         }
 
         private static bool HasBlock(Database db, string name)
@@ -325,7 +499,7 @@ namespace BHT.Bridge
             }
         }
 
-        private static double CreateWrapper(Database db, ObjectId clonedId, string wrapperName, string code, string sourceName)
+        internal static double CreateWrapper(Database db, ObjectId clonedId, string wrapperName, string code, string sourceName, bool preserveSourceOrder = false)
         {
             using (var tr = db.TransactionManager.StartTransaction())
             {
@@ -333,15 +507,16 @@ namespace BHT.Bridge
                 if (bt.Has(wrapperName)) { tr.Commit(); return 1.0; }
 
                 var cloned = (BlockTableRecord)tr.GetObject(clonedId, OpenMode.ForWrite);
-                PrepareFace(tr, clonedId, new HashSet<ObjectId>(), code);
+                PrepareFace(tr, clonedId, new HashSet<ObjectId>(), code, preserveSourceOrder);
                 Extents3d bounds;
                 using (var probe = new BlockReference(Point3d.Origin, clonedId)) bounds = probe.GeometricExtents;
                 double height = bounds.MaxPoint.Y - bounds.MinPoint.Y;
                 if (double.IsNaN(height) || double.IsInfinity(height) || height <= 1e-8)
                     throw new InvalidOperationException("mặt biển không có kích thước bao hợp lệ");
                 double width = bounds.MaxPoint.X - bounds.MinPoint.X;
-                double scale = StandardFaceHeight / (SignPresentation.BaseCode(code).StartsWith("S.", StringComparison.OrdinalIgnoreCase) ? Math.Max(width, height) : height);
-                string sourceAlias = "BHT_TDT_SRC_" + SafeToken(sourceName);
+                double targetHeight = SignPresentation.BaseCode(code).Equals("I.449",StringComparison.OrdinalIgnoreCase) ? .65 : StandardFaceHeight;
+                double scale = targetHeight / (SignPresentation.BaseCode(code).StartsWith("S.", StringComparison.OrdinalIgnoreCase) ? Math.Max(width, height) : height);
+                string sourceAlias = (preserveSourceOrder ? "BHT_ADS_SRC_" : "BHT_TDT_SRC_") + SafeToken(sourceName);
                 int suffix = 1;
                 string candidate = sourceAlias;
                 while (bt.Has(candidate)) candidate = sourceAlias + "_" + (suffix++).ToString(CultureInfo.InvariantCulture);
@@ -367,15 +542,42 @@ namespace BHT.Bridge
                 };
                 wrapper.AppendEntity(face); tr.AddNewlyCreatedDBObject(face, true);
 
+                var attributes = new List<KeyValuePair<AttributeDefinition, AttributeReference>>();
                 foreach (ObjectId id in cloned)
                 {
                     var def = tr.GetObject(id, OpenMode.ForRead) as AttributeDefinition;
-                    if (def == null || def.Constant) continue;
+                    if (def == null || def.Constant || def.Invisible) continue;
                     var attr = new AttributeReference();
                     attr.SetAttributeFromBlock(def, face.BlockTransform);
-                    attr.TextString = AttributeValue(code, def.TextString, def.Tag);
+                    attr.TextString = AttributeValue(code, def.TextString, def.Tag, preserveSourceOrder);
                     face.AttributeCollection.AppendAttribute(attr);
                     tr.AddNewlyCreatedDBObject(attr, true);
+                    if (preserveSourceOrder) attr.AdjustAlignment(db);
+                    attributes.Add(new KeyValuePair<AttributeDefinition, AttributeReference>(def, attr));
+                }
+                // A few ADS templates recompute their nested text extents only after insertion.
+                // Normalize the completed face, including its attribute references.
+                if (preserveSourceOrder)
+                {
+                    for (int attempt = 0; attempt < 3; attempt++)
+                    {
+                        var completed = face.GeometricExtents;
+                        double faceWidth = completed.MaxPoint.X - completed.MinPoint.X;
+                        double faceHeight = completed.MaxPoint.Y - completed.MinPoint.Y;
+                        double largest = SignPresentation.BaseCode(code).StartsWith("S.", StringComparison.OrdinalIgnoreCase) ? Math.Max(faceWidth, faceHeight) : faceHeight;
+                        double ratio = targetHeight / largest;
+                        if (Math.Abs(ratio - 1) < 1e-8 && Math.Abs(completed.MinPoint.Y - DefaultPostHeight) < 1e-8) break;
+                        scale *= ratio;
+                        face.ScaleFactors = new Scale3d(scale);
+                        face.Position = new Point3d((face.Position.X - (completed.MinPoint.X + completed.MaxPoint.X) / 2) * ratio,
+                            DefaultPostHeight + (face.Position.Y - completed.MinPoint.Y) * ratio, face.Position.Z * ratio);
+                        foreach (var pair in attributes)
+                        {
+                            pair.Value.SetAttributeFromBlock(pair.Key, face.BlockTransform);
+                            pair.Value.TextString = AttributeValue(code, pair.Key.TextString, pair.Key.Tag, true);
+                            pair.Value.AdjustAlignment(db);
+                        }
+                    }
                 }
                 tr.Commit();
                 return scale;
@@ -383,13 +585,16 @@ namespace BHT.Bridge
         }
 
         // Traverse nested definitions too; preserve hatch-to-hatch order from the source.
-        private static void PrepareFace(Transaction tr, ObjectId blockId, HashSet<ObjectId> seen, string code)
+        private static void PrepareFace(Transaction tr, ObjectId blockId, HashSet<ObjectId> seen, string code, bool preserveSourceOrder = false)
         {
             if (!seen.Add(blockId)) return;
             var block = (BlockTableRecord)tr.GetObject(blockId, OpenMode.ForRead);
             // TDT stores some dimensions as two texts, e.g. "3." and "5".
             var metrePrefix = block.Cast<ObjectId>().Select(id => tr.GetObject(id, OpenMode.ForRead) as DBText)
                 .FirstOrDefault(text => text != null && System.Text.RegularExpressions.Regex.IsMatch(text.TextString.Trim(), @"^\d+[.,]$"));
+            var zoneParts = block.Cast<ObjectId>().Select(id => tr.GetObject(id, OpenMode.ForRead) as DBText)
+                .Where(text => text != null && System.Text.RegularExpressions.Regex.IsMatch(text.TextString.Trim(), @"^\d{1,2}:\d{2}$"))
+                .OrderBy(text => text.Position.X).ThenByDescending(text => text.Position.Y).ToList();
             var draw = (DrawOrderTable)tr.GetObject(block.DrawOrderTableId, OpenMode.ForWrite);
             var hatches = new ObjectIdCollection();
             foreach (ObjectId id in draw.GetFullDrawOrder(0))
@@ -397,10 +602,27 @@ namespace BHT.Bridge
                 var entity = tr.GetObject(id, OpenMode.ForRead) as Entity;
                 if (entity is Hatch) hatches.Add(id);
                 var nested = entity as BlockReference;
-                if (nested != null) PrepareFace(tr, nested.BlockTableRecord, seen, code);
+                if (nested != null) PrepareFace(tr, nested.BlockTableRecord, seen, code, preserveSourceOrder);
+                var definition = entity as AttributeDefinition;
+                if (preserveSourceOrder && definition != null)
+                {
+                    string content = AttributeValue(code, definition.TextString, definition.Tag, true);
+                    string zone = SignPresentation.ZoneTime(code);
+                    if (zone != "" && zoneParts.Count == 2 && zoneParts.Contains(definition)) content = zone.Split('-')[zoneParts.IndexOf(definition)];
+                    if (content != definition.TextString)
+                    {
+                        definition.UpgradeOpen();
+                        if (zoneParts.Contains(definition) && content.Length > definition.TextString.Length)
+                            definition.WidthFactor *= (double)definition.TextString.Length / content.Length;
+                        definition.TextString = content; definition.AdjustAlignment(block.Database);
+                    }
+                }
                 bool whiteLayerFill = entity is Hatch && entity.ColorIndex == 256 && ((LayerTableRecord)tr.GetObject(entity.LayerId, OpenMode.ForRead)).Color.ColorIndex == 7;
                 if (entity.ColorIndex == 7 || whiteLayerFill) { entity.UpgradeOpen(); entity.Color = Autodesk.AutoCAD.Colors.Color.FromRgb(255,255,255); }
                 else if (entity.ColorIndex == 250) { entity.UpgradeOpen(); entity.Color = Autodesk.AutoCAD.Colors.Color.FromRgb(0,0,0); }
+                var zoneDash = entity as MText;
+                if (preserveSourceOrder && SignPresentation.HasZoneTime(code) && zoneDash != null && zoneDash.Text.Trim() == "-")
+                { zoneDash.UpgradeOpen(); zoneDash.Color = Autodesk.AutoCAD.Colors.Color.FromRgb(0,0,0); }
                 var speed = SignPresentation.Speed(code, "");
                 bool metres = SignPresentation.MetreValue(code) != "";
                 if (!speed.HasValue && !metres && !SignPresentation.HasZoneTime(code)) continue;
@@ -422,8 +644,8 @@ namespace BHT.Bridge
                     if (text != null && text == metrePrefix)
                     {
                         text.UpgradeOpen(); text.Visible = false;
-                        var definition = text as AttributeDefinition;
-                        if (definition != null) definition.Invisible = true;
+                        var prefixDefinition = text as AttributeDefinition;
+                        if (prefixDefinition != null) prefixDefinition.Invisible = true;
                         continue;
                     }
                     string changed = SignPresentation.ReplaceMetres(code, value);
@@ -444,9 +666,12 @@ namespace BHT.Bridge
                 }            }
             // Larger background fills must precede smaller foreground symbols.
             // Moving all hatches together preserves the defective legacy TDT order.
-            foreach (ObjectId id in hatches.Cast<ObjectId>().OrderBy(x => FillArea((Entity)tr.GetObject(x, OpenMode.ForRead))))
-                draw.MoveToBottom(new ObjectIdCollection(new[] { id }));
-            foreach (ObjectId id in hatches) if (RedForeground((Entity)tr.GetObject(id, OpenMode.ForRead))) draw.MoveToTop(new ObjectIdCollection(new[] { id }));
+            if (!preserveSourceOrder)
+            {
+                foreach (ObjectId id in hatches.Cast<ObjectId>().OrderBy(x => FillArea((Entity)tr.GetObject(x, OpenMode.ForRead))))
+                    draw.MoveToBottom(new ObjectIdCollection(new[] { id }));
+                foreach (ObjectId id in hatches) if (RedForeground((Entity)tr.GetObject(id, OpenMode.ForRead))) draw.MoveToTop(new ObjectIdCollection(new[] { id }));
+            }
         }
 
         private static bool RedForeground(Entity entity)
@@ -460,14 +685,29 @@ namespace BHT.Bridge
             catch (Autodesk.AutoCAD.Runtime.Exception) { return 0; }
         }
 
-        private static string AttributeValue(string code, string defaultValue, string tag)
+        internal static string AttributeValue(string code, string defaultValue, string tag, bool ads = false)
         {
             var speed = SignPresentation.Speed(code, "");
+            if (ads)
+            {
+                string key = (tag ?? "").ToUpperInvariant();
+                if (key == "V" && SignPresentation.SpeedBase(code) != "")
+                    return (speed ?? (SignPresentation.SpeedBase(code) == "R.306" ? 30 : 50)).ToString(CultureInfo.InvariantCulture);
+                string metres = SignPresentation.MetreValue(code); if (metres == "") metres = SignPresentation.MetreDefault(code);
+                if (key == "DISTANCE" && metres != "") return metres + " m";
+                if (SignPresentation.BaseCode(code).Equals("W.239b", StringComparison.OrdinalIgnoreCase) && key == "H") return metres + " m";
+                if (SignPresentation.BaseCode(code).Equals("S.509a", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (key == "DESC_1") return "CHIỀU CAO";
+                    if (key == "DESC_2") return "AN TOÀN";
+                    if (key == "DESC_3") return metres + " m";
+                }
+            }
             int number;
             if (speed.HasValue && int.TryParse((defaultValue ?? "").Trim(), out number))
                 return speed.Value.ToString(CultureInfo.InvariantCulture);
             defaultValue = SignPresentation.ReplaceZoneTime(code, SignPresentation.ReplaceMetres(code, defaultValue));
-            return string.IsNullOrWhiteSpace(defaultValue) ? (string.IsNullOrWhiteSpace(tag) ? "" : tag) : defaultValue;
+            return string.IsNullOrWhiteSpace(defaultValue) ? (ads || string.IsNullOrWhiteSpace(tag) ? "" : tag) : defaultValue;
         }
 
         private static string ResolveSourceBlock(BlockTable bt, Transaction tr, string catalogCode, string enteredCode)
@@ -588,8 +828,8 @@ namespace BHT.Bridge
             catch { }
             if (list.Count == 0) return BuiltInFallback();
             list.RemoveAll(x => x.Code == "W.239" || x.Code == "R.415");
-            foreach (var item in new[] { new[] { "W.239a", "Đường cáp điện ở phía trên" }, new[] { "W.239b", "Chiều cao tĩnh không thực tế" }, new[] { "R.415a", "Biển gộp làn đường theo phương tiện" }, new[] { "R.415b", "Kết thúc làn đường theo phương tiện" } })
-                if (!list.Any(x => x.Code.Equals(item[0], StringComparison.OrdinalIgnoreCase))) list.Add(new TdtSignEntry { Code = item[0], Description = item[1], Group = item[0].StartsWith("W.") ? "Biển nguy hiểm" : "Biển hiệu lệnh", HasVector = true });
+            foreach (var item in new[] { new[] { "IE.472a", "Trạm thu phí" }, new[] { "IE.472b", "Trạm thu phí" }, new[] { "W.239a", "Đường cáp điện ở phía trên" }, new[] { "W.239b", "Chiều cao tĩnh không thực tế" }, new[] { "R.415a", "Biển gộp làn đường theo phương tiện" }, new[] { "R.415b", "Kết thúc làn đường theo phương tiện" } })
+                if (!list.Any(x => x.Code.Equals(item[0], StringComparison.OrdinalIgnoreCase))) list.Add(new TdtSignEntry { Code = item[0], Description = item[1], Group = item[0].StartsWith("W.") ? "Biển nguy hiểm" : item[0].StartsWith("IE.") ? "Biển chỉ dẫn trên đường cao tốc" : "Biển hiệu lệnh", HasVector = true });
             return list.OrderBy(x => SignSortKey(x.Code), StringComparer.OrdinalIgnoreCase).ToList();
         }
 
@@ -597,7 +837,7 @@ namespace BHT.Bridge
         {
             string[][] data =
             {
-                new[] { "R.415a", "Biển gộp làn đường theo phương tiện" }, new[] { "R.415b", "Kết thúc làn đường theo phương tiện" }, new[] { "W.239b", "Chiều cao tĩnh không thực tế" }, new[] { "I.439", "Tên cầu" }, new[] { "W.207a", "Giao nhau với đường không ưu tiên" }, new[] { "W.209", "Giao nhau có tín hiệu đèn" },
+                new[] { "IE.472a", "Trạm thu phí" }, new[] { "IE.472b", "Trạm thu phí" }, new[] { "DP.134", "Hết hạn chế tốc độ tối đa" }, new[] { "R.306", "Tốc độ tối thiểu cho phép" }, new[] { "R.415a", "Biển gộp làn đường theo phương tiện" }, new[] { "R.415b", "Kết thúc làn đường theo phương tiện" }, new[] { "W.239b", "Chiều cao tĩnh không thực tế" }, new[] { "I.439", "Tên cầu" }, new[] { "W.207a", "Giao nhau với đường không ưu tiên" }, new[] { "W.209", "Giao nhau có tín hiệu đèn" },
                 new[] { "W.239a", "Đường cáp điện phía trên" }, new[] { "W.245a", "Đi chậm" },
                 new[] { "W.201", "Chỗ ngoặt nguy hiểm" }, new[] { "W.225", "Trẻ em" },
                 new[] { "R.412a", "Làn đường dành riêng cho từng loại xe" }, new[] { "I.414a", "Chỉ hướng đường" },
@@ -607,7 +847,7 @@ namespace BHT.Bridge
                 new[] { "P.125", "Cấm vượt" }, new[] { "P.127", "Tốc độ tối đa cho phép" }
                 , new[] { "S.501", "Phạm vi tác dụng của biển" }, new[] { "S.502", "Khoảng cách tới đối tượng báo hiệu" }, new[] { "S.509a", "Chiều cao an toàn" }
             };
-            return data.Select(x => new TdtSignEntry { Code = x[0], Description = x[1], Group = x[0].StartsWith("S.") ? "Biển phụ" : x[0].StartsWith("W.") ? "Biển nguy hiểm" : x[0].StartsWith("P.") ? "Biển cấm" : x[0].StartsWith("R.") ? "Biển hiệu lệnh" : "Biển chỉ dẫn" }).ToList();
+            return data.Select(x => new TdtSignEntry { Code = x[0], Description = x[1], HasVector = SignCorrections.Supports(x[0]), Group = x[0].StartsWith("S.") ? "Biển phụ" : x[0].StartsWith("W.") ? "Biển nguy hiểm" : x[0].StartsWith("P.") ? "Biển cấm" : x[0].StartsWith("R.") ? "Biển hiệu lệnh" : "Biển chỉ dẫn" }).ToList();
         }
 
         private static string FindRoot()
@@ -685,6 +925,8 @@ namespace BHT.Bridge
                 ? Reply("OK", r.BlockName, r.Description, r.SourceBlock, r.FaceScale.ToString("0.######", CultureInfo.InvariantCulture))
                 : Reply("LOI", r.Error);
         }
+        [LispFunction("BHTADSBLOCK")]
+        public static ResultBuffer ImportAdsSign(ResultBuffer args) { return ImportSign(args); }
         [LispFunction("BHTMETRETEXT")]
         public static string MetreText(ResultBuffer args)
         {
