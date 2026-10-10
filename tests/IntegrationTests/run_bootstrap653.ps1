@@ -1,4 +1,4 @@
-﻿param([Parameter(Mandatory=$true)][string]$BinDir,[Parameter(Mandatory=$true)][string]$RuntimePath,[ValidateSet("success","missing","broken","mismatch")][string]$Mode="success")
+﻿param([Parameter(Mandatory=$true)][string]$BinDir,[Parameter(Mandatory=$true)][string]$RuntimePath,[ValidateSet("success","missing","broken","mismatch")][string]$Mode="success",[switch]$WithSupportPath)
 $ErrorActionPreference='Stop'
 $root=Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
 $v=(Get-Content "$root\VERSION" -Raw).Trim()
@@ -13,6 +13,9 @@ $acad='D:\AutoCAD 2024'
 & "$env:WINDIR\Microsoft.NET\Framework64\v4.0.30319\csc.exe" /nologo /target:library /platform:x64 "/r:$work\BHT.Core.dll" "/r:$work\BHT.Bridge.dll" "/r:$acad\accoremgd.dll" "/r:$acad\acdbmgd.dll" "/out:$work\RuntimeBootstrapProbe.dll" "$PSScriptRoot\RuntimeBootstrapProbe.cs"
 if($LASTEXITCODE -ne 0){throw 'Probe compile failed'}
 $lines=@('(setvar "SECURELOAD" 0)','_.NETLOAD',('"'+("$work\BHT.Bridge.dll").Replace('\','/')+'"'),'_.NETLOAD',('"'+("$work\RuntimeBootstrapProbe.dll").Replace('\','/')+'"'),'BHTBOOTTEST')
+if($WithSupportPath){
+ $lines=@('(setenv "ACAD" (strcat (getenv "ACAD") ";'+$work.Replace('\','/')+'"))')+$lines
+}
 $scr="$work\bootstrap.scr"
 [IO.File]::WriteAllLines($scr,$lines,[Text.UTF8Encoding]::new($true))
 $p=Start-Process "$acad\accoreconsole.exe" -ArgumentList @('/isolate','BHTBootstrap',('"'+$work+'\profile"'),'/s',('"'+$scr+'"'),'/l','en-US') -RedirectStandardOutput "$work\console.log" -RedirectStandardError "$work\stderr.log" -WindowStyle Hidden -PassThru

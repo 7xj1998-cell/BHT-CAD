@@ -1,4 +1,10 @@
-﻿## 0.6.53 — 11/10/2026
+﻿## 0.6.54 — 11/10/2026
+
+- Sửa lỗi khởi động “bad argument type: stringp T”: OR trong AutoLISP trả boolean, không trả đường dẫn FAS/LSP. Giữ trực tiếp kết quả findfile, ưu tiên FAS rồi LSP.
+- Bổ sung hồi quy khi có Support Path như bộ cài thật, khi không có Support Path, nạp FAS trước Bridge và nạp loader mã nguồn LSP.
+- Đã tái hiện lỗi trên FAS 0.6.53 với Support Path trước khi sửa.
+
+## 0.6.53 — 11/10/2026
 
 - Khi mở BHT mà API Lisp chưa sẵn sàng, thử nạp đúng FAS cùng phiên bản nằm cạnh DLL; kiểm tra lại API sau khi nạp hoàn tất.
 - Phân biệt lỗi thiếu/nạp Lisp với lỗi khác phiên bản thật; giữ chi tiết lỗi và hiển thị tại vùng trạng thái, tránh hộp thoại lỗi giả khi mở bảng.

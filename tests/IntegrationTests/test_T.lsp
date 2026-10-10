@@ -1,9 +1,9 @@
-﻿;;; BHT 0.6.53 - phien T: anh nen IRT dang LUOI NHIEU TILE (moi tile = 1 IMAGE rieng, khong phai xref)
+﻿;;; BHT 0.6.54 - phien T: anh nen IRT dang LUOI NHIEU TILE (moi tile = 1 IMAGE rieng, khong phai xref)
 ;;; 144 tile (12x12) + 12 tile tren layer KHOA. Ten file / layer KHONG khop mau mac dinh -> phai dat mau.
 (load "C:/Users/Le Bao/BHT_TEST_V044/t_common.lsp")
 (tbegin "T")
 (setq e (tload))
-(tchk "T00" "nạp BHT-5.0" (and (null e) (= *bht-version* "0.6.53")) e)
+(tchk "T00" "nạp BHT-5.0" (and (null e) (= *bht-version* "0.6.54")) e)
 (setq r (tsafe "T01" "nhập survey.csv (526 điểm + nhãn)" '(lambda () (bht:import-csv (strcat *T-DIR* "data/survey.csv") "BOT19"))))
 (setq P (bht:pt-all) x0 nil x1 nil y0 nil y1 nil)
 (foreach it P (setq c (bht:pv (cdr it) 'xyz)

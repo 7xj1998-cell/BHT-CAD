@@ -1,10 +1,10 @@
-﻿;;; BHT 0.6.53 - phien TX: tim TDT 9.1 dang proxy tren BAN SAO ban ve tuyen that (tdt/tdt_copy.dwg), khong luu.
+﻿;;; BHT 0.6.54 - phien TX: tim TDT 9.1 dang proxy tren BAN SAO ban ve tuyen that (tdt/tdt_copy.dwg), khong luu.
 ;;; Bridge phai tu choi proxy, khong tao Polyline, khong sua doi tuong goc.
 (load "C:/Users/Le Bao/BHT_TEST_V044/t_common.lsp")
 (vl-load-com)
 (tbegin "TX")
 (setq e (tload))
-(tchk "X00" "nạp BHT-5.0" (and (null e) (= *bht-version* "0.6.53")) e)
+(tchk "X00" "nạp BHT-5.0" (and (null e) (= *bht-version* "0.6.54")) e)
 (defun t-x-types (/ ent d n out k)
   (setq ent (entnext) out nil)
   (while ent

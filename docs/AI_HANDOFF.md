@@ -1,4 +1,4 @@
-﻿# Bàn giao BHT 0.6.53 cho AI/người phát triển tiếp theo
+﻿# Bàn giao BHT 0.6.54 cho AI/người phát triển tiếp theo
 
 ## Đọc theo thứ tự
 
@@ -40,7 +40,7 @@ LispRuntimeLoader tìm FAS (hoặc LSP khi phát triển) đúng tên phiên b�
 
 Không thay SECURELOAD trong luồng sản phẩm. Test cô lập có thiết lập riêng. Không dùng NETLOAD chồng DLL mới để thử trong phiên CAD người dùng.
 
-**Còn cần xác minh:** nguyên nhân autoload ban đầu trong phiên CAD ở ảnh chưa được tái hiện; hành vi đổi/đóng nhiều tài liệu và hủy LOAD cần kiểm thử tương tác AutoCAD đầy đủ. Không coi kiểm tra Core Console là xác nhận toàn bộ giao diện thật.
+**Đã xác định ở 0.6.54:** OR trong AutoLISP trả T, không trả đường dẫn. Khi findfile tìm thấy file trong Support Path, vl-filename-directory nhận T và lỗi stringp. Đã thay bằng gán findfile + fallback riêng và tái hiện trước/sau sửa. Xem docs/QA_0.6.54.md. Hành vi đổi/đóng nhiều tài liệu và hủy LOAD vẫn cần kiểm thử tương tác AutoCAD đầy đủ.
 
 ## Kiểm thử đã thực hiện
 
@@ -56,7 +56,7 @@ Các script chính: tests/IntegrationTests/run_bootstrap653.ps1, run_palette_lay
 ## Tiếp tục phát triển
 
 - Đọc mã trước khi đề xuất; không dựa riêng vào README/hướng dẫn cũ vì chúng mô tả nhiều giai đoạn lịch sử.
-- Thay đổi chức năng tiếp theo phải tăng phiên bản bằng scripts/set-version.ps1, tối thiểu 0.6.54.
+- Thay đổi chức năng tiếp theo phải tăng phiên bản bằng scripts/set-version.ps1, tối thiểu 0.6.55.
 - Hoàn tất code, test và tài liệu trước package: RELEASE_STATE.json chặn đóng gói lại cùng phiên bản với nội dung đã đổi.
 - Không đưa kết quả build, DLL Autodesk, dữ liệu người dùng hoặc bản sao tài nguyên vendor lên repo.
 - Kho hiện chưa có LICENSE riêng cho mã BHT; công khai để đọc không thay thế việc lựa chọn giấy phép phân phối/tái sử dụng.
