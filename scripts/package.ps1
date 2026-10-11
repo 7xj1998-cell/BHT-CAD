@@ -5,9 +5,11 @@
   [switch]$SkipBuild,
   [switch]$IncludeSource,
   [switch]$ProtectedRuntime,
-  [string]$CompiledLisp = ''
+  [string]$CompiledLisp = '',
+  [switch]$PublicDistribution
 )
 $ErrorActionPreference = 'Stop'
+if($PublicDistribution -and (!$IncludeSource -or $ProtectedRuntime)){throw 'Public GPL package requires IncludeSource and an unprotected source build.'}
 $root = Split-Path -Parent $PSScriptRoot
 if ($BinDir -eq '') { $BinDir = Join-Path $root 'build\bin' }
 $version = (Get-Content -LiteralPath (Join-Path $root 'VERSION') -Raw).Trim()
@@ -21,7 +23,7 @@ foreach ($directory in @('src','scripts','packaging','tests','docs','assets')) {
   $trackedFiles += Get-ChildItem -LiteralPath (Join-Path $root $directory) -File -Recurse | Where-Object { $_.FullName -notmatch '\\(obj|bin)\\' -and $_.Extension.ToLowerInvariant() -notin @('.dwg','.dwl','.dwl2','.bak','.sv$','.kmz','.csv','.tsv','.ntd','.jpg','.jpeg') }
 }
 $trackedFiles += Get-ChildItem -LiteralPath (Join-Path $root 'assets/light-blocks') -Filter '*.dwg' -File
-foreach ($name in @('VERSION','README.md','CHANGELOG.md','AGENTS.md')) { $trackedFiles += Get-Item -LiteralPath (Join-Path $root $name) }
+foreach ($name in @('VERSION','README.md','CHANGELOG.md','AGENTS.md','LICENSE','COPYING_SCOPE.md','ROADMAP.md')) { $trackedFiles += Get-Item -LiteralPath (Join-Path $root $name) }
 $hashInput = ($trackedFiles | Sort-Object FullName | ForEach-Object { $_.FullName.Substring($root.Length) + ':' + (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash }) -join "`n"
 $hashAlgorithm = [Security.Cryptography.SHA256]::Create()
 try { $contentHash = [BitConverter]::ToString($hashAlgorithm.ComputeHash([Text.Encoding]::UTF8.GetBytes($hashInput))).Replace('-', '') }
@@ -33,7 +35,7 @@ if (Test-Path -LiteralPath $releaseStatePath) {
 }
 
 if (-not $SkipBuild) {
-  & (Join-Path $PSScriptRoot 'build.ps1') -AcadDir $AcadDir -OutDir $BinDir -UseCsc -Test
+  & (Join-Path $PSScriptRoot 'build.ps1') -AcadDir $AcadDir -OutDir $BinDir -UseCsc -Test -PublicDistribution:$PublicDistribution
   if ($LASTEXITCODE -ne 0) { throw "Build/test thất bại: $LASTEXITCODE" }
 }
 
@@ -41,6 +43,13 @@ foreach ($assemblyName in @('BHT.Core.dll','BHT.Bridge.dll','BHT.Palette.dll')) 
   $assembly = Join-Path $BinDir $assemblyName
   if (-not (Test-Path -LiteralPath $assembly)) { throw "Thiếu DLL: $assemblyName" }
   if ([Diagnostics.FileVersionInfo]::GetVersionInfo($assembly).FileVersion -ne "$version.0") { throw "DLL $assemblyName chưa được build cho phiên bản $version" }
+}
+if($PublicDistribution){
+ $proof=Get-Content -LiteralPath (Join-Path $BinDir 'public-build.json') -Raw | ConvertFrom-Json
+ if(!$proof.withoutEmbeddedPreviews){throw 'Public build must omit unverified embedded previews'}
+ foreach($n in @('BHT.Core.dll','BHT.Bridge.dll','BHT.Palette.dll')){
+  if((Get-FileHash (Join-Path $BinDir $n)).Hash -ne $proof.hashes.$n){throw 'Public build hash mismatch'}
+ }
 }
 if($ProtectedRuntime){
  $proof=Get-Content -LiteralPath (Join-Path $BinDir 'protection.json') -Raw | ConvertFrom-Json
@@ -71,11 +80,20 @@ if(!$ProtectedRuntime){Copy-Item -LiteralPath (Join-Path $root 'src\lisp\modules
 Copy-Item -LiteralPath (Join-Path $bin 'BHT.Core.dll'),(Join-Path $bin 'BHT.Bridge.dll'),(Join-Path $bin 'BHT.Palette.dll') -Destination $stage
 if($ProtectedRuntime){Copy-Item -LiteralPath (Join-Path $root 'packaging\README_RUNTIME.md') -Destination (Join-Path $stage 'README.md')}
 else{Copy-Item -LiteralPath (Join-Path $root 'README.md') -Destination $stage}
-Copy-Item -LiteralPath (Join-Path $root 'CHANGELOG.md') -Destination $stage
+Copy-Item -LiteralPath (Join-Path $root 'CHANGELOG.md'),(Join-Path $root 'LICENSE'),(Join-Path $root 'COPYING_SCOPE.md') -Destination $stage
 if($ProtectedRuntime){
  New-Item -ItemType Directory -Path (Join-Path $stage 'docs') -Force | Out-Null
  foreach($doc in @('HUONG_DAN.md',"RELEASE_NOTES_$version.md")){
   Copy-Item -LiteralPath (Join-Path $root "docs\$doc") -Destination (Join-Path $stage 'docs')
+ }
+}elseif($PublicDistribution){
+ $publicDocs=Join-Path $stage 'docs'
+ New-Item -ItemType Directory -Force $publicDocs | Out-Null
+ foreach($file in Get-ChildItem (Join-Path $root 'docs') -Recurse -File -Filter '*.md'){
+  $relative=$file.FullName.Substring((Join-Path $root 'docs').Length+1)
+  $target=Join-Path $publicDocs $relative
+  New-Item -ItemType Directory -Force (Split-Path -Parent $target) | Out-Null
+  Copy-Item -LiteralPath $file.FullName -Destination $target
  }
 }else{Copy-Item -LiteralPath (Join-Path $root 'docs') -Destination $stage -Recurse}
 Copy-Item -LiteralPath (Join-Path $root 'packaging\INSTALL_BHT.ps1'),(Join-Path $root 'packaging\INSTALL_BHT.cmd'),(Join-Path $root 'packaging\README_INSTALL.md') -Destination $stage
@@ -89,12 +107,13 @@ Copy-Item -LiteralPath (Join-Path $root 'scripts\audit_tdt_library.ps1') -Destin
 if ($IncludeSource) {
 $sourceStage = Join-Path $stage 'source\BHT-CAD'
 New-Item -ItemType Directory -Force -Path $sourceStage | Out-Null
-Copy-Item -LiteralPath (Join-Path $root '.gitignore'),(Join-Path $root 'BHT.sln'),(Join-Path $root 'VERSION'),(Join-Path $root 'README.md'),(Join-Path $root 'CHANGELOG.md'),(Join-Path $root 'AGENTS.md') -Destination $sourceStage
+Copy-Item -LiteralPath (Join-Path $root '.gitignore'),(Join-Path $root 'BHT.sln'),(Join-Path $root 'VERSION'),(Join-Path $root 'README.md'),(Join-Path $root 'CHANGELOG.md'),(Join-Path $root 'AGENTS.md'),(Join-Path $root 'LICENSE'),(Join-Path $root 'COPYING_SCOPE.md'),(Join-Path $root 'ROADMAP.md') -Destination $sourceStage
 foreach ($sourceDir in @('.github','docs','packaging','scripts','src','tests','assets')) {
   $sourcePath = Join-Path $root $sourceDir
   foreach ($file in (Get-ChildItem -LiteralPath $sourcePath -File -Recurse | Where-Object {
     $_.FullName -notmatch '\\(obj|bin)\\' -and $_.Extension.ToLowerInvariant() -notin @('.dll','.exe','.pdb','.user','.suo')
   })) {
+    if($PublicDistribution -and $file.Extension.ToLowerInvariant() -in @('.dwg','.png','.jpg','.jpeg','.ttf','.shx','.fas','.vlx')){continue}
     $relative = $file.FullName.Substring($root.Length + 1)
     $target = Join-Path $sourceStage $relative
     New-Item -ItemType Directory -Force -Path (Split-Path -Parent $target) | Out-Null
@@ -115,6 +134,8 @@ else{
  [IO.File]::WriteAllText($manifestPath,$manifestText,[Text.UTF8Encoding]::new($true))
 }
 
+$adsBundle=$adsLoose=$lightBundle=$lightLoose=$null
+if(!$PublicDistribution){
 # Ship a verified local BHT sign snapshot for offline use; compiled vendor plugins are never loaded.
 $adsLocal = Join-Path $root 'ads_library_local\TrafficSignal'
 if (-not (Test-Path -LiteralPath (Join-Path $adsLocal 'BIEN_CAM.txt'))) {
@@ -149,11 +170,13 @@ foreach ($fn in $fontNames) {
   else { if ($fn -eq 'VNRomancUpdate.shx') { throw 'Thiếu VNRomancUpdate.shx: không phát hành bản thiếu phông mặc định.' }; Write-Warning "Không tìm thấy phông $fn (fonts_local / TDT / AutoCAD Fonts) - bundle thiếu phông này." }
 }
 
+}
+
 # Khong dua ban ve/du lieu/anh khao sat hoac gallery DWG vao goi phat hanh,
 # ke ca khi tep nam trong thu muc tai lieu hay source ban giao.
 $forbiddenExtensions = @('.dwg','.dwl','.dwl2','.bak','.sv$','.kmz','.csv','.tsv','.ntd','.jpg','.jpeg')
-$libraryRoots = @($adsBundle, $adsLoose, $lightBundle, $lightLoose)
-if ($IncludeSource) { $libraryRoots += Join-Path $sourceStage 'assets\light-blocks' }
+$libraryRoots = @($adsBundle, $adsLoose, $lightBundle, $lightLoose) | Where-Object { $_ }
+if ($IncludeSource -and !$PublicDistribution) { $libraryRoots += Join-Path $sourceStage 'assets\light-blocks' }
 $libraryPrefixes = $libraryRoots | ForEach-Object { [IO.Path]::GetFullPath($_).TrimEnd('\') + '\' }
 Get-ChildItem -LiteralPath $stage -File -Recurse | Where-Object {
   $filePath = $_.FullName
@@ -171,6 +194,11 @@ if($ProtectedRuntime){
  $leaks=@(Get-ChildItem -LiteralPath $stage -File -Recurse | Where-Object {$_.Extension -in '.lsp','.cs','.pdb','.sln','.csproj','.fasmap' -or $_.Name -match '^(Mapping|obfuscar)\.'})
  if($leaks.Count -gt 0 -or (Test-Path (Join-Path $stage 'source'))){throw 'Protected package contains private source/debug files'}
 }
+if($PublicDistribution){
+ Copy-Item -LiteralPath (Join-Path $root 'packaging/README_PUBLIC.md') -Destination (Join-Path $stage 'README.md') -Force
+ $excluded=@(Get-ChildItem -LiteralPath $stage -Recurse -File | Where-Object {$_.Extension.ToLowerInvariant() -in @('.dwg','.png','.jpg','.jpeg','.ttf','.shx','.fas','.vlx')})
+ if($excluded.Count){throw 'Public package contains excluded resources'}
+}
 $hashFile = Join-Path $stage 'SHA256SUMS.txt'
 $hashTargets = Get-ChildItem -LiteralPath $stage -File -Recurse | Where-Object { $_.FullName -ne $hashFile }
 $basePath = $stage.TrimEnd('\') + '\'
@@ -183,5 +211,5 @@ $singleInstaller = Join-Path $resolvedOut ('BHT-Setup-' + $version + '.exe')
 & (Join-Path $PSScriptRoot 'build-installer.ps1') -PackageRoot $stage -OutFile $singleInstaller
 Compress-Archive -Path $stage -DestinationPath $zip -CompressionLevel Optimal
 
-@{ version = $version; contentHash = $contentHash; artifact = $zip; installer = $singleInstaller } | ConvertTo-Json | Set-Content -LiteralPath $releaseStatePath -Encoding UTF8
+@{ version = $version; contentHash = $contentHash; artifact = [IO.Path]::GetFileName($zip); installer = [IO.Path]::GetFileName($singleInstaller) } | ConvertTo-Json | Set-Content -LiteralPath $releaseStatePath -Encoding UTF8
 Get-Item -LiteralPath $stage,$zip,$singleInstaller | Select-Object FullName,Length,LastWriteTime

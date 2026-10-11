@@ -9,7 +9,7 @@
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
     <Deterministic>true</Deterministic>
-    <Version>0.6.54.0</Version>
+    <Version>0.6.55.0</Version>
     <!-- Thu muc cai AutoCAD chua acdbmgd.dll / accoremgd.dll / acmgd.dll (KHONG chep vao ma nguon) -->
     <AcadDir Condition="'$(AcadDir)' == '' and '$(ACAD_INSTALL_DIR)' != ''">$(ACAD_INSTALL_DIR)</AcadDir>
     <AcadDir Condition="'$(AcadDir)' == ''">D:\AutoCAD 2024</AcadDir>

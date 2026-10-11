@@ -1,4 +1,10 @@
-﻿## 0.6.54 — 11/10/2026
+﻿## 0.6.55 — đang phát triển
+
+- Ghi nhận GPL-3.0-only, tiêu chí nghiệm thu và ngưỡng sai số/hiệu năng do chủ dự án chốt.
+- Chuẩn hóa RELEASE_STATE sang tên tệp thay vì đường dẫn máy cá nhân; giữ contentHash và chặn ghi đè bản phát hành.
+- Chưa phát hành: cần hoàn tất gói công khai không chứa tài nguyên vendor và nghiệm thu Mốc 1.
+
+## 0.6.54 — 11/10/2026
 
 - Sửa lỗi khởi động “bad argument type: stringp T”: OR trong AutoLISP trả boolean, không trả đường dẫn FAS/LSP. Giữ trực tiếp kết quả findfile, ưu tiên FAS rồi LSP.
 - Bổ sung hồi quy khi có Support Path như bộ cài thật, khi không có Support Path, nạp FAS trước Bridge và nạp loader mã nguồn LSP.

@@ -1,8 +1,8 @@
-﻿;;; BHT 0.6.54 - phien NL: BAN SAO ban ve lam bang BHT 0.3.2 (legacy_032_src.dwg) mo bang 5.0 + BHT.Bridge.
-(load "C:/Users/Le Bao/BHT_TEST_V044/t_common.lsp")
+﻿;;; BHT 0.6.55 - phien NL: BAN SAO ban ve lam bang BHT 0.3.2 (legacy_032_src.dwg) mo bang 5.0 + BHT.Bridge.
+(load (strcat (getenv "BHT_TEST_DIR") "/t_common.lsp"))
 (tbegin "NL")
 (setq e (tload))
-(tchk "K00" "nạp BHT-5.0 trên bản vẽ 0.3.2" (and (null e) (= *bht-version* "0.6.54")) e)
+(tchk "K00" "nạp BHT-5.0 trên bản vẽ 0.3.2" (and (null e) (= *bht-version* "0.6.55")) e)
 (setq NP (length (bht:pt-all)) NPH (length (bht:rec-keys "PHOTO")) NO (length (bht:obj-ids)) PC0 (t-pt-coords))
 (tlog (strcat "   bản vẽ 0.3.2: điểm " (itoa NP) ", ảnh " (itoa NPH) ", hồ sơ " (itoa NO)))
 (setq e (t-netload "BHT.Bridge.dll"))

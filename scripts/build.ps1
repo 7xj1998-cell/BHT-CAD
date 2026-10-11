@@ -18,7 +18,8 @@ param(
   [string]$OutDir = '',
   [switch]$UseCsc,
   [switch]$CoreOnly,
-  [switch]$Test
+  [switch]$Test,
+  [switch]$PublicDistribution
 )
 $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent $PSScriptRoot
@@ -67,7 +68,7 @@ if ($sdk) {
   $p = @('build', (Join-Path $root 'tests\CoreTests\BHT.CoreTests.csproj'), '-c', 'Release', '-p:Platform=x64', ('-p:OutDir=' + $OutDir + '\'))
   if ((Run-Tool 'dotnet' $p 'dotnet build BHT.Core + BHT.CoreTests') -ne 0) { $failed = $true }
   if (-not $CoreOnly -and $havePaletteRefs) {
-    $p = @('build', (Join-Path $root 'src\dotnet\BHT.Palette\BHT.Palette.csproj'), '-c', 'Release', '-p:Platform=x64', ('-p:AcadDir=' + $AcadDir), ('-p:OutDir=' + $OutDir + '\'))
+    $p = @('build', (Join-Path $root 'src\dotnet\BHT.Palette\BHT.Palette.csproj'), ('-p:BhtPublicDistribution=' + $PublicDistribution.IsPresent.ToString().ToLowerInvariant()), '-c', 'Release', '-p:Platform=x64', ('-p:AcadDir=' + $AcadDir), ('-p:OutDir=' + $OutDir + '\'))
     if ((Run-Tool 'dotnet' $p 'dotnet build BHT.Bridge + BHT.Palette') -ne 0) { $failed = $true }
   }
 } else {
@@ -99,7 +100,7 @@ if ($sdk) {
                          ('/r:' + (Join-Path $fw 'System.Windows.Forms.dll')), ('/r:' + (Join-Path $fw 'System.Drawing.dll')),
                          ('/r:' + (Join-Path $fw 'WPF\PresentationCore.dll')), ('/r:' + (Join-Path $fw 'WPF\PresentationFramework.dll')),
                          ('/r:' + (Join-Path $fw 'WPF\WindowsBase.dll')), ('/r:' + (Join-Path $fw 'System.Xaml.dll'))) + (Src (Join-Path $root 'src\dotnet\BHT.Palette'))
-        $a += Get-ChildItem -LiteralPath (Join-Path $root 'assets\sign-previews') -Filter *.png | ForEach-Object { '/resource:' + $_.FullName + ',BHT.SignPreviews.' + $_.Name }
+        if (!$PublicDistribution) { $a += Get-ChildItem -LiteralPath (Join-Path $root 'assets\sign-previews') -Filter *.png | ForEach-Object { '/resource:' + $_.FullName + ',BHT.SignPreviews.' + $_.Name } }
         if ((Run-Tool $csc $a 'csc BHT.Palette (+ AcMgd, WinForms)') -ne 0) { $failed = $true }
       } elseif (-not $havePaletteRefs) { Log "SKIP BHT.Palette: khong co acmgd.dll trong AcadDir." }
       else { Log "SKIP BHT.Palette: BHT.Bridge build that bai, khong dung DLL cu." }
@@ -126,4 +127,10 @@ $script:log | Set-Content -LiteralPath $logFile -Encoding UTF8
 if ($failed) { Log "BUILD THAT BAI"; exit 1 }
 if ($testCode -ne 0) { Log ("TEST THAT BAI: " + $testCode + " FAIL"); exit 3 }
 Log "BUILD XONG"
-exit 0
+
+
+if ($PublicDistribution -and !$failed -and (Test-Path (Join-Path $OutDir 'BHT.Palette.dll'))) {
+ $publicHashes=@{}
+ foreach($n in @('BHT.Core.dll','BHT.Bridge.dll','BHT.Palette.dll')){$publicHashes[$n]=(Get-FileHash (Join-Path $OutDir $n)).Hash}
+ @{withoutEmbeddedPreviews=$true;hashes=$publicHashes} | ConvertTo-Json -Depth 3 | Set-Content (Join-Path $OutDir 'public-build.json') -Encoding UTF8
+}

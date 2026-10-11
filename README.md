@@ -1,4 +1,4 @@
-﻿# BHT v0.6.54 — mã nguồn cho AutoCAD
+﻿# BHT v0.6.55 — mã nguồn cho AutoCAD
 
 BHT quản lý hiện trạng tuyến, điểm khảo sát, biển báo, cọc và đèn trong AutoCAD. Kho này chứa mã nguồn C# và AutoLISP để đọc, kiểm tra và tiếp tục phát triển.
 
@@ -6,19 +6,19 @@ BHT quản lý hiện trạng tuyến, điểm khảo sát, biển báo, cọc v
 
 ## Bản hiện tại
 
-- Phiên bản mã nguồn: **0.6.53**, assembly **0.6.54.0**.
+- Phiên bản mã nguồn: **0.6.53**, assembly **0.6.55.0**.
 - Sửa lỗi nạp Lisp “bad argument type: stringp T” khi FAS/LSP nằm trong Support Path; giữ cơ chế tự thử nạp và kiểm tra API của 0.6.53.
 - Các cập nhật gần đây: đồng bộ tỷ lệ biển, biểu diễn trụ mất mặt biển, nhãn cọc xoay theo ký hiệu, mốc lý trình lấy từ hồ sơ cọc, đèn tín hiệu và đèn chiếu sáng riêng.
 - Không tự cập nhật hình học ký hiệu khi khởi động CAD.
 
-Xem [CHANGELOG](CHANGELOG.md), [ghi chú 0.6.53](docs/RELEASE_NOTES_0.6.54.md) và [QA 0.6.53](docs/QA_0.6.53.md). Tài liệu phiên bản cũ là lịch sử; khi có khác biệt, ưu tiên mã nguồn hiện tại và ghi chú mới nhất.
+Xem [CHANGELOG](CHANGELOG.md), [ghi chú 0.6.53](docs/RELEASE_NOTES_0.6.55.md) và [QA 0.6.53](docs/QA_0.6.53.md). Tài liệu phiên bản cũ là lịch sử; khi có khác biệt, ưu tiên mã nguồn hiện tại và ghi chú mới nhất.
 
 ## Cấu trúc
 
 | Thư mục | Vai trò |
 |---|---|
 | src/lisp/modules | 12 module AutoLISP: điểm, hồ sơ, tuyến, ký hiệu, API |
-| src/lisp/BHT-0.6.54.lsp | Loader mã nguồn |
+| src/lisp/BHT-0.6.55.lsp | Loader mã nguồn |
 | src/dotnet/BHT.Core | Mô hình, quy tắc nghiệp vụ; không phụ thuộc AutoCAD |
 | src/dotnet/BHT.Bridge | Đọc/ghi DWG, thư viện block, điều phối lệnh và gọi Lisp |
 | src/dotnet/BHT.Palette | Giao diện WinForms/Palette của AutoCAD |
@@ -47,4 +47,10 @@ Kho mã nguồn không chứa DLL Autodesk, thư viện DWG/phông sao chép t�
 
 Xem [thư viện cục bộ](docs/ADSCIVIL_LIBRARY.md), [đóng gói bảo vệ](docs/PROTECTED_BUILD.md), [cài đặt](packaging/README_INSTALL.md), [hợp đồng dữ liệu](docs/DATA_CONTRACT.md) và [hướng dẫn sử dụng](docs/HUONG_DAN.md).
 
-Bộ phát hành 0.6.53 đã giao trên máy phát triển gồm FAS/DLL; BHT-0.6.54.zip runtime bảo vệ không phải ZIP mã nguồn. Mã nguồn mới nhất nằm trong kho Git này. Tài nguyên bên thứ ba tiếp tục tuân theo giấy phép của chủ sở hữu.
+Bộ phát hành 0.6.53 đã giao trên máy phát triển gồm FAS/DLL; BHT-0.6.55.zip runtime bảo vệ không phải ZIP mã nguồn. Mã nguồn mới nhất nằm trong kho Git này. Tài nguyên bên thứ ba tiếp tục tuân theo giấy phép của chủ sở hữu.
+
+## Trạng thái 0.6.55
+
+Bản thử nghiệm Mốc 1: GPL-3.0-only (LICENSE, COPYING_SCOPE.md), gói công khai kèm mã nguồn nhưng không kèm tài nguyên vendor chưa rõ quyền. Đọc ROADMAP.md, docs/ACCEPTANCE_0.6.md và docs/KNOWN_ISSUES.md. Chỉ kiểm thử AutoCAD 2024 trong đợt này; chưa nghiệm thu máy sạch/người dùng độc lập.
+
+Build công khai: thêm -PublicDistribution vào scripts/build.ps1. Package: -PublicDistribution -IncludeSource, không dùng -ProtectedRuntime. Các mục thư viện phụ thuộc nguồn ngoài có thể thiếu; xem packaging/README_PUBLIC.md.

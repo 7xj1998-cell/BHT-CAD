@@ -1,9 +1,9 @@
-﻿# BHT 0.6.54 — Hướng dẫn sử dụng
+﻿# BHT 0.6.55 — Hướng dẫn sử dụng
 
 BHT là bộ lệnh AutoLISP quản lý điểm khảo sát RTK, hồ sơ đối tượng (biển báo, cọc tiêu, cột Km…), ảnh TimeMark (KMZ), tuyến / lý trình và xuất thống kê.
 
 - Lệnh chính: **`BTH`** hoặc **`BHT`** mở một Palette gắn bên trái AutoCAD.
-- Bản 0.6.54 gồm `BHT-0.6.54.lsp`, `BHT.Palette.dll`, `BHT.Bridge.dll` và `BHT.Core.dll`, cùng thư mục `modules` chứa 12 module.
+- Bản 0.6.55 gồm `BHT-0.6.55.lsp`, `BHT.Palette.dll`, `BHT.Bridge.dll` và `BHT.Core.dll`, cùng thư mục `modules` chứa 12 module.
 - Palette .NET là giao diện chính. Từ v0.5.5 đã bỏ bảng DCL dự phòng.
 - Định dạng dữ liệu trong bản vẽ không đổi: bản vẽ từ 0.3.2 đến 0.5.5 mở bằng 0.6.0 mà không cần chuyển đổi.
 - Mục tiêu hỗ trợ AutoCAD 2021–2024 và Civil 3D 2023 trên Windows.
@@ -34,17 +34,17 @@ Khi bật/tắt **Tô nền tất cả biển**, checkbox tạm khóa trong lúc
 ## 1. Cài đặt khuyến nghị
 
 1. Đóng AutoCAD.
-2. Giải nén gói `BHT-0.6.54.zip` và chạy `INSTALL_BHT.cmd`.
+2. Giải nén gói `BHT-0.6.55.zip` và chạy `INSTALL_BHT.cmd`.
 3. Mở AutoCAD, gõ `BTH` hoặc `BHT`.
 
 AutoCAD tự nhận `BHT.bundle`; không cần `APPLOAD` hoặc `NETLOAD`. Nếu từng cài bản cũ bằng Startup Suite, hãy gỡ file Lisp cũ để tránh hai phiên bản cùng nạp.
 
 ## 1b. Cách di động bằng APPLOAD
 
-1. Đặt `BHT-0.6.54.lsp` và ba DLL cùng thư mục `modules` trong một thư mục tin cậy đã có trên Support Path.
+1. Đặt `BHT-0.6.55.lsp` và ba DLL cùng thư mục `modules` trong một thư mục tin cậy đã có trên Support Path.
 2. Kiểm tra **LISPSYS = 1**. Nếu phải đổi từ 0 sang 1, khởi động lại AutoCAD.
-3. Gõ `APPLOAD`, chọn duy nhất `BHT-0.6.54.lsp`. Sau APPLOAD, gõ BHTLOAD để nạp giao diện khi cần.
-4. Khi dòng lệnh báo `BHT 0.6.54 đã nạp thành công`, gõ `BTH` hoặc `BHT`.
+3. Gõ `APPLOAD`, chọn duy nhất `BHT-0.6.55.lsp`. Sau APPLOAD, gõ BHTLOAD để nạp giao diện khi cần.
+4. Khi dòng lệnh báo `BHT 0.6.55 đã nạp thành công`, gõ `BTH` hoặc `BHT`.
 
 Nếu Palette không nạp được, gõ `BHTLOAD` để thử lại và đọc lỗi tại dòng lệnh. Kiểm tra ba DLL nằm cạnh file Lisp hoặc cài lại bundle rồi mở lại AutoCAD. Các lệnh nghiệp vụ trực tiếp vẫn dùng được khi Lisp đã nạp.
 
@@ -109,7 +109,7 @@ vẽ (dictionary BHT_V02 / XData) — palette chỉ là giao diện; đóng pale
 - Biển báo tự đặt ra ngoài tim theo phía tuyến, xoay theo hướng tuyến, có leader nối về điểm RTK. Nhãn hiện mã biển và lý trình; ID hồ sơ chỉ nằm trong XData.
 - Nút **Xuất báo cáo biển báo Excel** tạo `.xlsx` Unicode gồm sheet tổng hợp và danh sách chi tiết. Báo cáo có STT, công trình, đoạn/gói, loại và tên biển, phía, lý trình, tình trạng, số trụ/mặt, trạng thái kiểm tra, ghi chú và ID hồ sơ.
 - Báo cáo kiểm tra/trạng thái mở trong hộp thoại lớn; vùng thông báo dưới Palette chỉ hiển thị trạng thái ngắn và không nhận con trỏ nhập.
-- Toàn bộ block dự phòng vẫn nằm trong `BHT-0.6.54.lsp`; không nạp thêm `BHT-BIENBAO.lsp`. `BHTBLOCK` tiếp tục nhận DWG tùy chọn khi cần mẫu riêng.
+- Toàn bộ block dự phòng vẫn nằm trong `BHT-0.6.55.lsp`; không nạp thêm `BHT-BIENBAO.lsp`. `BHTBLOCK` tiếp tục nhận DWG tùy chọn khi cần mẫu riêng.
 
 ### Biển hoặc bảng có hai trụ/chân
 

@@ -5,7 +5,7 @@ Thư mục làm việc cố định trong kịch bản: `C:\Users\Le Bao\BHT_TES
 và `$w` trong `run_session.ps1` / `run_all.ps1` nếu chạy ở máy khác).
 
 **Không có dữ liệu thật trong repo.** Trước khi chạy cần tự chuẩn bị trong thư mục làm việc:
-`thư mục có dấu\BHT-0.6.54.lsp` (bản Lisp cần kiểm, đặt trong đường dẫn có dấu), `bin\BHT.*.dll` (kết quả build),
+`thư mục có dấu\BHT-0.6.55.lsp` (bản Lisp cần kiểm, đặt trong đường dẫn có dấu), `bin\BHT.*.dll` (kết quả build),
 `data\survey.csv` (+ các file trong data), `anh_da_doi\kmz_out\` (205 JPG + BHT_PHOTO.tsv), `irt\google_sat_18_x.jpg`,
 `irt\anh_khac.jpg`, `run\route_src.dwg`, `run\legacy_032_src.dwg` (bản sao bản vẽ làm bằng 0.3.2),
 `run\v033_A_out.dwg` (bản vẽ do bộ kiểm 0.3.3 tạo). Kịch bản chỉ làm việc trên **bản sao** bản vẽ.
@@ -13,7 +13,7 @@ và `$w` trong `run_session.ps1` / `run_all.ps1` nếu chạy ở máy khác).
 | Phiên | Nội dung |
 |---|---|
 | S0 | nạp từ đường dẫn có dấu, BHTTEST, API Lisp, xác nhận bỏ DCL và BHTLOAD khi chưa có plugin |
-| A, B, L, R, L2 | hồi quy bộ kiểm 0.3.3 trên BHT-0.6.54.lsp (nhãn, hồ sơ, ký hiệu, thứ tự, ảnh, bản vẽ 0.3.2, lưu / mở lại) |
+| A, B, L, R, L2 | hồi quy bộ kiểm 0.3.3 trên BHT-0.6.55.lsp (nhãn, hồ sơ, ký hiệu, thứ tự, ảnh, bản vẽ 0.3.2, lưu / mở lại) |
 | N, N2 | bản vẽ 0.3.3 + NETLOAD BHT.Bridge: C# đọc = Lisp, C# tạo/sửa hồ sơ Lisp đọc giống hệt, Application.Invoke, lưu / mở lại |
 | NL | bản vẽ 0.3.2 + BHT.Bridge |
 | P | NETLOAD BHT.Palette.dll trong Core Console, lệnh chính BTH |
@@ -65,3 +65,8 @@ Từ 0.6.29, các ca IE.472a/b còn kiểm tra đúng hai trụ/circle chân, kh
 
 Chạy `run_heading.ps1 -BinDir <thư-mục-DLL-đã-build>` bằng AutoCAD 2024 Core Console. Kiểm tra tiếp tuyến PL thẳng/cong, chiều tuyến, hướng chung trong UCS xoay, giữ RTK/điểm chèn/tỷ lệ/điểm gấp khúc, nối chân CAP1, lựa chọn/hủy và một Undo cho cả đợt xoay. Log tại `build/v<phiên-bản>/heading.log`; yêu cầu `HEADING-FINAL-FAIL=0` và không có lỗi Lisp.
 
+
+## Cấu hình fixture di động (0.6.55)
+
+Đặt BHT_TEST_DIR đến thư mục fixture đã chuẩn bị, ACAD_INSTALL_DIR đến AutoCAD 2024. Phiên test_A còn dùng BHT_LEGACY_TEST_DIR đến bộ fixture ảnh cũ. Không suy ra thiếu dữ liệu là test đạt.
+run_all/run_session yêu cầu script và dữ liệu trong fixture theo bố cục chú thích đầu run_all. run_review nhận -FixtureRoot/-AcadDir hoặc các biến môi trường tương ứng. Chạy script từ repo mới, không dùng bản run_session cũ sao chép trước đó.

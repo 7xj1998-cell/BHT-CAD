@@ -1,5 +1,5 @@
 ﻿;;; BHT 0.3.3 - phien L2: mo lai ban ve 0.3.2 da nang cap + SAVEAS 2018 o phien L
-(load "C:/Users/Le Bao/BHT_TEST_V044/t_common.lsp")
+(load (strcat (getenv "BHT_TEST_DIR") "/t_common.lsp"))
 (tbegin "L2")
 (setq e (tload))
 (setq S (t-read-state "L"))

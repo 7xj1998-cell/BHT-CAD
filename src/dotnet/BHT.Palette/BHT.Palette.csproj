@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
   <!-- Palette WinForms trong PaletteSet + lenh chinh BTH/BHT. Tham chieu them AcMgd (giao dien AutoCAD). -->
   <PropertyGroup>
     <OutputType>Library</OutputType>
@@ -7,7 +7,7 @@
     <UseWindowsForms>true</UseWindowsForms>
   </PropertyGroup>
   <ItemGroup>
-    <EmbeddedResource Include="..\..\..\assets\sign-previews\*.png">
+    <EmbeddedResource Condition="'$(BhtPublicDistribution)' != 'true'" Include="..\..\..\assets\sign-previews\*.png">
       <LogicalName>BHT.SignPreviews.%(Filename)%(Extension)</LogicalName>
     </EmbeddedResource>
     <ProjectReference Include="..\BHT.Core\BHT.Core.csproj" />

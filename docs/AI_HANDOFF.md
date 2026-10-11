@@ -59,4 +59,4 @@ Các script chính: tests/IntegrationTests/run_bootstrap653.ps1, run_palette_lay
 - Thay đổi chức năng tiếp theo phải tăng phiên bản bằng scripts/set-version.ps1, tối thiểu 0.6.55.
 - Hoàn tất code, test và tài liệu trước package: RELEASE_STATE.json chặn đóng gói lại cùng phiên bản với nội dung đã đổi.
 - Không đưa kết quả build, DLL Autodesk, dữ liệu người dùng hoặc bản sao tài nguyên vendor lên repo.
-- Kho hiện chưa có LICENSE riêng cho mã BHT; công khai để đọc không thay thế việc lựa chọn giấy phép phân phối/tái sử dụng.
+- Chủ dự án đã chọn GPL-3.0-only; xem LICENSE và COPYING_SCOPE.md. Tài nguyên vendor không thuộc giấy phép BHT và chưa được phép đưa vào gói công khai.

@@ -1,13 +1,14 @@
-﻿# BHT 0.6.54 - chay toan bo kiem thu Core Console
-#  Hoi quy 0.3.3 tren BHT-0.6.54.lsp: S0, A, B, L, R, L2
+﻿# BHT 0.6.55 - chay toan bo kiem thu Core Console
+#  Hoi quy 0.3.3 tren BHT-0.6.55.lsp: S0, A, B, L, R, L2
 #  Plugin .NET: N (ban ve 0.3.3 + BHT.Bridge), N2 (mo lai), NL (ban ve 0.3.2 + BHT.Bridge), P (thu NETLOAD BHT.Palette)
-# Can: $w\thu muc co dau\BHT-0.6.54.lsp, $w\bin\BHT.*.dll, $w\data\survey.csv, $w\run\route_src.dwg,
+# Can: $w\thu muc co dau\BHT-0.6.55.lsp, $w\bin\BHT.*.dll, $w\data\survey.csv, $w\run\route_src.dwg,
 #      $w\run\legacy_032_src.dwg, $w\run\v033_A_out.dwg (A_out.dwg cua bo kiem thu 0.3.3), $w\anh_da_doi\kmz_out, $w\irt\*.jpg
 param([string[]]$Only = @())
-$w = 'C:\Users\Le Bao\BHT_TEST_V044'
+$w = $env:BHT_TEST_DIR
+if (!$w -or !(Test-Path -LiteralPath $w -PathType Container)) { throw 'Set BHT_TEST_DIR to the prepared fixture directory.' }
 Set-Location $w
 function Want($n) { return ($Only.Count -eq 0) -or ($Only -contains $n) }
-$r = "C:/Users/Le Bao/BHT_TEST_V044/run/"
+$r = $w.Replace('\','/').TrimEnd('/') + '/run/'
 function Inv([string]$fn, [string]$arg, [string]$file) { return @('BHTNETLISP', $fn, $arg, ($r + $file)) }
 if (Want 'S0') { & .\run_session.ps1 -Name test_S0 -TimeoutSec 300 }
 if (Want 'A') {

@@ -1,13 +1,13 @@
 ﻿;;; BHT 0.3.3 - phien A: ban ve moi (BAN SAO sample-route.dwg). Nhan tu dong / tay,
 ;;; ho so doi tuong, ky hieu theo ID, thu tu hien thi, anh, nhap trung dinh dang.
-(load "C:/Users/Le Bao/BHT_TEST_V044/t_common.lsp")
+(load (strcat (getenv "BHT_TEST_DIR") "/t_common.lsp"))
 (tbegin "A")
 (setq *D* (strcat *T-DIR* "data/"))
 (setq *CSV* (strcat *D* "survey.csv"))
-(setq *PH* "C:/Users/Le Bao/BHT_TEST_V032/anh/kmz_out/BHT_PHOTO.tsv")
+(setq *PH* (strcat (getenv "BHT_LEGACY_TEST_DIR") "/anh/kmz_out/BHT_PHOTO.tsv"))
 (setq *MOVED* (strcat *T-DIR* "anh_da_doi/kmz_out"))
 (setq e (tload))
-(tchk "T00" "nạp BHT-5.0" (and (null e) (= *bht-version* "0.6.54")) (if e e *bht-version*))
+(tchk "T00" "nạp BHT-5.0" (and (null e) (= *bht-version* "0.6.55")) (if e e *bht-version*))
 (setq *bht-no-launch* T)
 
 ;; ---------- thuc the NGOAI BHT ----------
